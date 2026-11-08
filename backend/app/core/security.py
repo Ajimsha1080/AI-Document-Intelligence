@@ -1,0 +1,94 @@
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Any, Union
+import bcrypt
+import jwt
+import secrets
+import hashlib
+import re
+
+from app.core.config import settings
+
+def hash_password(password: str) -> str:
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode('utf-8'),
+            hashed_password.encode('utf-8')
+        )
+    except Exception:
+        return False
+
+def create_access_token(
+    subject: Union[str, Any],
+    tenant_id: str,
+    role: str,
+    expires_delta: Optional[timedelta] = None
+) -> str:
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "tenant_id": str(tenant_id),
+        "role": role,
+        "iss": "uae-doc-intel-auth",
+        "aud": "uae-doc-intel-services",
+    }
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
+
+def decode_access_token(token: str) -> dict:
+    return jwt.decode(
+        token,
+        settings.SECRET_KEY,
+        algorithms=[settings.ALGORITHM],
+        audience="uae-doc-intel-services",
+        issuer="uae-doc-intel-auth",
+    )
+
+def generate_api_key(tenant_id: str) -> tuple[str, str, str]:
+    """Generates (raw_key, key_hash, prefix)"""
+    token = secrets.token_urlsafe(32)
+    prefix = token[:8]
+    raw_key = f"uae_live_{prefix}_{token}"
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    return raw_key, key_hash, prefix
+
+def mask_pii_value(key: str, val: Any) -> Any:
+    """Masks PII values for privacy previews, exports, and sanitized audit trails."""
+    if not isinstance(val, str) or not val:
+        return val
+    
+    clean_key = key.lower()
+    
+    # Emirates ID pattern (784-XXXX-XXXXXXX-X)
+    if "emirates_id" in clean_key or "eid" in clean_key or re.match(r"^784-\d{4}-\d{7}-\d{1}$", val):
+        parts = val.split("-")
+        if len(parts) == 4:
+            return f"{parts[0]}-****-*******-{parts[3]}"
+        return f"{val[:3]}*******{val[-2:]}" if len(val) > 5 else "***"
+        
+    # Email pattern
+    if "email" in clean_key or "@" in val:
+        parts = val.split("@")
+        if len(parts) == 2:
+            name, domain = parts
+            masked_name = name[0] + "***" + (name[-1] if len(name) > 1 else "")
+            return f"{masked_name}@{domain}"
+            
+    # Phone numbers
+    if "phone" in clean_key or "mobile" in clean_key:
+        return f"{val[:4]}****{val[-2:]}" if len(val) > 6 else "****"
+        
+    # Passport / License / IBAN
+    if any(k in clean_key for k in ["passport", "iban", "account"]):
+        return f"{val[:2]}****{val[-3:]}" if len(val) > 5 else "****"
+        
+    return val

@@ -1,0 +1,32 @@
+{
+  "synthetic_documents": [
+    {
+      "file_name": "synthetic_emirates_id_front.svg",
+      "document_type": "emirates_id",
+      "vertical": "Banking KYC / Identity Verification",
+      "fields": {
+        "id_number": "784-1988-1234567-1",
+        "full_name_ar": "سالم راشد سيف الشامسي",
+        "full_name_en": "SALEM RASHED SAIF AL SHAMSI",
+        "nationality_ar": "الإمارات العربية المتحدة",
+        "nationality_en": "United Arab Emirates",
+        "date_of_birth": "1988-04-15",
+        "expiry_date": "2028-04-14"
+      },
+      "pii_compliance_note": "100% synthetically generated fixture complying with UAE PDPL rules."
+    },
+    {
+      "file_name": "synthetic_trade_license.svg",
+      "document_type": "uae_trade_license",
+      "vertical": "Trade, Logistics & Corporate Onboarding",
+      "fields": {
+        "license_number": "CN-1029384",
+        "company_name_en": "GULF HORIZON LOGISTICS L.L.C.",
+        "company_name_ar": "شركة أفق الخليج للخدمات اللوجستية ذ.م.م",
+        "issuing_authority": "Dubai Department of Economy and Tourism (DET)",
+        "expiry_date": "2027-11-30"
+      },
+      "pii_compliance_note": "Fictitious company and trade license number."
+    }
+  ]
+}
