@@ -3,6 +3,7 @@ import { useApp } from "@/context/AppContext";
 import { DocumentTypeCode, DocumentItem } from "@/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ConfidenceBadge } from "@/components/common/ConfidenceBadge";
+import { api } from "@/lib/api";
 import {
   UploadCloud,
   FileCheck,
@@ -32,8 +33,10 @@ export function UploadZone() {
     documents,
     setSelectedDocumentId,
     setCurrentScreen,
+    dataMode,
     language,
     dir,
+    showToast,
     t,
   } = useApp();
 
@@ -54,112 +57,99 @@ export function UploadZone() {
     setIsDragging(false);
   };
 
-  const processFiles = (files: FileList | null) => {
+  const processFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const newFiles: UploadingFile[] = Array.from(files).map((f) => ({
-      id: Math.random().toString(36).substring(2, 9),
-      name: f.name,
-      sizeKB: Math.round(f.size / 1024),
-      progress: 10,
-      status: "preprocessing",
-      type: selectedType,
-    }));
+    const fileList = Array.from(files);
+    for (const f of fileList) {
+      const fileId = `up-${Date.now()}-${f.name.replace(/[^a-zA-Z0-9]/g, "_")}`;
+      const item: UploadingFile = {
+        id: fileId,
+        name: f.name,
+        sizeKB: Math.round(f.size / 1024),
+        progress: 15,
+        status: "preprocessing",
+        type: selectedType,
+      };
 
-    setQueue((prev) => [...newFiles, ...prev]);
+      setQueue((prev) => [item, ...prev]);
 
-    // Simulate async pipeline stages
-    newFiles.forEach((item) => {
-      let prog = 10;
-      const interval = setInterval(() => {
-        prog += 25;
-        if (prog < 70) {
+      try {
+        if (dataMode === "live") {
+          // 1. Upload to live FastAPI server
           setQueue((q) =>
-            q.map((f) =>
-              f.id === item.id ? { ...f, progress: prog, status: "preprocessing" } : f
-            )
+            q.map((x) => (x.id === fileId ? { ...x, progress: 40, status: "ocr" } : x))
           );
-        } else if (prog < 100) {
-          setQueue((q) =>
-            q.map((f) =>
-              f.id === item.id ? { ...f, progress: prog, status: "ocr" } : f
-            )
-          );
-        } else {
-          clearInterval(interval);
 
-          // Infer type if auto
-          const lower = item.name.toLowerCase();
-          let docType: DocumentTypeCode = "emirates_id";
-          let docNameEn = "UAE Identity Card (Emirates ID)";
-          let docNameAr = "بطاقة الهوية الإماراتية";
+          const docTypeParam = selectedType === "auto" ? "emirates_id" : selectedType;
+          const initialDoc = await api.documents.upload(f, docTypeParam, (p) => {
+            setQueue((q) =>
+              q.map((x) => (x.id === fileId ? { ...x, progress: Math.min(p, 60) } : x))
+            );
+          });
 
-          if (item.type !== "auto") {
-            docType = item.type;
-          } else if (lower.includes("trade") || lower.includes("license") || lower.includes("ded")) {
-            docType = "uae_trade_license";
-            docNameEn = "UAE Commercial Trade License";
-            docNameAr = "رخصة تجارية في دولة الإمارات";
-          } else if (lower.includes("invoice") || lower.includes("tax") || lower.includes("vat")) {
-            docType = "commercial_invoice";
-            docNameEn = "Commercial Tax Invoice (VAT)";
-            docNameAr = "فاتورة ضريبية تجارية";
+          // 2. Poll extraction pipeline status
+          let currentDoc = initialDoc;
+          let attempts = 0;
+          while (
+            attempts < 40 &&
+            (currentDoc.status === "processing" || (currentDoc.status as string) === "queued")
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 1200));
+            attempts++;
+            try {
+              currentDoc = await api.documents.get(initialDoc.id);
+            } catch {
+              // keep waiting
+            }
           }
 
-          const newDoc: DocumentItem = {
-            id: `doc-${Date.now()}`,
-            referenceNumber: `DOC-${Math.floor(1000 + Math.random() * 9000)}`,
-            fileName: item.name,
-            documentType: docType,
-            documentTypeNameEn: docNameEn,
-            documentTypeNameAr: docNameAr,
-            status: "needs_review",
-            overallConfidence: 0.94,
-            uploadedAt: new Date().toISOString(),
-            processedAt: new Date().toISOString(),
-            fileSizeKB: item.sizeKB,
-            pageCount: 1,
-            extractedLanguage: "mixed",
-            previewUrl: docType,
-            validationErrors: [],
-            fields: [
-              {
-                id: `f-${Date.now()}-1`,
-                key: "reference_id",
-                nameEn: "Extracted Reference",
-                nameAr: "الرقم المرجعي المستخرج",
-                value: `784-2026-${Math.floor(1000000 + Math.random() * 9000000)}-1`,
-                originalValue: `784-2026-${Math.floor(1000000 + Math.random() * 9000000)}-1`,
-                confidence: 0.98,
-                section: "identity",
-                page: 1,
-              },
-              {
-                id: `f-${Date.now()}-2`,
-                key: "entity_name",
-                nameEn: "Entity / Holder Name",
-                nameAr: "اسم الجهة / صاحب المستند",
-                value: "شركة الخليج للحلول الرقمية ذ.م.م",
-                originalValue: "شركة الخليج للحلول الرقمية ذ.م.م",
-                confidence: 0.95,
-                section: "company",
-                page: 1,
-              },
-            ],
-          };
-
-          addDocument(newDoc);
-
+          // 3. Mark complete & update application context
           setQueue((q) =>
-            q.map((f) =>
-              f.id === item.id
-                ? { ...f, progress: 100, status: "done", detectedType: docType }
-                : f
+            q.map((x) =>
+              x.id === fileId
+                ? {
+                    ...x,
+                    progress: 100,
+                    status: currentDoc.status === "failed" ? "error" : "done",
+                    detectedType: currentDoc.documentType,
+                  }
+                : x
             )
           );
+
+          addDocument(currentDoc);
+          setSelectedDocumentId(currentDoc.id);
+          showToast(
+            currentDoc.status === "failed" ? "error" : "success",
+            `Document ${currentDoc.referenceNumber} processed (${currentDoc.status.replace("_", " ")})`,
+            `تمت معالجة المستند ${currentDoc.referenceNumber} بنجاح`
+          );
+        } else {
+          // Mock mode with deterministic flow
+          setQueue((q) =>
+            q.map((x) => (x.id === fileId ? { ...x, progress: 75, status: "ocr" } : x))
+          );
+          await new Promise((resolve) => setTimeout(resolve, 600));
+
+          const mockDoc = await api.documents.upload(f, selectedType === "auto" ? "emirates_id" : selectedType);
+          setQueue((q) =>
+            q.map((x) =>
+              x.id === fileId
+                ? { ...x, progress: 100, status: "done", detectedType: mockDoc.documentType }
+                : x
+            )
+          );
+          addDocument(mockDoc);
+          setSelectedDocumentId(mockDoc.id);
         }
-      }, 500);
-    });
+      } catch (err: any) {
+        setQueue((q) =>
+          q.map((x) => (x.id === fileId ? { ...x, progress: 100, status: "error" } : x))
+        );
+        showToast("error", `Upload failed: ${err.message}`, "فشل رفع ومعالجة المستند");
+      }
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {

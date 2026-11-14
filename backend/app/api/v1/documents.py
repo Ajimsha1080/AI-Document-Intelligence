@@ -112,7 +112,11 @@ async def upload_document(
 
     # 5. Enqueue background extraction pipeline
     from app.worker.queue import enqueue_document_job
-    enqueue_document_job(doc_id, actor.tenant_id)
+    job_id = enqueue_document_job(doc_id, actor.tenant_id)
+    if not job_id:
+        import asyncio
+        from app.worker.tasks import process_document_pipeline
+        asyncio.create_task(process_document_pipeline(doc_id, actor.tenant_id))
 
     return DocumentResponse(
         id=new_doc.id,

@@ -62,8 +62,9 @@ async def get_current_actor(
             is_api_client=True
         )
 
-    # 2. Check JWT Bearer Token
-    if not token:
+    # 2. Check JWT Bearer Token (from header or token query parameter)
+    effective_token = token or request.query_params.get("token")
+    if not effective_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing authentication credentials (Bearer token or X-API-Key required)",
@@ -71,7 +72,7 @@ async def get_current_actor(
         )
 
     try:
-        payload = decode_access_token(token)
+        payload = decode_access_token(effective_token)
         user_id: str = payload.get("sub")
         tenant_id: str = payload.get("tenant_id")
         role: str = payload.get("role")

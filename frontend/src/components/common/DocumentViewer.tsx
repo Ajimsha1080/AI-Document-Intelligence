@@ -127,7 +127,19 @@ export function DocumentViewer() {
           }}
         >
           {/* Document Content Rendering */}
-          {selectedDocument.documentType === "emirates_id" ? (
+          {selectedDocument.previewUrl && selectedDocument.previewUrl.startsWith("http") ? (
+            <div className="relative w-full h-full flex flex-col items-center justify-center p-4 bg-slate-50 min-h-[480px]">
+              <img
+                src={selectedDocument.previewUrl}
+                alt={selectedDocument.fileName}
+                className="w-full h-auto object-contain select-none pointer-events-none rounded"
+                onError={(e) => {
+                  // Fallback to synthetic view if image load fails
+                  (e.target as HTMLElement).style.display = "none";
+                }}
+              />
+            </div>
+          ) : selectedDocument.documentType === "emirates_id" ? (
             /* Synthetic Emirates ID Render */
             <div className="p-6 h-full flex flex-col justify-between font-sans relative">
               {/* Header Banner */}

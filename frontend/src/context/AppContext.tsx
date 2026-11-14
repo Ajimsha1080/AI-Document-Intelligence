@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { translations, TranslationKey } from "@/lib/translations";
 import {
   DocumentItem,
@@ -18,6 +18,7 @@ import {
   initialUsers,
   initialApiKeys,
 } from "@/lib/mockData";
+import { api, getDataMode, setDataMode as setStoredDataMode, DataMode } from "@/lib/api";
 
 export type ScreenId =
   | "dashboard"
@@ -57,6 +58,8 @@ interface AppContextType {
   activeTenant: TenantInfo;
   currentScreen: ScreenId;
   sidebarCollapsed: boolean;
+  dataMode: DataMode;
+  setDataMode: (mode: DataMode) => void;
   toggleLanguage: () => void;
   toggleTheme: () => void;
   toggleArabicDigits: () => void;
@@ -78,11 +81,12 @@ interface AppContextType {
   setActivePage: (page: number) => void;
   togglePiiMasked: () => void;
   addDocument: (doc: DocumentItem) => void;
-  updateDocumentField: (docId: string, fieldKey: string, newValue: string) => void;
+  refreshDocuments: () => Promise<void>;
+  updateDocumentField: (docId: string, fieldKey: string, newValue: string) => Promise<void>;
   updateTableRow: (docId: string, rowId: string, field: keyof TableRowItem, value: any) => void;
-  approveDocument: (docId: string) => void;
-  rejectDocument: (docId: string) => void;
-  deleteDocument: (docId: string) => void;
+  approveDocument: (docId: string) => Promise<void>;
+  rejectDocument: (docId: string) => Promise<void>;
+  deleteDocument: (docId: string) => Promise<void>;
   bulkApproveDocuments: (docIds: string[]) => void;
   bulkDeleteDocuments: (docIds: string[]) => void;
 
@@ -93,6 +97,7 @@ interface AppContextType {
 
   // Audit State
   auditLogs: AuditLogEntry[];
+  refreshAuditLogs: () => Promise<void>;
   addAuditLog: (entry: Omit<AuditLogEntry, "id" | "timestamp">) => void;
 
   // Users & Settings State
@@ -127,6 +132,8 @@ const defaultTenant: TenantInfo = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+let toastSeq = 1;
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>("en");
   const [theme, setTheme] = useState<Theme>("light");
@@ -134,6 +141,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [activeTenant] = useState<TenantInfo>(defaultTenant);
+  const [dataMode, setDataModeState] = useState<DataMode>("live");
 
   // Core Data Collections
   const [documents, setDocuments] = useState<DocumentItem[]>(initialDocuments);
@@ -154,6 +162,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     "https://api.alhilal-bank.ae/webhooks/doc-intelligence-approved"
   );
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
+
+  // Initialize data mode
+  useEffect(() => {
+    setDataModeState(getDataMode());
+  }, []);
+
+  const setDataMode = (mode: DataMode) => {
+    setStoredDataMode(mode);
+    setDataModeState(mode);
+    if (mode === "mock") {
+      setDocuments(initialDocuments);
+      setAuditLogs(initialAuditLogs);
+      setSelectedDocumentId(initialDocuments[0]?.id || "");
+    } else {
+      refreshDocuments();
+      refreshAuditLogs();
+    }
+  };
 
   // Sync document dir and lang attributes
   useEffect(() => {
@@ -187,24 +213,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSidebarCollapsed((prev) => !prev);
   };
 
-  const togglePiiMasked = () => {
-    setPiiMasked((prev) => !prev);
-    addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@alhilal-bank.ae",
-      actorRole: "Admin",
-      action: "PII_UNMASKED",
-      documentId: selectedDocumentId,
-      documentRef: selectedDocument?.referenceNumber,
-      ipAddress: "192.168.10.45",
-      detailsEn: piiMasked ? "Admin unmasked PII view" : "Admin masked PII view",
-      detailsAr: piiMasked ? "قام المشرف بإظهار البيانات الحساسة" : "قام المشرف بحجب البيانات الحساسة",
-    });
-  };
-
   const showToast = (type: "success" | "error" | "info", messageEn: string, messageAr: string) => {
     const newToast: ToastNotification = {
-      id: Math.random().toString(36).substring(2, 9),
+      id: `toast-${Date.now()}-${toastSeq++}`,
       type,
       messageEn,
       messageAr,
@@ -228,8 +239,67 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAuditLogs((prev) => [newEntry, ...prev]);
   };
 
+  const refreshDocuments = useCallback(async () => {
+    try {
+      // Ensure authenticated
+      if (!api.auth.getToken()) {
+        try {
+          await api.auth.login("admin@alhilal-bank.ae", "AdminSecurePass2026!");
+        } catch {
+          // If login fails, keep current state
+          return;
+        }
+      }
+      const docs = await api.documents.list();
+      if (docs && docs.length > 0) {
+        setDocuments(docs);
+        setSelectedDocumentId((prev) => {
+          if (docs.some((d) => d.id === prev)) return prev;
+          return docs[0].id;
+        });
+      }
+    } catch {
+      // Live server might be connecting; fallback gracefully
+    }
+  }, []);
+
+  const refreshAuditLogs = useCallback(async () => {
+    try {
+      const logs = await api.audit.list();
+      if (logs && logs.length > 0) {
+        setAuditLogs(logs);
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  // Fetch initial live data on mount
+  useEffect(() => {
+    if (dataMode === "live") {
+      refreshDocuments();
+      refreshAuditLogs();
+    }
+  }, [dataMode, refreshDocuments, refreshAuditLogs]);
+
+  const togglePiiMasked = () => {
+    setPiiMasked((prev) => !prev);
+    addAuditLog({
+      actorName: "Ahmed Al Mansoori",
+      actorEmail: "admin@alhilal-bank.ae",
+      actorRole: "Admin",
+      action: "PII_UNMASKED",
+      documentId: selectedDocumentId,
+      documentRef: selectedDocument?.referenceNumber,
+      ipAddress: "192.168.10.45",
+      detailsEn: piiMasked ? "Admin unmasked PII view" : "Admin masked PII view",
+      detailsAr: piiMasked ? "قام المشرف بإظهار البيانات الحساسة" : "قام المشرف بحجب البيانات الحساسة",
+    });
+  };
+
   const addDocument = (doc: DocumentItem) => {
-    setDocuments((prev) => [doc, ...prev]);
+    setDocuments((prev) => [doc, ...prev.filter((d) => d.id !== doc.id)]);
+    setSelectedDocumentId(doc.id);
     addAuditLog({
       actorName: "Ahmed Al Mansoori",
       actorEmail: "admin@alhilal-bank.ae",
@@ -241,34 +311,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       detailsEn: `Uploaded document '${doc.fileName}' (${doc.documentTypeNameEn})`,
       detailsAr: `تم رفع المستند '${doc.fileName}' (${doc.documentTypeNameAr})`,
     });
-    showToast(
-      "success",
-      `Document ${doc.referenceNumber} uploaded and queued for processing!`,
-      `تم رفع المستند ${doc.referenceNumber} وبدء معالجته بنجاح!`
-    );
   };
 
-  const updateDocumentField = (docId: string, fieldKey: string, newValue: string) => {
+  const updateDocumentField = async (docId: string, fieldKey: string, newValue: string) => {
+    // Optimistic local update
     setDocuments((prev) =>
       prev.map((doc) => {
         if (doc.id !== docId) return doc;
-        const oldField = doc.fields.find((f) => f.key === fieldKey);
-        const oldValue = oldField?.value || "";
-
         const updatedFields = doc.fields.map((f) => {
           if (f.key !== fieldKey) return f;
           return {
             ...f,
             value: newValue,
             isCorrected: newValue !== f.originalValue,
-            confidence: 1.0, // Human verified
+            confidence: 1.0,
             validationError: undefined,
           };
         });
-
-        // Clear warning on that field
         const updatedErrors = doc.validationErrors.filter((e) => e.fieldKey !== fieldKey);
-
         return {
           ...doc,
           fields: updatedFields,
@@ -276,6 +336,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       })
     );
+
+    if (dataMode === "live") {
+      try {
+        await api.documents.correctField(docId, fieldKey, newValue);
+      } catch (err: any) {
+        showToast("error", `Failed to save correction to server: ${err.message}`, "فشل حفظ التعديل على الخادم");
+      }
+    }
 
     addAuditLog({
       actorName: "Ahmed Al Mansoori",
@@ -311,7 +379,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return updated;
         });
 
-        // Recalculate totals
         const sumLineTotals = updatedTable.reduce((acc, r) => acc + r.lineTotalAED, 0);
         const updatedFields = doc.fields.map((f) => {
           if (f.key === "total_amount") {
@@ -339,7 +406,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     showToast("success", "Table row updated and total rebalanced!", "تم تحديث بند الجدول وإعادة موازنة المجموع!");
   };
 
-  const approveDocument = (docId: string) => {
+  const approveDocument = async (docId: string) => {
     setDocuments((prev) =>
       prev.map((doc) => {
         if (doc.id !== docId) return doc;
@@ -351,6 +418,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       })
     );
+
+    if (dataMode === "live") {
+      try {
+        await api.documents.approve(docId);
+      } catch (err: any) {
+        showToast("error", `Failed to approve document: ${err.message}`, "فشل اعتماد المستند");
+      }
+    }
 
     addAuditLog({
       actorName: "Ahmed Al Mansoori",
@@ -371,7 +446,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const rejectDocument = (docId: string) => {
+  const rejectDocument = async (docId: string) => {
     setDocuments((prev) =>
       prev.map((doc) => {
         if (doc.id !== docId) return doc;
@@ -382,6 +457,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       })
     );
+
+    if (dataMode === "live") {
+      try {
+        await api.documents.reject(docId, "Rejected during human review");
+      } catch (err: any) {
+        showToast("error", `Failed to reject document: ${err.message}`, "فشل رفض المستند");
+      }
+    }
 
     addAuditLog({
       actorName: "Ahmed Al Mansoori",
@@ -402,9 +485,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const deleteDocument = (docId: string) => {
+  const deleteDocument = async (docId: string) => {
     const docToDelete = documents.find((d) => d.id === docId);
     setDocuments((prev) => prev.filter((doc) => doc.id !== docId));
+
+    if (dataMode === "live") {
+      try {
+        await api.documents.delete(docId);
+      } catch (err: any) {
+        showToast("error", `Failed to delete document: ${err.message}`, "فشل حذف المستند");
+      }
+    }
 
     addAuditLog({
       actorName: "Ahmed Al Mansoori",
@@ -425,6 +516,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDocuments((prev) =>
       prev.map((doc) => (docIds.includes(doc.id) ? { ...doc, status: "approved" } : doc))
     );
+    docIds.forEach((id) => approveDocument(id));
     showToast(
       "success",
       `Bulk approved ${docIds.length} documents!`,
@@ -434,6 +526,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const bulkDeleteDocuments = (docIds: string[]) => {
     setDocuments((prev) => prev.filter((doc) => !docIds.includes(doc.id)));
+    docIds.forEach((id) => deleteDocument(id));
     showToast(
       "info",
       `Hard deleted ${docIds.length} documents.`,
@@ -448,42 +541,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
       actorEmail: "admin@alhilal-bank.ae",
       actorRole: "Admin",
       action: "SCHEMA_MODIFIED",
+      detailsEn: `Created custom schema '${schema.nameEn}' (${schema.code})`,
+      detailsAr: `تم إنشاء قالب مخصص '${schema.nameAr}' (${schema.code})`,
       ipAddress: "192.168.10.45",
-      detailsEn: `Created custom schema '${schema.nameEn}' (${schema.fields.length} fields)`,
-      detailsAr: `تم إنشاء مخطط جديد '${schema.nameAr}' (${schema.fields.length} حقول)`,
     });
-    showToast(
-      "success",
-      `Schema '${schema.nameEn}' created successfully!`,
-      `تم حفظ المخطط '${schema.nameAr}' بنجاح!`
-    );
+    showToast("success", `Schema '${schema.nameEn}' created!`, `تم إنشاء القالب '${schema.nameAr}'!`);
   };
 
   const updateSchema = (schema: DocumentTypeSchema) => {
     setSchemas((prev) => prev.map((s) => (s.id === schema.id ? schema : s)));
-    showToast("success", `Schema '${schema.nameEn}' updated!`, `تم تحديث المخطط '${schema.nameAr}'!`);
+    addAuditLog({
+      actorName: "Ahmed Al Mansoori",
+      actorEmail: "admin@alhilal-bank.ae",
+      actorRole: "Admin",
+      action: "SCHEMA_MODIFIED",
+      detailsEn: `Updated schema definition '${schema.nameEn}'`,
+      detailsAr: `تم تحديث بنية القالب '${schema.nameAr}'`,
+      ipAddress: "192.168.10.45",
+    });
+    showToast("info", `Schema '${schema.nameEn}' updated.`, `تم تحديث القالب '${schema.nameAr}'.`);
   };
 
   const addUser = (name: string, email: string, role: SystemUser["role"]) => {
     const newUser: SystemUser = {
-      id: `u-${Date.now()}`,
+      id: `usr-${Date.now()}`,
       name,
       email,
       role,
       status: "active",
-      lastLogin: "Never",
+      lastLogin: new Date().toISOString(),
     };
     setUsers((prev) => [...prev, newUser]);
-    showToast("success", `User ${name} added!`, `تمت إضافة المستخدم ${name}!`);
+    showToast("success", `User ${name} added successfully!`, `تمت إضافة المستخدم ${name} بنجاح!`);
   };
 
   const updateUserRole = (id: string, role: SystemUser["role"]) => {
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role } : u)));
-    showToast("info", "User role updated.", "تم تحديث صلاحية المستخدم.");
+    showToast("info", "User permissions updated.", "تم تحديث صلاحيات المستخدم.");
   };
 
-  const generateApiKey = (name: string, role: string): string => {
-    const prefix = "uae_live_" + Math.random().toString(36).substring(2, 6);
+  const generateApiKey = (name: string, role: string) => {
+    const prefix = `sn_${name.toLowerCase().replace(/\s+/g, "_").slice(0, 4)}`;
+    const secret = `sec_${Date.now()}_prod`;
     const newKey: ApiKeyItem = {
       id: `key-${Date.now()}`,
       name,
@@ -494,42 +593,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
       status: "active",
     };
     setApiKeys((prev) => [newKey, ...prev]);
-    const fullRawKey = `${prefix}_${Math.random().toString(36).substring(2, 18)}`;
-    showToast("success", "API Key created successfully!", "تم إنشاء المفتاح بنجاح!");
-    return fullRawKey;
+    showToast("success", `API key '${name}' created!`, `تم إصدار المفتاح البرمجي '${name}'!`);
+    return `${prefix}_${secret}`;
   };
 
   const revokeApiKey = (id: string) => {
     setApiKeys((prev) => prev.map((k) => (k.id === id ? { ...k, status: "revoked" } : k)));
-    showToast("info", "API key revoked.", "تم إلغاء تفعيل المفتاح.");
+    showToast("info", "API key revoked.", "تم إلغاء تفعيل المفتاح البرمجي.");
   };
 
   const selectedDocument = documents.find((d) => d.id === selectedDocumentId) || documents[0];
 
   const t = (key: TranslationKey): string => {
-    const entry = translations[key];
-    if (!entry) return key;
-    return entry[language] || entry["en"] || key;
+    const translationObj = translations[key];
+    if (!translationObj) return key;
+    return translationObj[language] || translationObj.en || key;
   };
-
-  const dir = language === "ar" ? "rtl" : "ltr";
 
   return (
     <AppContext.Provider
       value={{
         language,
-        dir,
+        dir: language === "ar" ? "rtl" : "ltr",
         theme,
         useArabicDigits,
         activeTenant,
         currentScreen,
         sidebarCollapsed,
+        dataMode,
+        setDataMode,
         toggleLanguage,
         toggleTheme,
         toggleArabicDigits,
         toggleSidebar,
         setCurrentScreen,
         t,
+
         documents,
         selectedDocumentId,
         selectedDocument,
@@ -543,6 +642,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setActivePage,
         togglePiiMasked,
         addDocument,
+        refreshDocuments,
         updateDocumentField,
         updateTableRow,
         approveDocument,
@@ -550,11 +650,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteDocument,
         bulkApproveDocuments,
         bulkDeleteDocuments,
+
         schemas,
         addSchema,
         updateSchema,
+
         auditLogs,
+        refreshAuditLogs,
         addAuditLog,
+
         users,
         apiKeys,
         retentionDays,
@@ -567,6 +671,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateUserRole,
         generateApiKey,
         revokeApiKey,
+
         toasts,
         dismissToast,
         showToast,

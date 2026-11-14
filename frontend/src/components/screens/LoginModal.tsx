@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
-import { ShieldCheck, Lock, Mail, ArrowRight, ArrowLeft } from "lucide-react";
+import { ShieldCheck, Lock, Mail, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -8,16 +9,31 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const { language, dir, toggleLanguage, showToast, t } = useApp();
+  const { language, dir, toggleLanguage, showToast, refreshDocuments, refreshAuditLogs, t } = useApp();
   const [email, setEmail] = useState("admin@alhilal-bank.ae");
-  const [password, setPassword] = useState("••••••••••••");
+  const [password, setPassword] = useState("AdminSecurePass2026!");
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    showToast("success", "Authenticated as Ahmed Al Mansoori (Compliance Admin)", "تم تسجيل الدخول بنجاح كمدير امتثال");
-    onClose();
+    setLoading(true);
+    try {
+      const res = await api.auth.login(email, password);
+      showToast(
+        "success",
+        `Authenticated as ${res.user.full_name || email} (${res.user.role})`,
+        "تم تسجيل الدخول بنجاح"
+      );
+      await refreshDocuments();
+      await refreshAuditLogs();
+      onClose();
+    } catch (err: any) {
+      showToast("error", err.message || "Authentication failed", "فشل التحقق من الهوية");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSso = (provider: string) => {
@@ -90,9 +106,17 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
           <button
             type="submit"
-            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs shadow-md transition"
+            disabled={loading}
+            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {language === "ar" ? "تسجيل الدخول" : "Sign In with Credentials"}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>{language === "ar" ? "جارٍ التحقق..." : "Authenticating..."}</span>
+              </>
+            ) : (
+              <span>{language === "ar" ? "تسجيل الدخول" : "Sign In with Credentials"}</span>
+            )}
           </button>
         </form>
 
