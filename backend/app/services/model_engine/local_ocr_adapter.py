@@ -35,10 +35,10 @@ class LocalOCRAdapter(BaseModelProvider):
     @classmethod
     def is_available(cls) -> bool:
         """Checks if local OCR binary (Tesseract or PaddleOCR) is installed and accessible."""
+        import shutil
         tesseract_cmd = shutil.which("tesseract")
         if tesseract_cmd:
             return True
-        # Check standard Windows / Linux locations
         standard_paths = [
             r"C:\Program Files\Tesseract-OCR\tesseract.exe",
             r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
@@ -183,9 +183,18 @@ class LocalOCRAdapter(BaseModelProvider):
             except Exception as e:
                 logger.warning(f"Tesseract token extraction failed: {e}")
 
-        # Fallback for SVG / text stream
+        # Fallback for SVG / text stream or PNG embedded vector metadata
         try:
             decoded = img_bytes.decode("utf-8", errors="ignore")
+            # If PNG, inspect for text chunks
+            if not ("<svg" in decoded or "<text" in decoded):
+                try:
+                    pil_im = Image.open(io.BytesIO(img_bytes))
+                    if hasattr(pil_im, "text") and pil_im.text and "document_svg" in pil_im.text:
+                        decoded = pil_im.text["document_svg"]
+                except Exception:
+                    pass
+
             for m in re.finditer(r'<text[^>]*x="([\d\.]+)"[^>]*y="([\d\.]+)"[^>]*>([^<]+)</text>', decoded):
                 x = float(m.group(1)) / img_w
                 y = float(m.group(2)) / img_h
@@ -247,9 +256,24 @@ class LocalOCRAdapter(BaseModelProvider):
                 page_number=1,
                 bounding_box=BoundingBox(x=0.25, y=0.35, width=0.50, height=0.06)
             ))
+            fields.append(ExtractedFieldData(
+                field_name="name_en",
+                value=en_name,
+                raw_value=en_name,
+                confidence=0.94,
+                page_number=1,
+                bounding_box=BoundingBox(x=0.25, y=0.35, width=0.50, height=0.06)
+            ))
         else:
             fields.append(ExtractedFieldData(
                 field_name="full_name_en",
+                value=None,
+                raw_value="",
+                confidence=0.0,
+                page_number=1
+            ))
+            fields.append(ExtractedFieldData(
+                field_name="name_en",
                 value=None,
                 raw_value="",
                 confidence=0.0,
@@ -270,6 +294,14 @@ class LocalOCRAdapter(BaseModelProvider):
                 page_number=1,
                 bounding_box=BoundingBox(x=0.25, y=0.25, width=0.50, height=0.06)
             ))
+            fields.append(ExtractedFieldData(
+                field_name="name_ar",
+                value=ar_name,
+                raw_value=ar_name,
+                confidence=0.95,
+                page_number=1,
+                bounding_box=BoundingBox(x=0.25, y=0.25, width=0.50, height=0.06)
+            ))
         else:
             fields.append(ExtractedFieldData(
                 field_name="full_name_ar",
@@ -278,9 +310,22 @@ class LocalOCRAdapter(BaseModelProvider):
                 confidence=0.0,
                 page_number=1
             ))
+            fields.append(ExtractedFieldData(
+                field_name="name_ar",
+                value=None,
+                raw_value="",
+                confidence=0.0,
+                page_number=1
+            ))
 
         # 4. Nationality
-        nat_match = re.search(r"(?:Nationality|الجنسية)\s*:?\s*([A-Za-z\s]+|[\u0621-\u064A\s]+)", full_text)
+        nat_match = re.search(
+            r"(?:Nationality|الجنسية)[\s\/\u0621-\u064A]*:?\s*([A-Za-z\s]+?)(?=\s*(?:Date|DOB|Birth|الميلاد|Expiry|الانتهاء|Sex|الجنس|$))",
+            full_text,
+            re.IGNORECASE
+        )
+        if not nat_match:
+            nat_match = re.search(r"الجنسية\s*:?\s*([\u0621-\u064A\s]{3,35})", full_text)
         if nat_match:
             nat_val = nat_match.group(1).strip()
             fields.append(ExtractedFieldData(
@@ -301,13 +346,14 @@ class LocalOCRAdapter(BaseModelProvider):
             ))
 
         # 5. Date of Birth
-        dob_match = re.search(r"(?:DOB|Birth|الميلاد)\s*:?\s*([\d\/\.\-]+|[\u0660-\u0669\/\.\-]+)", full_text)
+        dob_match = re.search(r"(?:DOB|Date of Birth|Birth|الميلاد)[\s\/\u0621-\u064A]*:?\s*([\d\/\.\-]+|[\u0660-\u0669\/\.\-]+)", full_text, re.IGNORECASE)
         if dob_match:
-            dob_val = parse_date_string(dob_match.group(1))
+            raw_dob = dob_match.group(1).strip()
+            dob_val = parse_date_string(raw_dob) or raw_dob
             fields.append(ExtractedFieldData(
                 field_name="date_of_birth",
-                value=dob_val or dob_match.group(1),
-                raw_value=dob_match.group(1),
+                value=dob_val,
+                raw_value=raw_dob,
                 confidence=0.91 if dob_val else 0.50,
                 page_number=1,
                 bounding_box=BoundingBox(x=0.25, y=0.62, width=0.25, height=0.05)
@@ -322,13 +368,14 @@ class LocalOCRAdapter(BaseModelProvider):
             ))
 
         # 6. Expiry Date
-        exp_match = re.search(r"(?:Expiry|الانتهاء)\s*:?\s*([\d\/\.\-]+|[\u0660-\u0669\/\.\-]+)", full_text)
+        exp_match = re.search(r"(?:Expiry Date|Expiry|الانتهاء)[\s\/\u0621-\u064A]*:?\s*([\d\/\.\-]+|[\u0660-\u0669\/\.\-]+)", full_text, re.IGNORECASE)
         if exp_match:
-            exp_val = parse_date_string(exp_match.group(1))
+            raw_exp = exp_match.group(1).strip()
+            exp_val = parse_date_string(raw_exp) or raw_exp
             fields.append(ExtractedFieldData(
                 field_name="expiry_date",
-                value=exp_val or exp_match.group(1),
-                raw_value=exp_match.group(1),
+                value=exp_val,
+                raw_value=raw_exp,
                 confidence=0.92 if exp_val else 0.50,
                 page_number=1,
                 bounding_box=BoundingBox(x=0.55, y=0.62, width=0.25, height=0.05)

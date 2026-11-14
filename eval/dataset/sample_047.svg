@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="630">
+  <rect width="1000" height="630" fill="#f4f7fa"/>
+  <rect x="10" y="10" width="980" height="80" fill="#e6f0f5"/>
+  <text x="220" y="45">UNITED ARAB EMIRATES FEDERAL AUTHORITY FOR IDENTITY</text>
+  <text x="220" y="75">بطاقة الهوية الإماراتية Identity Card</text>
+  <text x="280" y="150">Identity Number / رقم الهوية: 784-1977-8877776-7</text>
+  <text x="280" y="210">الاسم: جورجيا باولا بيانكي</text>
+  <text x="280" y="255">Name: GIORGIA PAOLA BIANCHI</text>
+  <text x="280" y="320">Nationality / الجنسية: Italy</text>
+  <text x="280" y="380">Date of Birth / تاريخ الميلاد: 13/05/1977</text>
+  <text x="280" y="440">Expiry Date / تاريخ الانتهاء: 13/08/2029</text>
+  <text x="280" y="500">Sex / الجنس: F</text>
+</svg>
