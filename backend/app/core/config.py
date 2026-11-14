@@ -1,8 +1,12 @@
 from typing import List, Optional, Union
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, model_validator
+import os
 import sys
 import logging
+
+_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+_canonical_db_path = os.path.join(_project_root, "docsmvp.db").replace("\\", "/")
 
 logger = logging.getLogger("uae_compliance")
 
@@ -44,7 +48,7 @@ class Settings(BaseSettings):
     LOCAL_STORAGE_DIR: str = "./data/sovereign_storage"
     
     # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./docsmvp.db"
+    DATABASE_URL: str = f"sqlite+aiosqlite:///{_canonical_db_path}"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
