@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* UAE Sovereign Emerald Accent: #065f46 (hsl 166 88% 20%) */
+    --primary: 166 88% 20%;
+    --primary-foreground: 166 100% 97%;
+    --primary-hover: 166 85% 16%;
+
+    --secondary: 210 25% 93%;
+    --secondary-foreground: 222 47% 14%;
+
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 16% 45%;
+
+    --accent: 166 40% 92%;
+    --accent-foreground: 166 88% 18%;
+
+    --success: 158 64% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 45%;
+    --warning-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 166 88% 22%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 224 35% 8%;
+    --foreground: 210 30% 96%;
+
+    --card: 224 30% 11%;
+    --card-foreground: 210 30% 96%;
+
+    --popover: 224 30% 11%;
+    --popover-foreground: 210 30% 96%;
+
+    /* Dark Mode Sovereign Emerald: brightened for contrast */
+    --primary: 160 84% 36%;
+    --primary-foreground: 224 35% 8%;
+    --primary-hover: 160 84% 42%;
+
+    --secondary: 224 25% 17%;
+    --secondary-foreground: 210 30% 94%;
+
+    --muted: 224 25% 16%;
+    --muted-foreground: 217 19% 65%;
+
+    --accent: 166 40% 18%;
+    --accent-foreground: 160 84% 45%;
+
+    --success: 158 64% 42%;
+    --success-foreground: 224 35% 8%;
+
+    --warning: 38 92% 52%;
+    --warning-foreground: 224 35% 8%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 224 20% 20%;
+    --input: 224 20% 20%;
+    --ring: 160 84% 40%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-150;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Bi-directional typography handling */
+  [dir="rtl"] {
+    font-family: "IBM Plex Sans Arabic", "Noto Naskh Arabic", "Tajawal", "Segoe UI", sans-serif;
+    letter-spacing: 0;
+  }
+
+  [dir="ltr"] {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+}
+
+/* Custom scrollbars for document viewer & data tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* Focus outline for enterprise accessibility (WCAG AA) */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
