@@ -14,6 +14,10 @@ class MockModelAdapter(BaseModelProvider):
     Deterministic model adapter for testing and validation.
     Generates realistic UAE KYC & commercial documents with Arabic & English fields.
     """
+    def __init__(self, is_fallback: bool = False):
+        self.is_fallback = is_fallback
+        self.backend_name = "mock-fallback" if is_fallback else "mock"
+        self.is_mock = True
 
     async def classify_document(self, document_bytes: bytes, filename: str) -> ClassificationResult:
         fn = filename.lower()
@@ -144,5 +148,7 @@ class MockModelAdapter(BaseModelProvider):
             document_type_code=document_type_code,
             overall_confidence=round(avg_conf, 2),
             fields=fields,
-            pages=pages
+            pages=pages,
+            is_mock=True,
+            backend_used=self.backend_name
         )

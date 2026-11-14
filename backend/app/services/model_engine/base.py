@@ -32,12 +32,16 @@ class ExtractionResult(BaseModel):
     overall_confidence: float
     fields: List[ExtractedFieldData]
     pages: List[DocumentPageLayout]
+    is_mock: bool = False
+    backend_used: str = "local"
 
 class BaseModelProvider(ABC):
     """
     Abstract interface for swappable Document Intelligence model backends.
     Ensures vendor independence and compliance with UAE in-country processing requirements.
     """
+    backend_name: str = "base"
+    is_mock: bool = False
 
     @abstractmethod
     async def classify_document(self, document_bytes: bytes, filename: str) -> ClassificationResult:

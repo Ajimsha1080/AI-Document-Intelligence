@@ -1,5 +1,6 @@
 import sys
 import os
+import logging
 # Ensure backend directory is in sys.path regardless of launch working directory
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if backend_dir not in sys.path:
@@ -8,19 +9,21 @@ if backend_dir not in sys.path:
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.core.database import engine, Base, AsyncSessionLocal
+from app.core.database import engine, AsyncSessionLocal
 from app.core.security import hash_password
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.document_type import DocumentType
 from app.schemas.document_type import DEFAULT_EMIRATES_ID_SCHEMA, DEFAULT_TRADE_LICENSE_SCHEMA
 from app.services.audit_service import log_audit_event
+from app.services.model_engine.factory import get_model_provider
 from app.api.v1.router import api_router
 import app.models  # Register all ORM models
+
+logger = logging.getLogger("docintel_main")
 
 async def seed_initial_data():
     """Seeds default tenant, admin user, and standard UAE schemas if database is newly initialized."""
@@ -89,11 +92,16 @@ async def seed_initial_data():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    # Seed bootstrap data if empty
-    await seed_initial_data()
+    # Step 0: Refuse to start in production if default secrets/credentials are active
+    settings.validate_production_environment()
+
+    # Note: Database tables are strictly managed via Alembic migrations ('alembic upgrade head').
+    # create_all has been removed outside of test suites.
+    try:
+        await seed_initial_data()
+    except Exception as e:
+        logger.info(f"Database bootstrap seed verification: {e}")
+        
     yield
     # Cleanup on shutdown
     await engine.dispose()
@@ -101,39 +109,52 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Multi-tenant Document Intelligence Platform tailored for the UAE market (Banking, KYC, Trade)",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
-# CORS setup
+# CORS setup - Strict allowed origins list, strictly no wildcard '*' with credentials
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, restrict to tenant sovereign domains
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
 @app.middleware("http")
 async def uae_compliance_headers_middleware(request: Request, call_next):
     """Enforces sovereign data processing headers on all requests and responses."""
+    provider = get_model_provider()
+    actual_backend = getattr(provider, "backend_name", settings.MODEL_PROVIDER_BACKEND)
+
     response = await call_next(request)
     response.headers["X-Data-Sovereignty-Region"] = settings.CURRENT_REGION
     response.headers["X-Compliance-PDPL"] = "UAE-Federal-Law-45-2021"
-    response.headers["X-Model-Provider-Mode"] = settings.MODEL_PROVIDER_BACKEND
+    response.headers["X-Model-Provider-Mode"] = actual_backend
     return response
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/health", tags=["Health & Compliance"])
 async def health_check():
+    """
+    Sovereign health check.
+    Reports the REAL model backend (e.g., 'mock-fallback' if 'local' is configured
+    but no real OCR/weights engine is loaded). Never silently masquerades as local.
+    """
+    provider = get_model_provider()
+    actual_backend = getattr(provider, "backend_name", settings.MODEL_PROVIDER_BACKEND)
+    
     return {
         "status": "healthy",
         "environment": settings.ENVIRONMENT,
         "region": settings.CURRENT_REGION,
         "strict_local_only": settings.STRICT_LOCAL_ONLY,
         "in_country_storage": settings.ENFORCE_IN_COUNTRY_STORAGE,
-        "model_backend": settings.MODEL_PROVIDER_BACKEND,
+        "model_backend": actual_backend,
+        "model_backend_configured": settings.MODEL_PROVIDER_BACKEND,
+        "is_mock": getattr(provider, "is_mock", False),
     }

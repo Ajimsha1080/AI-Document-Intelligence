@@ -9,6 +9,7 @@ def get_model_provider() -> BaseModelProvider:
     """
     Factory function returning the configured ModelProvider backend.
     Enforces UAE data sovereignty guards.
+    Never silently masquerades fallback mock as real local engine.
     """
     backend = settings.MODEL_PROVIDER_BACKEND.lower()
     
@@ -19,9 +20,21 @@ def get_model_provider() -> BaseModelProvider:
         )
 
     if backend == "mock":
-        return MockModelAdapter()
+        return MockModelAdapter(is_fallback=False)
     elif backend == "local":
-        # Local air-gapped adapter (falls back to deterministic mock if local weights/tesseract not yet mounted)
-        return MockModelAdapter()
+        # Check if real local OCR engine / weights are available
+        try:
+            from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
+            if LocalOCRAdapter.is_available():
+                return LocalOCRAdapter()
+        except ImportError:
+            pass
+            
+        logger.warning(
+            "HONESTY/COMPLIANCE ALERT: MODEL_PROVIDER_BACKEND is configured as 'local', "
+            "but real local OCR engine/weights are not yet loaded. "
+            "Reporting 'mock-fallback' and logging explicit warning. Never silently falling back."
+        )
+        return MockModelAdapter(is_fallback=True)
     else:
         raise NotImplementedError(f"Model backend '{backend}' is not supported or compliant.")
