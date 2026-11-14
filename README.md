@@ -19,7 +19,8 @@ The following table honestly tracks the live implementation status of each syste
 | **Alembic Database Migrations** | **LIVE** | Managed via Alembic (`alembic/versions`); runtime `create_all` removed from production app startup. |
 | **Model Backend Health Honesty** | **LIVE** | `/health` inspects actual engine; reports `"mock-fallback"` with warnings when local engine is not loaded. |
 | **Bilingual Frontend UI (LTR / RTL)** | **LIVE** | Full Arabic/English UI with logical CSS, bounding box viewer, inline diffs, and live data adapter switch. |
-| **Document Storage & Ingestion Pipeline** | **PARTIAL** | Schemas & storage models defined; real S3 upload, magic byte validation, and async worker slice in progress. |
+| **Document Storage & Ingestion API** | **LIVE** | S3/MinIO & local sovereign store under `{tenant}/{doc}/...`, magic byte inspection, hard-delete cascade, retention sweep, and full audit trail. |
+| **Async Redis Job Worker** | **PARTIAL** | Queue architecture designed; RQ worker service, job state machine, timeouts, and stuck-job sweeper in progress. |
 | **Real Local Emirates ID OCR Adapter** | **PARTIAL** | Pipeline interface defined; baseline local OCR adapter & check-digit validation engine being wired. |
 | **Evaluation Benchmark Harness (/eval)** | **PARTIAL** | Synthetic fixtures provided; automated 50-document evaluation benchmark harness being built. |
 

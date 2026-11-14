@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     ALLOWED_DATA_REGIONS: List[str] = ["uae-north", "uae-central", "local-cluster"]
     CURRENT_REGION: str = "uae-north"
     
+    # Storage & Upload Limits
+    MAX_UPLOAD_SIZE_MB: int = 25
+    LOCAL_STORAGE_DIR: str = "./data/sovereign_storage"
+    
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./docsmvp.db"
     

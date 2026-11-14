@@ -110,3 +110,14 @@ def require_permission(permission: Permission):
             )
         return actor
     return permission_checker
+
+def require_role(*roles: str):
+    """Dependency factory verifying actor belongs to one of the authorized roles."""
+    async def role_checker(actor: AuthenticatedActor = Depends(get_current_actor)) -> AuthenticatedActor:
+        if actor.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: Requires role in {roles}, but actor has role '{actor.role}'"
+            )
+        return actor
+    return role_checker
