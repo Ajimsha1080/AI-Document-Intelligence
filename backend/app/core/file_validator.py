@@ -8,6 +8,7 @@ ALLOWED_MIME_TYPES = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/tiff": ".tiff",
+    "image/svg+xml": ".svg",
 }
 
 def validate_magic_bytes(content: bytes) -> str:
@@ -36,6 +37,8 @@ def validate_magic_bytes(content: bytes) -> str:
             mime = "image/png"
         elif content.startswith(b"II*\x00") or content.startswith(b"MM\x00*"):
             mime = "image/tiff"
+        elif content.strip().startswith(b"<svg") or b"<svg" in content[:256]:
+            mime = "image/svg+xml"
 
     if not mime or mime not in ALLOWED_MIME_TYPES:
         raise HTTPException(

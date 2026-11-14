@@ -66,3 +66,10 @@ class DocumentDetailResponse(DocumentResponse):
 class DocumentListResponse(BaseModel):
     total: int
     documents: List[DocumentResponse]
+
+class FieldCorrectionRequest(BaseModel):
+    corrected_value: str
+    reason: Optional[str] = None
+
+class RejectDocumentRequest(BaseModel):
+    rejection_reason: Optional[str] = None

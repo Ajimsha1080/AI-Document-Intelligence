@@ -1,5 +1,6 @@
+import io
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
@@ -10,7 +11,14 @@ from app.core.file_validator import validate_magic_bytes, validate_file_size
 from app.api.deps import get_current_actor, require_role, AuthenticatedActor
 from app.models.document import Document, DocumentPage, ExtractedField, ValidationResult
 from app.models.document_type import DocumentType
-from app.schemas.document import DocumentResponse, DocumentDetailResponse, DocumentListResponse
+from app.schemas.document import (
+    DocumentResponse,
+    DocumentDetailResponse,
+    DocumentListResponse,
+    ExtractedFieldResponse,
+    FieldCorrectionRequest,
+    RejectDocumentRequest
+)
 from app.services.storage_service import storage_service
 from app.services.audit_service import log_audit_event
 from app.services.retention_service import run_retention_policy_sweep
@@ -101,6 +109,10 @@ async def upload_document(
     )
     await db.commit()
     await db.refresh(new_doc)
+
+    # 5. Enqueue background extraction pipeline
+    from app.worker.queue import enqueue_document_job
+    enqueue_document_job(doc_id, actor.tenant_id)
 
     return DocumentResponse(
         id=new_doc.id,
@@ -351,3 +363,322 @@ async def trigger_retention_sweep(
     """Manually triggers the tenant retention policy sweep (Admin only)."""
     result = await run_retention_policy_sweep(db)
     return result
+
+@router.patch("/{id}/fields/{field_name}", response_model=ExtractedFieldResponse)
+async def correct_document_field(
+    id: str,
+    field_name: str,
+    payload: FieldCorrectionRequest,
+    request: Request,
+    actor: AuthenticatedActor = Depends(require_role("admin", "reviewer")),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reviewer field correction endpoint.
+    Preserves original OCR value alongside corrected value and writes an immutable audit record.
+    Re-runs validation rules to reflect updated field state.
+    """
+    stmt = select(ExtractedField).where(
+        and_(
+            ExtractedField.document_id == id,
+            ExtractedField.field_name == field_name,
+            ExtractedField.tenant_id == actor.tenant_id
+        )
+    )
+    res = await db.execute(stmt)
+    field = res.scalar_one_or_none()
+    if not field:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Field '{field_name}' not found on document {id}"
+        )
+
+    original_val = field.value
+    field.is_corrected = True
+    field.corrected_value = payload.corrected_value
+    field.value = payload.corrected_value
+    field.corrected_by = actor.id
+    field.corrected_at = datetime.now(timezone.utc)
+
+    # Re-evaluate validation rules for this document
+    all_fields_res = await db.execute(
+        select(ExtractedField).where(
+            and_(ExtractedField.document_id == id, ExtractedField.tenant_id == actor.tenant_id)
+        )
+    )
+    all_fields = all_fields_res.scalars().all()
+
+    from app.services.model_engine.base import ExtractedFieldData
+    from app.pipeline.validator import run_validation_rules
+    field_data_list = [
+        ExtractedFieldData(
+            field_name=f.field_name,
+            value=f.value,
+            raw_value=f.raw_value or "",
+            confidence=f.confidence,
+            page_number=f.page_number
+        )
+        for f in all_fields
+    ]
+
+    doc_stmt = select(Document).where(and_(Document.id == id, Document.tenant_id == actor.tenant_id))
+    doc_res = await db.execute(doc_stmt)
+    doc = doc_res.scalar_one_or_none()
+    doc_type_code = "emirates_id"
+    schema_def = {}
+    if doc and doc.document_type_id:
+        dt_res = await db.execute(select(DocumentType).where(DocumentType.id == doc.document_type_id))
+        dt = dt_res.scalar_one_or_none()
+        if dt:
+            doc_type_code = dt.code
+            schema_def = dt.schema_definition or {}
+
+    val_outcomes = run_validation_rules(doc_type_code, field_data_list, schema_def)
+    
+    # Refresh validation results table
+    await db.execute(
+        select(ValidationResult).where(
+            and_(ValidationResult.document_id == id, ValidationResult.tenant_id == actor.tenant_id)
+        )
+    )
+    # Delete old and insert new validations
+    from sqlalchemy import delete
+    await db.execute(
+        delete(ValidationResult).where(
+            and_(ValidationResult.document_id == id, ValidationResult.tenant_id == actor.tenant_id)
+        )
+    )
+    for vo in val_outcomes:
+        db.add(ValidationResult(
+            document_id=id,
+            tenant_id=actor.tenant_id,
+            rule_name=vo["rule_name"],
+            passed=vo["passed"],
+            severity=vo["severity"],
+            message=vo["message"]
+        ))
+
+    # Log immutable audit event
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    await log_audit_event(
+        db=db,
+        tenant_id=actor.tenant_id,
+        actor_id=actor.id,
+        actor_email=actor.email,
+        actor_role=actor.role,
+        action="FIELD_CORRECT",
+        entity_type="extracted_field",
+        entity_id=field.id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={
+            "document_id": id,
+            "field_name": field_name,
+            "original_value": original_val,
+            "corrected_value": payload.corrected_value,
+            "reason": payload.reason
+        }
+    )
+    await db.commit()
+    await db.refresh(field)
+
+    return field
+
+@router.post("/{id}/approve")
+async def approve_document(
+    id: str,
+    request: Request,
+    actor: AuthenticatedActor = Depends(require_role("admin", "reviewer")),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Approves document and triggers a cryptographic HMAC-SHA256 signed webhook.
+    Enforces reviewer/admin RBAC.
+    """
+    stmt = select(Document).where(and_(Document.id == id, Document.tenant_id == actor.tenant_id))
+    res = await db.execute(stmt)
+    doc = res.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    doc.status = "approved"
+
+    # Fetch extracted fields for webhook payload
+    fields_res = await db.execute(
+        select(ExtractedField).where(
+            and_(ExtractedField.document_id == id, ExtractedField.tenant_id == actor.tenant_id)
+        )
+    )
+    fields = fields_res.scalars().all()
+    fields_dict = {f.field_name: f.value for f in fields}
+
+    # Dispatch signed webhook
+    from app.services.webhook_service import dispatch_document_approved_webhook
+    webhook_meta = await dispatch_document_approved_webhook(
+        tenant_id=actor.tenant_id,
+        document_id=id,
+        document_data={
+            "file_name": doc.file_name,
+            "status": "approved",
+            "confidence_score": doc.confidence_score,
+            "fields": fields_dict
+        }
+    )
+
+    # Log audit event
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    await log_audit_event(
+        db=db,
+        tenant_id=actor.tenant_id,
+        actor_id=actor.id,
+        actor_email=actor.email,
+        actor_role=actor.role,
+        action="DOCUMENT_APPROVE",
+        entity_type="document",
+        entity_id=id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={
+            "file_name": doc.file_name,
+            "webhook_dispatched": webhook_meta.get("dispatched"),
+            "webhook_signature": webhook_meta.get("signature")
+        }
+    )
+    await db.commit()
+
+    return {
+        "status": "approved",
+        "document_id": id,
+        "webhook": webhook_meta
+    }
+
+@router.post("/{id}/reject")
+async def reject_document(
+    id: str,
+    payload: RejectDocumentRequest,
+    request: Request,
+    actor: AuthenticatedActor = Depends(require_role("admin", "reviewer")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Rejects document with reason and immutable audit log."""
+    stmt = select(Document).where(and_(Document.id == id, Document.tenant_id == actor.tenant_id))
+    res = await db.execute(stmt)
+    doc = res.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    doc.status = "rejected"
+
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    await log_audit_event(
+        db=db,
+        tenant_id=actor.tenant_id,
+        actor_id=actor.id,
+        actor_email=actor.email,
+        actor_role=actor.role,
+        action="DOCUMENT_REJECT",
+        entity_type="document",
+        entity_id=id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={
+            "file_name": doc.file_name,
+            "rejection_reason": payload.rejection_reason
+        }
+    )
+    await db.commit()
+
+    return {
+        "status": "rejected",
+        "document_id": id,
+        "rejection_reason": payload.rejection_reason
+    }
+
+@router.get("/{id}/export")
+async def export_document_data(
+    id: str,
+    request: Request,
+    format: str = Query("json", pattern="^(json|csv)$"),
+    mask_pii: Optional[bool] = Query(None),
+    actor: AuthenticatedActor = Depends(get_current_actor),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Exports extracted structured data as JSON or CSV.
+    Supports PII masking option for Emirates ID and confidential data compliance.
+    """
+    stmt = select(Document).where(and_(Document.id == id, Document.tenant_id == actor.tenant_id))
+    res = await db.execute(stmt)
+    doc = res.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    fields_res = await db.execute(
+        select(ExtractedField).where(
+            and_(ExtractedField.document_id == id, ExtractedField.tenant_id == actor.tenant_id)
+        )
+    )
+    fields = fields_res.scalars().all()
+
+    # Determine PII masking
+    should_mask = mask_pii if mask_pii is not None else True
+    from app.core.security import mask_pii_value
+
+    export_data = {}
+    for f in fields:
+        raw_val = f.value
+        val = mask_pii_value(f.field_name, raw_val) if should_mask else raw_val
+        export_data[f.field_name] = {
+            "value": val,
+            "confidence": f.confidence,
+            "is_corrected": f.is_corrected,
+            "page_number": f.page_number
+        }
+
+    # Log audit event
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    await log_audit_event(
+        db=db,
+        tenant_id=actor.tenant_id,
+        actor_id=actor.id,
+        actor_email=actor.email,
+        actor_role=actor.role,
+        action="DOCUMENT_EXPORT",
+        entity_type="document",
+        entity_id=id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={"format": format, "mask_pii": should_mask}
+    )
+    await db.commit()
+
+    if format == "csv":
+        import csv
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["field_name", "value", "confidence", "is_corrected", "page_number"])
+        for k, v in export_data.items():
+            writer.writerow([k, v["value"], v["confidence"], v["is_corrected"], v["page_number"]])
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="document_{id}_export.csv"'}
+        )
+
+    import json
+    return Response(
+        content=json.dumps({
+            "document_id": doc.id,
+            "file_name": doc.file_name,
+            "status": doc.status,
+            "confidence_score": doc.confidence_score,
+            "pii_masked": should_mask,
+            "fields": export_data
+        }, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="document_{id}_export.json"'}
+    )
