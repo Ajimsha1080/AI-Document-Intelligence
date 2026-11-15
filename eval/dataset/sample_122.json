@@ -1,0 +1,13 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5671502",
+  "company_name_en": "GOLDEN DUNES TOURISM LLC",
+  "company_name_ar": "الكثبان الذهبية للسياحة ذ.م.م",
+  "issuing_authority": "Department of Economy and Tourism Dubai",
+  "expiry_date": "06/09/2032",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "jpeg_q72"
+  ]
+}

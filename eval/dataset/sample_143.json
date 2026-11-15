@@ -1,0 +1,13 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-1213",
+  "trn": "100012345600003",
+  "invoice_date": "04/12/2026",
+  "supplier_name": "ATLAS HEAVY MACHINERY RENTALS LLC",
+  "total_amount": "142000.00",
+  "vat_amount": "7100.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-3.0deg"
+  ]
+}

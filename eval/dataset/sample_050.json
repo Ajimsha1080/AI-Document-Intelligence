@@ -1,9 +1,16 @@
 {
-  "id_number": "784-1985-2542936-5",
-  "name_ar": "سالم راشد سيف الشامسي",
-  "name_en": "SALEM RASHED SAIF ALSHAMSI",
-  "nationality": "United Arab Emirates",
-  "date_of_birth": "14/10/1985",
-  "expiry_date": "27/06/2030",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1974-7030835-0",
+  "name_ar": "أوليفيا بياتريس غوميز",
+  "name_en": "OLIVIA BEATRIZ GOMEZ",
+  "nationality": "Spain",
+  "date_of_birth": "13/02/1974",
+  "expiry_date": "17/04/2034",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "uneven_lighting_shadow",
+    "jpeg_q56"
+  ]
 }

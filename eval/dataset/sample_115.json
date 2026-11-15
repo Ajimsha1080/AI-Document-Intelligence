@@ -1,0 +1,13 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5403465",
+  "company_name_en": "AL AIN WATER BOTTLING & SUPPLY",
+  "company_name_ar": "العين لتعبئة وتوريد المياه",
+  "issuing_authority": "Abu Dhabi Department of Economic Development",
+  "expiry_date": "09/10/2028",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "uneven_lighting_shadow"
+  ]
+}

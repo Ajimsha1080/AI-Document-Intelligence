@@ -1,7 +1,6 @@
 import logging
 from app.core.config import settings
 from app.services.model_engine.base import BaseModelProvider
-from app.services.model_engine.mock_adapter import MockModelAdapter
 
 logger = logging.getLogger("model_factory")
 
@@ -9,32 +8,51 @@ def get_model_provider() -> BaseModelProvider:
     """
     Factory function returning the configured ModelProvider backend.
     Enforces UAE data sovereignty guards.
-    Never silently masquerades fallback mock as real local engine.
+    Mock adapters are strictly forbidden in production configurations and reside exclusively under /tests.
     """
     backend = settings.MODEL_PROVIDER_BACKEND.lower()
-    
+    is_prod = settings.ENVIRONMENT.lower() == "production"
+
+    # 1. Enforce UAE data sovereignty
     if settings.STRICT_LOCAL_ONLY and backend not in ["local", "mock"]:
         raise ValueError(
             "UAE Data Sovereignty Violation: STRICT_LOCAL_ONLY is active. "
             f"Model backend '{backend}' cannot be loaded because external egress is strictly forbidden."
         )
 
+    # 2. Strict Production Guard: Impossible to enable mock in production
+    if is_prod:
+        if backend == "mock":
+            raise ValueError(
+                "Production Configuration Violation: 'mock' model backend is strictly forbidden in production. "
+                "A real sovereign local model provider must be configured."
+            )
+        from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
+        if not LocalOCRAdapter.is_available():
+            raise RuntimeError(
+                "FATAL PRODUCTION ERROR: MODEL_PROVIDER_BACKEND is 'local', but real local OCR engine "
+                "(Tesseract with 'ara' and 'eng') is missing. Production refuses to start without real engine."
+            )
+        return LocalOCRAdapter()
+
+    # 3. Non-production / test execution paths
     if backend == "mock":
+        from tests.mock_adapter import MockModelAdapter
         return MockModelAdapter(is_fallback=False)
+
     elif backend == "local":
-        # Check if real local OCR engine / weights are available
-        try:
-            from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
-            if LocalOCRAdapter.is_available():
-                return LocalOCRAdapter()
-        except ImportError:
-            pass
-            
+        from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
+        if LocalOCRAdapter.is_available():
+            return LocalOCRAdapter()
+
+        # In dev/test: report mock-fallback honestly and log explicit warning
         logger.warning(
             "HONESTY/COMPLIANCE ALERT: MODEL_PROVIDER_BACKEND is configured as 'local', "
-            "but real local OCR engine/weights are not yet loaded. "
-            "Reporting 'mock-fallback' and logging explicit warning. Never silently falling back."
+            "but real local OCR engine (Tesseract ara+eng) is not installed on the dev host. "
+            "Reporting 'mock-fallback' via test adapter. Never silently falling back."
         )
+        from tests.mock_adapter import MockModelAdapter
         return MockModelAdapter(is_fallback=True)
+
     else:
         raise NotImplementedError(f"Model backend '{backend}' is not supported or compliant.")

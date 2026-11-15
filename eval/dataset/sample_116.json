@@ -1,0 +1,14 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5441756",
+  "company_name_en": "INFINITY FINANCIAL TECHNOLOGIES LLC",
+  "company_name_ar": "إنفينيتي للتكنولوجيا المالية ذ.م.م",
+  "issuing_authority": "Dubai International Financial Centre",
+  "expiry_date": "20/09/2028",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "noise_grain",
+    "jpeg_q60"
+  ]
+}

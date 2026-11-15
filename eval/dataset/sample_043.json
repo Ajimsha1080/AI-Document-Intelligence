@@ -1,9 +1,14 @@
 {
-  "id_number": "784-1993-4734664-7",
-  "name_ar": "إيلينا صوفي شميت",
-  "name_en": "ELENA SOPHIE SCHMIDT",
+  "document_type": "emirates_id",
+  "id_number": "784-1992-7590504-2",
+  "name_ar": "لوكاس هانز ماير",
+  "name_en": "LUKAS HANS MEYER",
   "nationality": "Germany",
-  "date_of_birth": "11/06/1993",
-  "expiry_date": "22/04/2030",
-  "sex": "F"
+  "date_of_birth": "19/08/1992",
+  "expiry_date": "03/04/2027",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-3.0deg"
+  ]
 }

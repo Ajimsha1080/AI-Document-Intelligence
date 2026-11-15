@@ -1,0 +1,16 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1985-4331112-4",
+  "name_ar": "كلوي مانون برنارد",
+  "name_en": "CHLOE MANON BERNARD",
+  "nationality": "France",
+  "date_of_birth": "21/10/1985",
+  "expiry_date": "19/05/2028",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "noise_grain",
+    "jpeg_q63"
+  ]
+}

@@ -15,8 +15,8 @@ export interface ExtractedField {
   key: string;
   nameEn: string;
   nameAr: string;
-  value: string;
-  originalValue: string;
+  value: string | null;
+  originalValue: string | null;
   confidence: number; // 0..1
   section: "identity" | "company" | "dates" | "financials" | "general";
   page: number;

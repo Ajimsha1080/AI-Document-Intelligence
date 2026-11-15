@@ -1,0 +1,13 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5709793",
+  "company_name_en": "BLUE OCEAN LOGISTICS FZE",
+  "company_name_ar": "بلو أوشن للخدمات اللوجستية ش.ح",
+  "issuing_authority": "Jebel Ali Free Zone Authority",
+  "expiry_date": "27/10/2027",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-3.0deg",
+    "gaussian_blur_0.95px"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5326883",
+  "company_name_en": "AL DHAFRA AGRICULTURAL CORP",
+  "company_name_ar": "مؤسسة الظفرة الزراعية",
+  "issuing_authority": "Abu Dhabi Department of Economic Development",
+  "expiry_date": "11/05/2032",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-3.0deg"
+  ]
+}

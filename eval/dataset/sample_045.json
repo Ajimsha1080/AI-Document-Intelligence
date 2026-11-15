@@ -1,9 +1,16 @@
 {
-  "id_number": "784-1996-8207713-8",
-  "name_ar": "كاميل لويز موريل",
-  "name_en": "CAMILLE LOUISE MOREL",
+  "document_type": "emirates_id",
+  "id_number": "784-1984-8474410-1",
+  "name_ar": "جان باتيست دوبوا",
+  "name_en": "JEAN BAPTISTE DUBOIS",
   "nationality": "France",
-  "date_of_birth": "23/01/1996",
-  "expiry_date": "27/11/2032",
-  "sex": "F"
+  "date_of_birth": "26/01/1984",
+  "expiry_date": "04/08/2029",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "gaussian_blur_1.22px",
+    "uneven_lighting_shadow"
+  ]
 }

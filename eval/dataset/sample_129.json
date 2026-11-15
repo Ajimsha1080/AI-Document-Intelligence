@@ -1,0 +1,11 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-4339",
+  "trn": "100678901200003",
+  "invoice_date": "18/10/2026",
+  "supplier_name": "GULF OFFICE AUTOMATION FZCO",
+  "total_amount": "9400.00",
+  "vat_amount": "470.00",
+  "subset": "clean",
+  "degradations": []
+}

@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1999-9330158-1",
+  "name_ar": "بشرى خليفة سالم الرواس",
+  "name_en": "BOUSHRA KHALIFA SALEM ALRAWAS",
+  "nationality": "Oman",
+  "date_of_birth": "28/08/1999",
+  "expiry_date": "27/02/2035",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-1.5deg",
+    "jpeg_q65"
+  ]
+}

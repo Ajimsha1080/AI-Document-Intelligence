@@ -1,9 +1,17 @@
 {
-  "id_number": "784-1984-7205659-1",
-  "name_ar": "تشينغ وي ليو",
-  "name_en": "CHENG WEI LIU",
-  "nationality": "China",
-  "date_of_birth": "19/03/1984",
-  "expiry_date": "22/04/2032",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1970-2286086-6",
+  "name_ar": "آنا بيتروفا إيفانوفا",
+  "name_en": "ANNA PETROVA IVANOVA",
+  "nationality": "Russian Federation",
+  "date_of_birth": "04/07/1970",
+  "expiry_date": "07/09/2032",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "noise_grain",
+    "uneven_lighting_shadow",
+    "jpeg_q50"
+  ]
 }

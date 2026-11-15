@@ -1,9 +1,15 @@
 {
-  "id_number": "784-1989-7106817-0",
-  "name_ar": "ماركو أنتونيو روسي",
-  "name_en": "MARCO ANTONIO ROSSI",
-  "nationality": "Italy",
-  "date_of_birth": "26/10/1989",
-  "expiry_date": "12/02/2030",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1972-1979932-3",
+  "name_ar": "كاميل لويز موريل",
+  "name_en": "CAMILLE LOUISE MOREL",
+  "nationality": "France",
+  "date_of_birth": "13/04/1972",
+  "expiry_date": "18/07/2030",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "jpeg_q58"
+  ]
 }

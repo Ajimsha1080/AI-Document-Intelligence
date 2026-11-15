@@ -12,10 +12,10 @@ import { SchemaBuilderScreen } from "@/components/screens/SchemaBuilderScreen";
 import { AuditLogScreen } from "@/components/screens/AuditLogScreen";
 import { SettingsScreen } from "@/components/screens/SettingsScreen";
 import { LoginModal } from "@/components/screens/LoginModal";
-import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 
 export function Shell() {
-  const { currentScreen, toasts, dismissToast, language, dataMode, setDataMode } = useApp();
+  const { currentScreen, toasts, dismissToast, language } = useApp();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Screen Router
@@ -47,20 +47,6 @@ export function Shell() {
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        {/* Persistent Demo Mode Banner */}
-        {dataMode === "mock" && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-center text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center justify-center gap-2 select-none">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>Demo mode: sample data only</span>
-            <button
-              onClick={() => setDataMode("live")}
-              className="ms-3 underline font-bold hover:text-amber-900 dark:hover:text-amber-200"
-            >
-              Switch to Live Sovereign API
-            </button>
-          </div>
-        )}
-
         {/* Sticky Header with Profile Click to open LoginModal */}
         <Header onOpenLoginModal={() => setIsLoginModalOpen(true)} />
 

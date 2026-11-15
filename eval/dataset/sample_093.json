@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1995-3282340-0",
+  "name_ar": "ليوناردو ماتيو دي لوكا",
+  "name_en": "LEONARDO MATTEO DE LUCA",
+  "nationality": "Italy",
+  "date_of_birth": "05/03/1995",
+  "expiry_date": "27/08/2033",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-3.0deg",
+    "gaussian_blur_0.81px"
+  ]
+}

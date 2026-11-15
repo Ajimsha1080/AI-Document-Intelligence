@@ -1,0 +1,18 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-2004-5963422-4",
+  "name_ar": "كلارا ماري شولز",
+  "name_en": "KLARA MARIE SCHULZ",
+  "nationality": "Germany",
+  "date_of_birth": "12/11/2004",
+  "expiry_date": "04/01/2033",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "gaussian_blur_1.27px",
+    "uneven_lighting_shadow",
+    "low_resolution_downscale",
+    "jpeg_q69"
+  ]
+}

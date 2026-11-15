@@ -50,7 +50,15 @@ async def run_retention_policy_sweep(db: AsyncSession) -> Dict[str, Any]:
                 storage_path=doc.storage_path
             )
 
-            # 2. Hard delete document and all cascade orphans from DB
+            # 2. Hard delete document and all cascade derived data from DB
+            from app.models.document import DocumentPage, ExtractedField, ValidationResult
+            from app.models.document_chunk import DocumentChunk
+            from sqlalchemy import delete
+
+            await db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == doc_id))
+            await db.execute(delete(ExtractedField).where(ExtractedField.document_id == doc_id))
+            await db.execute(delete(ValidationResult).where(ValidationResult.document_id == doc_id))
+            await db.execute(delete(DocumentPage).where(DocumentPage.document_id == doc_id))
             await db.delete(doc)
 
             # 3. Log immutable audit trail

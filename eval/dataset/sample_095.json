@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1971-5833731-7",
+  "name_ar": "هوانغ شياو مينغ",
+  "name_en": "HUANG XIAO MING",
+  "nationality": "China",
+  "date_of_birth": "15/07/1971",
+  "expiry_date": "20/07/2027",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "uneven_lighting_shadow"
+  ]
+}

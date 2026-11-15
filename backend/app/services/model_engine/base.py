@@ -10,10 +10,10 @@ class BoundingBox(BaseModel):
 
 class ExtractedFieldData(BaseModel):
     field_name: str
-    value: str
-    raw_value: str
-    confidence: float
-    page_number: int
+    value: Optional[str] = None
+    raw_value: Optional[str] = None
+    confidence: float = 0.0
+    page_number: int = 1
     bounding_box: Optional[BoundingBox] = None
 
 class DocumentPageLayout(BaseModel):

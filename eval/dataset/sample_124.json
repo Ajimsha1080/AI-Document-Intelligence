@@ -1,0 +1,14 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5748084",
+  "company_name_en": "AL WASL PHARMACEUTICAL DISTRIBUTORS",
+  "company_name_ar": "الوصل لتوزيع الأدوية",
+  "issuing_authority": "Department of Economy and Tourism Dubai",
+  "expiry_date": "21/07/2031",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-1.5deg",
+    "noise_grain",
+    "jpeg_q72"
+  ]
+}

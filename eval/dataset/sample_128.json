@@ -1,0 +1,11 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-5848",
+  "trn": "100567890100003",
+  "invoice_date": "17/09/2026",
+  "supplier_name": "EMIRATES TECH HARDWARE SOLUTIONS",
+  "total_amount": "31200.00",
+  "vat_amount": "1560.00",
+  "subset": "clean",
+  "degradations": []
+}

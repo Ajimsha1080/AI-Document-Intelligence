@@ -1,0 +1,13 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5058846",
+  "company_name_en": "AL MANSOOR LEGAL ADVOCACY",
+  "company_name_ar": "المنصور للمحاماة والاستشارات القانونية",
+  "issuing_authority": "Abu Dhabi Department of Economic Development",
+  "expiry_date": "07/02/2028",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "jpeg_q46"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1994-5697559-0",
+  "name_ar": "عفراء راشد حميد المهيري",
+  "name_en": "AFRA RASHED HUMAID ALMHEIRI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "05/08/1994",
+  "expiry_date": "28/10/2034",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "noise_grain",
+    "jpeg_q66"
+  ]
+}

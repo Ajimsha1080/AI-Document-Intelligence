@@ -6,7 +6,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    tesseract-ocr \
+    tesseract-ocr-ara \
+    tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/* \
+    && tesseract --list-langs | grep -q ara || (echo "ERROR: tesseract-ocr-ara missing!" && exit 1)
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

@@ -1,0 +1,17 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1970-7463214-8",
+  "name_ar": "أميرة حسن كمال عبدربه",
+  "name_en": "AMIRA HASSAN KAMAL ABDELRABBO",
+  "nationality": "Egypt",
+  "date_of_birth": "08/09/1970",
+  "expiry_date": "24/12/2029",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "gaussian_blur_1.26px",
+    "low_resolution_downscale",
+    "jpeg_q69"
+  ]
+}

@@ -6,14 +6,25 @@ logger = logging.getLogger("worker_queue")
 
 _redis_conn = None
 _rq_queue = None
+_redis_last_check = 0.0
+_redis_check_interval = 10.0  # seconds between reconnection attempts
 
 def get_redis_client():
-    global _redis_conn
-    if _redis_conn is None:
+    global _redis_conn, _redis_last_check
+    import time
+    now = time.time()
+    if _redis_conn is None and (now - _redis_last_check) > _redis_check_interval:
+        _redis_last_check = now
         try:
             import redis
-            _redis_conn = redis.from_url(settings.REDIS_URL, decode_responses=False)
-            _redis_conn.ping()
+            conn = redis.from_url(
+                settings.REDIS_URL,
+                decode_responses=False,
+                socket_connect_timeout=0.2,
+                socket_timeout=0.5
+            )
+            conn.ping()
+            _redis_conn = conn
         except Exception as e:
             _redis_conn = None
             logger.info(f"Redis queue unavailable ({e}). Running jobs in direct/sync mode.")
@@ -50,4 +61,15 @@ def enqueue_document_job(document_id: str, tenant_id: str) -> Optional[str]:
             return job.id
         except Exception as e:
             logger.error(f"Failed to enqueue to RQ ({e}).")
-    return None
+    
+    # Standalone fallback when Redis / RQ is unavailable
+    try:
+        import threading
+        from app.worker.cli import run_worker_job
+        worker_thread = threading.Thread(target=run_worker_job, args=(document_id, tenant_id), daemon=True)
+        worker_thread.start()
+        logger.info(f"Document {document_id} running via local background worker thread.")
+        return f"thread-{document_id}"
+    except Exception as e:
+        logger.error(f"Failed to spawn local worker thread ({e}).")
+        return None

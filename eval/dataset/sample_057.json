@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-2001-8011881-0",
+  "name_ar": "سهيل عبدالله عبيد الكتبي",
+  "name_en": "SUHAIL ABDULLAH OBAID ALKETBI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "18/12/2001",
+  "expiry_date": "02/11/2032",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_4.5deg",
+    "gaussian_blur_0.96px"
+  ]
+}

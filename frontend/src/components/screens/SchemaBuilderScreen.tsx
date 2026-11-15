@@ -5,16 +5,11 @@ import {
   FileCode2,
   Plus,
   Trash2,
-  CheckCircle2,
-  Eye,
   Save,
-  Sliders,
-  ShieldCheck,
-  Code,
 } from "lucide-react";
 
 export function SchemaBuilderScreen() {
-  const { schemas, addSchema, updateSchema, language, t } = useApp();
+  const { schemas, updateSchema, language } = useApp();
 
   const [selectedSchemaId, setSelectedSchemaId] = useState<string>(schemas[0]?.id || "sch-1");
   const activeSchema = schemas.find((s) => s.id === selectedSchemaId) || schemas[0];

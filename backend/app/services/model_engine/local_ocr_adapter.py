@@ -33,21 +33,7 @@ class LocalOCRAdapter(BaseModelProvider):
     is_mock = False
 
     @classmethod
-    def is_available(cls) -> bool:
-        """Checks if local OCR binary (Tesseract or PaddleOCR) is installed and accessible."""
-        import shutil
-        tesseract_cmd = shutil.which("tesseract")
-        if tesseract_cmd:
-            return True
-        standard_paths = [
-            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-            "/usr/bin/tesseract",
-            "/usr/local/bin/tesseract"
-        ]
-        return any(os.path.exists(p) for p in standard_paths)
-
-    def _get_tesseract_cmd(self) -> Optional[str]:
+    def get_tesseract_cmd(cls) -> Optional[str]:
         standard_paths = [
             shutil.which("tesseract"),
             r"C:\Program Files\Tesseract-OCR\tesseract.exe",
@@ -60,33 +46,54 @@ class LocalOCRAdapter(BaseModelProvider):
                 return p
         return None
 
-    async def classify_document(self, document_bytes: bytes, filename: str) -> ClassificationResult:
-        """Classifies document by examining textual markers and layout structure."""
-        text = self._extract_raw_text(document_bytes)
-        combined = f"{filename} {text}".lower()
+    @classmethod
+    def is_available(cls) -> bool:
+        """Checks if local OCR binary (Tesseract or PaddleOCR) is installed and accessible."""
+        return cls.get_tesseract_cmd() is not None
 
-        if any(k in combined for k in ["784-", "emirates id", "identity card", "الهوية", "بطاقة"]):
+    @classmethod
+    def get_ocr_info(cls) -> Dict[str, Any]:
+        """Returns OCR engine name and list of loaded languages."""
+        tess_cmd = cls.get_tesseract_cmd()
+        if not tess_cmd:
+            return {"ocr_engine": "none", "ocr_languages": []}
+        try:
+            import subprocess
+            res = subprocess.run([tess_cmd, "--list-langs"], capture_output=True, text=True, timeout=5)
+            langs = [line.strip() for line in res.stdout.splitlines() if line.strip() and not line.lower().startswith("list of")]
+            return {"ocr_engine": "tesseract", "ocr_languages": langs}
+        except Exception as e:
+            logger.warning(f"Failed to query tesseract languages: {e}")
+            return {"ocr_engine": "tesseract", "ocr_languages": []}
+
+    def _get_tesseract_cmd(self) -> Optional[str]:
+        return self.get_tesseract_cmd()
+
+    async def classify_document(self, document_bytes: bytes, filename: str = "") -> ClassificationResult:
+        """
+        Classifies document strictly by examining textual markers from real OCR text.
+        Never infers or cheats document classification from filename or metadata.
+        """
+        text = self._extract_raw_text(document_bytes)
+        combined = text.lower()
+
+        if any(k in combined for k in ["784-", "emirates id", "emirates", "eid", "identity card", "الهوية", "بطاقة"]):
             return ClassificationResult(document_type_code="emirates_id", confidence=0.96, language="mixed")
-        elif any(k in combined for k in ["trade license", "commercial license", "رخصة تجارية"]):
+        elif any(k in combined for k in ["trade license", "commercial license", "رخصة تجارية", "تنمية اقتصادية"]):
             return ClassificationResult(document_type_code="uae_trade_license", confidence=0.94, language="mixed")
-        elif any(k in combined for k in ["tax invoice", "commercial invoice", "فاتورة ضريبية"]):
+        elif any(k in combined for k in ["tax invoice", "commercial invoice", "فاتورة ضريبية", "فاتورة"]):
             return ClassificationResult(document_type_code="commercial_invoice", confidence=0.92, language="mixed")
 
-        return ClassificationResult(document_type_code="emirates_id", confidence=0.75, language="mixed")
+        # Unknown document: Never default to emirates_id
+        return ClassificationResult(document_type_code="unknown", confidence=0.30, language="mixed")
 
     def _extract_raw_text(self, document_bytes: bytes) -> str:
-        """Attempts text extraction via Tesseract or embedded text."""
-        # 1. Check for text in SVG / XML / PDF stream
-        try:
-            decoded = document_bytes.decode("utf-8", errors="ignore")
-            if "<svg" in decoded or "<text" in decoded:
-                texts = re.findall(r">([^<]+)<", decoded)
-                return " ".join(t.strip() for t in texts if t.strip())
-        except Exception:
-            pass
+        """Attempts text extraction via Tesseract with zero network calls."""
+        tokens = self._extract_tokens_with_boxes(document_bytes, 1000, 1000)
+        if tokens:
+            return " ".join(t.get("text", "") for t in tokens)
 
-        # 2. Try pytesseract if binary is available
-        tess_cmd = self._get_tesseract_cmd()
+        tess_cmd = self.get_tesseract_cmd()
         if tess_cmd:
             try:
                 import pytesseract
@@ -97,6 +104,29 @@ class LocalOCRAdapter(BaseModelProvider):
                 logger.warning(f"Tesseract raw text extraction failed: {e}")
 
         return ""
+
+    @staticmethod
+    def _union_token_boxes(tokens: List[Dict[str, Any]]) -> Optional[BoundingBox]:
+        """Builds field bounding box from the actual OCR tokens (union of token boxes), normalized to 0-1."""
+        if not tokens:
+            return None
+        min_x = min(t["left"] for t in tokens)
+        min_y = min(t["top"] for t in tokens)
+        max_r = max(t["right"] for t in tokens)
+        max_b = max(t["bottom"] for t in tokens)
+        return BoundingBox(
+            x=round(min_x, 4),
+            y=round(min_y, 4),
+            width=round(max(0.001, max_r - min_x), 4),
+            height=round(max(0.001, max_b - min_y), 4)
+        )
+
+    @staticmethod
+    def _average_token_confidence(tokens: List[Dict[str, Any]]) -> float:
+        """Computes field confidence from the OCR token confidences."""
+        if not tokens:
+            return 0.0
+        return round(sum(t["conf"] for t in tokens) / len(tokens), 2)
 
     async def extract_fields(
         self,
@@ -124,9 +154,16 @@ class LocalOCRAdapter(BaseModelProvider):
 
         if document_type_code == "emirates_id":
             fields = self._parse_emirates_id(tokens, full_text, normalized_full_text)
+        elif document_type_code == "uae_trade_license":
+            from app.schemas.document_type import DEFAULT_TRADE_LICENSE_SCHEMA
+            eff_schema = schema_definition if (schema_definition and schema_definition.get("fields")) else DEFAULT_TRADE_LICENSE_SCHEMA.model_dump()
+            fields = self._parse_schema_driven_fields(eff_schema, tokens, full_text)
+        elif document_type_code == "commercial_invoice":
+            from app.schemas.document_type import DEFAULT_COMMERCIAL_INVOICE_SCHEMA
+            eff_schema = schema_definition if (schema_definition and schema_definition.get("fields")) else DEFAULT_COMMERCIAL_INVOICE_SCHEMA.model_dump()
+            fields = self._parse_schema_driven_fields(eff_schema, tokens, full_text)
         else:
-            # Generic extractor for other document types
-            fields = self._parse_generic_fields(schema_definition, tokens, full_text)
+            fields = self._parse_schema_driven_fields(schema_definition or {}, tokens, full_text)
 
         pages = [
             DocumentPageLayout(
@@ -153,60 +190,53 @@ class LocalOCRAdapter(BaseModelProvider):
         )
 
     def _extract_tokens_with_boxes(self, img_bytes: bytes, img_w: int, img_h: int) -> List[Dict[str, Any]]:
-        """Extracts OCR word tokens and bounding boxes."""
-        tess_cmd = self._get_tesseract_cmd()
+        """Extracts OCR word tokens and bounding boxes from raster image via Tesseract."""
+        tess_cmd = self.get_tesseract_cmd()
         tokens = []
 
-        # Try Tesseract if available
-        if tess_cmd:
-            try:
-                import pytesseract
-                pytesseract.pytesseract.tesseract_cmd = tess_cmd
-                img = Image.open(io.BytesIO(img_bytes))
-                data = pytesseract.image_to_data(img, lang="ara+eng", output_type=pytesseract.Output.DICT)
-                n_boxes = len(data["text"])
-                for i in range(n_boxes):
-                    text = data["text"][i].strip()
-                    if text:
-                        tokens.append({
-                            "text": text,
-                            "box": BoundingBox(
-                                x=round(data["left"][i] / img_w, 4),
-                                y=round(data["top"][i] / img_h, 4),
-                                width=round(data["width"][i] / img_w, 4),
-                                height=round(data["height"][i] / img_h, 4)
-                            ),
-                            "conf": max(0.0, float(data["conf"][i]) / 100.0)
-                        })
-                if tokens:
-                    return tokens
-            except Exception as e:
-                logger.warning(f"Tesseract token extraction failed: {e}")
+        if not tess_cmd:
+            return tokens
 
-        # Fallback for SVG / text stream or PNG embedded vector metadata
         try:
-            decoded = img_bytes.decode("utf-8", errors="ignore")
-            # If PNG, inspect for text chunks
-            if not ("<svg" in decoded or "<text" in decoded):
-                try:
-                    pil_im = Image.open(io.BytesIO(img_bytes))
-                    if hasattr(pil_im, "text") and pil_im.text and "document_svg" in pil_im.text:
-                        decoded = pil_im.text["document_svg"]
-                except Exception:
-                    pass
-
-            for m in re.finditer(r'<text[^>]*x="([\d\.]+)"[^>]*y="([\d\.]+)"[^>]*>([^<]+)</text>', decoded):
-                x = float(m.group(1)) / img_w
-                y = float(m.group(2)) / img_h
-                text = m.group(3).strip()
-                if text:
+            import pytesseract
+            pytesseract.pytesseract.tesseract_cmd = tess_cmd
+            img = Image.open(io.BytesIO(img_bytes))
+            data = pytesseract.image_to_data(img, lang="ara+eng", output_type=pytesseract.Output.DICT)
+            n_boxes = len(data.get("text", []))
+            for i in range(n_boxes):
+                text = str(data["text"][i]).strip()
+                raw_conf = data["conf"][i]
+                conf_val = float(raw_conf) if str(raw_conf).strip() not in ["-1", ""] else -1.0
+                if text and conf_val >= 0:
+                    left = float(data["left"][i])
+                    top = float(data["top"][i])
+                    width = float(data["width"][i])
+                    height = float(data["height"][i])
+                    norm_x = round(left / img_w, 4)
+                    norm_y = round(top / img_h, 4)
+                    norm_w = round(width / img_w, 4)
+                    norm_h = round(height / img_h, 4)
+                    norm_conf = max(0.0, min(1.0, round(conf_val / 100.0, 4)))
                     tokens.append({
                         "text": text,
-                        "box": BoundingBox(x=round(x, 4), y=round(y, 4), width=0.25, height=0.05),
-                        "conf": 0.95
+                        "box": BoundingBox(
+                            x=norm_x,
+                            y=norm_y,
+                            width=norm_w,
+                            height=norm_h
+                        ),
+                        "conf": norm_conf,
+                        "left": norm_x,
+                        "top": norm_y,
+                        "right": round(norm_x + norm_w, 4),
+                        "bottom": round(norm_y + norm_h, 4),
+                        "center_x": round(norm_x + norm_w / 2, 4),
+                        "center_y": round(norm_y + norm_h / 2, 4),
+                        "line_num": data.get("line_num", [0])[i],
+                        "block_num": data.get("block_num", [0])[i]
                     })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Tesseract token extraction failed: {e}")
 
         return tokens
 
@@ -216,223 +246,455 @@ class LocalOCRAdapter(BaseModelProvider):
         full_text: str,
         norm_text: str
     ) -> List[ExtractedFieldData]:
-        """Parses Emirates ID specific fields according to UAE standards."""
-        fields = []
+        """Parses Emirates ID fields by layout proximity and token bounding box unions."""
+        fields: List[ExtractedFieldData] = []
 
+        # -------------------------------------------------------------
         # 1. ID Number (784-YYYY-NNNNNNN-C)
-        id_pattern = r"(?:784[\-\s]?)?(?:\d{4})[\-\s]?(?:\d{7})[\-\s]?(?:\d)"
-        id_match = re.search(id_pattern, norm_text)
-        if id_match:
-            raw_id = id_match.group(0)
-            valid, formatted_id, _ = validate_emirates_id_number(raw_id)
+        # -------------------------------------------------------------
+        matched_id_tokens: List[Dict[str, Any]] = []
+        raw_id: Optional[str] = None
+        formatted_id: Optional[str] = None
+        is_valid_id = False
+
+        # Strategy A: Check single tokens
+        for t in tokens:
+            norm_t = normalize_arabic_digits(t["text"])
+            m = re.search(r"(?:784[\-\s]?)?(?:\d{4})[\-\s]?(?:\d{7})[\-\s]?(?:\d)", norm_t)
+            if m:
+                candidate = m.group(0)
+                valid, fid, _ = validate_emirates_id_number(candidate)
+                if valid or len(re.sub(r"\D", "", candidate)) >= 9:
+                    matched_id_tokens = [t]
+                    raw_id = t["text"]
+                    formatted_id = fid if valid else candidate
+                    is_valid_id = valid
+                    break
+
+        # Strategy B: Sliding window of tokens on same line
+        if not matched_id_tokens:
+            for i in range(len(tokens)):
+                window = []
+                acc_text = ""
+                for j in range(i, min(i + 7, len(tokens))):
+                    if abs(tokens[j]["center_y"] - tokens[i]["center_y"]) > 0.035:
+                        break
+                    window.append(tokens[j])
+                    acc_text += normalize_arabic_digits(tokens[j]["text"])
+                    m = re.search(r"(?:784[\-\s]?)?(?:\d{4})[\-\s]?(?:\d{7})[\-\s]?(?:\d)", acc_text)
+                    if m:
+                        candidate = m.group(0)
+                        valid, fid, _ = validate_emirates_id_number(candidate)
+                        if valid:
+                            matched_id_tokens = window
+                            raw_id = " ".join(tok["text"] for tok in window)
+                            formatted_id = fid
+                            is_valid_id = True
+                            break
+                if matched_id_tokens:
+                    break
+
+        # Strategy C: Proximity to ID label
+        if not matched_id_tokens:
+            for t in tokens:
+                t_lower = normalize_arabic_digits(t["text"]).lower()
+                if any(lbl in t_lower for lbl in ["id", "identity", "الهوية"]):
+                    nearby = [
+                        tok for tok in tokens
+                        if (abs(tok["center_y"] - t["center_y"]) < 0.035 and tok["left"] >= t["right"] - 0.02)
+                        or (0 < tok["top"] - t["bottom"] < 0.06 and abs(tok["center_x"] - t["center_x"]) < 0.35)
+                    ]
+                    for tok in nearby:
+                        norm_tok = normalize_arabic_digits(tok["text"])
+                        m = re.search(r"(?:784[\-\s]?)?(?:\d{4})[\-\s]?(?:\d{7})[\-\s]?(?:\d)", norm_tok)
+                        if m:
+                            valid, fid, _ = validate_emirates_id_number(m.group(0))
+                            matched_id_tokens = [tok]
+                            raw_id = tok["text"]
+                            formatted_id = fid if valid else m.group(0)
+                            is_valid_id = valid
+                            break
+                    if matched_id_tokens:
+                        break
+
+        if matched_id_tokens:
             fields.append(ExtractedFieldData(
                 field_name="id_number",
-                value=formatted_id if valid else raw_id,
+                value=formatted_id if is_valid_id else raw_id,
                 raw_value=raw_id,
-                confidence=0.98 if valid else 0.65,
+                confidence=self._average_token_confidence(matched_id_tokens),
                 page_number=1,
-                bounding_box=BoundingBox(x=0.25, y=0.45, width=0.50, height=0.08)
+                bounding_box=self._union_token_boxes(matched_id_tokens)
             ))
         else:
-            fields.append(ExtractedFieldData(
-                field_name="id_number",
-                value=None,
-                raw_value="",
-                confidence=0.0,
-                page_number=1
-            ))
+            fields.append(ExtractedFieldData(field_name="id_number", value=None, raw_value=None, confidence=0.0, page_number=1, bounding_box=None))
 
+        # -------------------------------------------------------------
         # 2. English Full Name
-        en_name_match = re.search(r"Name\s*:?\s*([A-Z\s]{4,40})", full_text, re.IGNORECASE)
-        if not en_name_match:
-            en_name_match = re.search(r"\b([A-Z]{3,}\s+[A-Z]{3,}(?:\s+[A-Z]{3,})*)\b", full_text)
-        if en_name_match:
-            en_name = en_name_match.group(1).strip()
-            fields.append(ExtractedFieldData(
-                field_name="full_name_en",
-                value=en_name,
-                raw_value=en_name,
-                confidence=0.94,
-                page_number=1,
-                bounding_box=BoundingBox(x=0.25, y=0.35, width=0.50, height=0.06)
-            ))
-            fields.append(ExtractedFieldData(
-                field_name="name_en",
-                value=en_name,
-                raw_value=en_name,
-                confidence=0.94,
-                page_number=1,
-                bounding_box=BoundingBox(x=0.25, y=0.35, width=0.50, height=0.06)
-            ))
-        else:
-            fields.append(ExtractedFieldData(
-                field_name="full_name_en",
-                value=None,
-                raw_value="",
-                confidence=0.0,
-                page_number=1
-            ))
-            fields.append(ExtractedFieldData(
-                field_name="name_en",
-                value=None,
-                raw_value="",
-                confidence=0.0,
-                page_number=1
-            ))
+        # -------------------------------------------------------------
+        en_stop_words = {"name", "nationality", "sex", "card", "identity", "united", "arab", "emirates", "federal", "authority", "citizenship", "date", "birth", "dob", "expiry", "signature", "holder", "resident", "citizen"}
+        matched_en_name_tokens: List[Dict[str, Any]] = []
 
+        # Find "Name" label token
+        name_labels = [t for t in tokens if t["text"].lower().strip(":") == "name" or t["text"].lower().startswith("name:")]
+        if name_labels:
+            lbl = name_labels[0]
+            # Tokens to the right on same line
+            right_tokens = [
+                t for t in tokens
+                if abs(t["center_y"] - lbl["center_y"]) < 0.035
+                and t["left"] >= lbl["right"] - 0.02
+                and t["text"].lower().strip(":") not in en_stop_words
+                and re.match(r"^[A-Za-z\'-]+$", t["text"].strip(":"))
+            ]
+            if right_tokens:
+                matched_en_name_tokens = right_tokens
+            else:
+                # Check line immediately below
+                below_tokens = [
+                    t for t in tokens
+                    if 0 < t["top"] - lbl["bottom"] < 0.06
+                    and t["text"].lower().strip(":") not in en_stop_words
+                    and re.match(r"^[A-Za-z\'-]+$", t["text"].strip(":"))
+                ]
+                if below_tokens:
+                    matched_en_name_tokens = below_tokens
+
+        # Fallback: scan for contiguous capitalized English words (length >= 3)
+        if not matched_en_name_tokens:
+            for i in range(len(tokens)):
+                candidate_seq = []
+                for j in range(i, min(i + 5, len(tokens))):
+                    if abs(tokens[j]["center_y"] - tokens[i]["center_y"]) > 0.035:
+                        break
+                    txt = tokens[j]["text"].strip(":")
+                    if txt.lower() not in en_stop_words and re.match(r"^[A-Z][a-zA-Z]{1,}$", txt):
+                        candidate_seq.append(tokens[j])
+                    else:
+                        break
+                if len(candidate_seq) >= 2:
+                    matched_en_name_tokens = candidate_seq
+                    break
+
+        if matched_en_name_tokens:
+            en_val = " ".join(t["text"].strip(":") for t in matched_en_name_tokens).strip()
+            en_box = self._union_token_boxes(matched_en_name_tokens)
+            en_conf = self._average_token_confidence(matched_en_name_tokens)
+            fields.append(ExtractedFieldData(field_name="full_name_en", value=en_val, raw_value=en_val, confidence=en_conf, page_number=1, bounding_box=en_box))
+            fields.append(ExtractedFieldData(field_name="name_en", value=en_val, raw_value=en_val, confidence=en_conf, page_number=1, bounding_box=en_box))
+        else:
+            fields.append(ExtractedFieldData(field_name="full_name_en", value=None, raw_value=None, confidence=0.0, page_number=1, bounding_box=None))
+            fields.append(ExtractedFieldData(field_name="name_en", value=None, raw_value=None, confidence=0.0, page_number=1, bounding_box=None))
+
+        # -------------------------------------------------------------
         # 3. Arabic Full Name
-        ar_name_match = re.search(r"الاسم\s*:?\s*([\u0621-\u064A\s]{4,40})", full_text)
-        if not ar_name_match:
-            ar_name_match = re.search(r"([\u0621-\u064A]{3,}\s+[\u0621-\u064A]{3,}(?:\s+[\u0621-\u064A]{3,})*)", full_text)
-        if ar_name_match:
-            ar_name = ar_name_match.group(1).strip()
-            fields.append(ExtractedFieldData(
-                field_name="full_name_ar",
-                value=ar_name,
-                raw_value=ar_name,
-                confidence=0.95,
-                page_number=1,
-                bounding_box=BoundingBox(x=0.25, y=0.25, width=0.50, height=0.06)
-            ))
-            fields.append(ExtractedFieldData(
-                field_name="name_ar",
-                value=ar_name,
-                raw_value=ar_name,
-                confidence=0.95,
-                page_number=1,
-                bounding_box=BoundingBox(x=0.25, y=0.25, width=0.50, height=0.06)
-            ))
-        else:
-            fields.append(ExtractedFieldData(
-                field_name="full_name_ar",
-                value=None,
-                raw_value="",
-                confidence=0.0,
-                page_number=1
-            ))
-            fields.append(ExtractedFieldData(
-                field_name="name_ar",
-                value=None,
-                raw_value="",
-                confidence=0.0,
-                page_number=1
-            ))
+        # -------------------------------------------------------------
+        ar_stop_words = {"الاسم", "اسم", "الجنسية", "الهوية", "بطاقة", "الميلاد", "تاريخ", "الانتهاء", "الجنس", "دولة", "الإمارات", "العربية", "المتحدة", "هيئة", "الاتحادية", "للهوية", "والجنسية"}
+        matched_ar_name_tokens: List[Dict[str, Any]] = []
 
+        ar_name_labels = [t for t in tokens if "الاسم" in t["text"]]
+        if ar_name_labels:
+            lbl = ar_name_labels[0]
+            # Tokens on same line (Arabic may be placed to left or right)
+            same_line_ar = [
+                t for t in tokens
+                if abs(t["center_y"] - lbl["center_y"]) < 0.035
+                and t != lbl
+                and t["text"].strip(":") not in ar_stop_words
+                and re.match(r"^[\u0621-\u064A]+$", t["text"].strip(":"))
+            ]
+            if same_line_ar:
+                matched_ar_name_tokens = same_line_ar
+            else:
+                below_ar = [
+                    t for t in tokens
+                    if 0 < t["top"] - lbl["bottom"] < 0.06
+                    and t["text"].strip(":") not in ar_stop_words
+                    and re.match(r"^[\u0621-\u064A]+$", t["text"].strip(":"))
+                ]
+                if below_ar:
+                    matched_ar_name_tokens = below_ar
+
+        # Fallback: scan for sequence of Arabic tokens
+        if not matched_ar_name_tokens:
+            for i in range(len(tokens)):
+                candidate_seq = []
+                for j in range(i, min(i + 5, len(tokens))):
+                    if abs(tokens[j]["center_y"] - tokens[i]["center_y"]) > 0.035:
+                        break
+                    txt = tokens[j]["text"].strip(":")
+                    if txt not in ar_stop_words and re.match(r"^[\u0621-\u064A]{2,}$", txt):
+                        candidate_seq.append(tokens[j])
+                    else:
+                        break
+                if len(candidate_seq) >= 2:
+                    matched_ar_name_tokens = candidate_seq
+                    break
+
+        if matched_ar_name_tokens:
+            ar_val = " ".join(t["text"].strip(":") for t in matched_ar_name_tokens).strip()
+            ar_box = self._union_token_boxes(matched_ar_name_tokens)
+            ar_conf = self._average_token_confidence(matched_ar_name_tokens)
+            fields.append(ExtractedFieldData(field_name="full_name_ar", value=ar_val, raw_value=ar_val, confidence=ar_conf, page_number=1, bounding_box=ar_box))
+            fields.append(ExtractedFieldData(field_name="name_ar", value=ar_val, raw_value=ar_val, confidence=ar_conf, page_number=1, bounding_box=ar_box))
+        else:
+            fields.append(ExtractedFieldData(field_name="full_name_ar", value=None, raw_value=None, confidence=0.0, page_number=1, bounding_box=None))
+            fields.append(ExtractedFieldData(field_name="name_ar", value=None, raw_value=None, confidence=0.0, page_number=1, bounding_box=None))
+
+        # -------------------------------------------------------------
         # 4. Nationality
-        nat_match = re.search(
-            r"(?:Nationality|الجنسية)[\s\/\u0621-\u064A]*:?\s*([A-Za-z\s]+?)(?=\s*(?:Date|DOB|Birth|الميلاد|Expiry|الانتهاء|Sex|الجنس|$))",
-            full_text,
-            re.IGNORECASE
-        )
-        if not nat_match:
-            nat_match = re.search(r"الجنسية\s*:?\s*([\u0621-\u064A\s]{3,35})", full_text)
-        if nat_match:
-            nat_val = nat_match.group(1).strip()
+        # -------------------------------------------------------------
+        matched_nat_tokens: List[Dict[str, Any]] = []
+        nat_labels = [t for t in tokens if "nationality" in t["text"].lower() or "الجنسية" in t["text"]]
+        if nat_labels:
+            lbl = nat_labels[0]
+            cand = [
+                t for t in tokens
+                if abs(t["center_y"] - lbl["center_y"]) < 0.035
+                and t["left"] >= lbl["right"] - 0.02
+                and t["text"].lower().strip(":") not in {"date", "birth", "dob", "sex"}
+            ]
+            if cand:
+                matched_nat_tokens = cand
+
+        if not matched_nat_tokens:
+            for t in tokens:
+                t_clean = t["text"].lower().strip(":")
+                if t_clean in ["emirati", "uae", "are", "إماراتي"] or "emirates" in t_clean:
+                    matched_nat_tokens = [t]
+                    break
+
+        if matched_nat_tokens:
+            nat_val = " ".join(t["text"].strip(":") for t in matched_nat_tokens).strip()
             fields.append(ExtractedFieldData(
                 field_name="nationality",
                 value=nat_val,
                 raw_value=nat_val,
-                confidence=0.92,
+                confidence=self._average_token_confidence(matched_nat_tokens),
                 page_number=1,
-                bounding_box=BoundingBox(x=0.25, y=0.55, width=0.35, height=0.05)
+                bounding_box=self._union_token_boxes(matched_nat_tokens)
             ))
         else:
-            fields.append(ExtractedFieldData(
-                field_name="nationality",
-                value=None,
-                raw_value="",
-                confidence=0.0,
-                page_number=1
-            ))
+            fields.append(ExtractedFieldData(field_name="nationality", value=None, raw_value=None, confidence=0.0, page_number=1, bounding_box=None))
 
+        # -------------------------------------------------------------
         # 5. Date of Birth
-        dob_match = re.search(r"(?:DOB|Date of Birth|Birth|الميلاد)[\s\/\u0621-\u064A]*:?\s*([\d\/\.\-]+|[\u0660-\u0669\/\.\-]+)", full_text, re.IGNORECASE)
-        if dob_match:
-            raw_dob = dob_match.group(1).strip()
-            dob_val = parse_date_string(raw_dob) or raw_dob
+        # -------------------------------------------------------------
+        matched_dob_tokens: List[Dict[str, Any]] = []
+        dob_labels = [t for t in tokens if any(k in t["text"].lower() for k in ["dob", "birth", "الميلاد"])]
+        if dob_labels:
+            lbl = dob_labels[0]
+            cand = [
+                t for t in tokens
+                if (abs(t["center_y"] - lbl["center_y"]) < 0.035 and t["left"] >= lbl["right"] - 0.02)
+                or (0 < t["top"] - lbl["bottom"] < 0.06 and abs(t["center_x"] - lbl["center_x"]) < 0.25)
+            ]
+            for c in cand:
+                norm_c = normalize_arabic_digits(c["text"])
+                if re.search(r"\d{1,4}[\/\.\-]\d{1,2}[\/\.\-]\d{1,4}", norm_c):
+                    matched_dob_tokens = [c]
+                    break
+
+        if not matched_dob_tokens:
+            for t in tokens:
+                norm_t = normalize_arabic_digits(t["text"])
+                m = re.search(r"(\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{4}|\d{4}[\/\.\-]\d{1,2}[\/\.\-]\d{1,2})", norm_t)
+                if m:
+                    # Heuristic: birth dates usually have year < 2015
+                    yr_match = re.search(r"(19\d\d|200\d|201[0-5])", norm_t)
+                    if yr_match:
+                        matched_dob_tokens = [t]
+                        break
+
+        if matched_dob_tokens:
+            raw_dob = matched_dob_tokens[0]["text"]
+            dob_val = parse_date_string(normalize_arabic_digits(raw_dob)) or raw_dob
             fields.append(ExtractedFieldData(
                 field_name="date_of_birth",
                 value=dob_val,
                 raw_value=raw_dob,
-                confidence=0.91 if dob_val else 0.50,
+                confidence=self._average_token_confidence(matched_dob_tokens),
                 page_number=1,
-                bounding_box=BoundingBox(x=0.25, y=0.62, width=0.25, height=0.05)
+                bounding_box=self._union_token_boxes(matched_dob_tokens)
             ))
         else:
-            fields.append(ExtractedFieldData(
-                field_name="date_of_birth",
-                value=None,
-                raw_value="",
-                confidence=0.0,
-                page_number=1
-            ))
+            fields.append(ExtractedFieldData(field_name="date_of_birth", value=None, raw_value=None, confidence=0.0, page_number=1, bounding_box=None))
 
+        # -------------------------------------------------------------
         # 6. Expiry Date
-        exp_match = re.search(r"(?:Expiry Date|Expiry|الانتهاء)[\s\/\u0621-\u064A]*:?\s*([\d\/\.\-]+|[\u0660-\u0669\/\.\-]+)", full_text, re.IGNORECASE)
-        if exp_match:
-            raw_exp = exp_match.group(1).strip()
-            exp_val = parse_date_string(raw_exp) or raw_exp
+        # -------------------------------------------------------------
+        matched_exp_tokens: List[Dict[str, Any]] = []
+        exp_labels = [t for t in tokens if any(k in t["text"].lower() for k in ["expiry", "الانتهاء"])]
+        if exp_labels:
+            lbl = exp_labels[0]
+            cand = [
+                t for t in tokens
+                if (abs(t["center_y"] - lbl["center_y"]) < 0.035 and t["left"] >= lbl["right"] - 0.02)
+                or (0 < t["top"] - lbl["bottom"] < 0.06 and abs(t["center_x"] - lbl["center_x"]) < 0.25)
+            ]
+            for c in cand:
+                norm_c = normalize_arabic_digits(c["text"])
+                if re.search(r"\d{1,4}[\/\.\-]\d{1,2}[\/\.\-]\d{1,4}", norm_c):
+                    matched_exp_tokens = [c]
+                    break
+
+        if not matched_exp_tokens:
+            for t in tokens:
+                norm_t = normalize_arabic_digits(t["text"])
+                m = re.search(r"(\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{4}|\d{4}[\/\.\-]\d{1,2}[\/\.\-]\d{1,2})", norm_t)
+                if m:
+                    # Expiry dates usually have year >= 2020
+                    yr_match = re.search(r"(202\d|203\d|204\d)", norm_t)
+                    if yr_match and t not in matched_dob_tokens:
+                        matched_exp_tokens = [t]
+                        break
+
+        if matched_exp_tokens:
+            raw_exp = matched_exp_tokens[0]["text"]
+            exp_val = parse_date_string(normalize_arabic_digits(raw_exp)) or raw_exp
             fields.append(ExtractedFieldData(
                 field_name="expiry_date",
                 value=exp_val,
                 raw_value=raw_exp,
-                confidence=0.92 if exp_val else 0.50,
+                confidence=self._average_token_confidence(matched_exp_tokens),
                 page_number=1,
-                bounding_box=BoundingBox(x=0.55, y=0.62, width=0.25, height=0.05)
+                bounding_box=self._union_token_boxes(matched_exp_tokens)
             ))
         else:
-            fields.append(ExtractedFieldData(
-                field_name="expiry_date",
-                value=None,
-                raw_value="",
-                confidence=0.0,
-                page_number=1
-            ))
+            fields.append(ExtractedFieldData(field_name="expiry_date", value=None, raw_value=None, confidence=0.0, page_number=1, bounding_box=None))
 
+        # -------------------------------------------------------------
         # 7. Sex (M / F)
-        sex_match = re.search(r"(?:Sex|الجنس)\s*:?\s*([MF]|ذكر|أنثى)", full_text, re.IGNORECASE)
-        if sex_match:
-            raw_sex = sex_match.group(1).upper()
+        # -------------------------------------------------------------
+        matched_sex_tokens: List[Dict[str, Any]] = []
+        sex_labels = [t for t in tokens if any(k in t["text"].lower() for k in ["sex", "الجنس"])]
+        if sex_labels:
+            lbl = sex_labels[0]
+            cand = [
+                t for t in tokens
+                if (abs(t["center_y"] - lbl["center_y"]) < 0.035 and t["left"] >= lbl["right"] - 0.02)
+                or (0 < t["top"] - lbl["bottom"] < 0.06 and abs(t["center_x"] - lbl["center_x"]) < 0.20)
+            ]
+            for c in cand:
+                c_clean = c["text"].upper().strip(":")
+                if c_clean in ["M", "F", "ذكر", "أنثى"]:
+                    matched_sex_tokens = [c]
+                    break
+
+        if not matched_sex_tokens:
+            for t in tokens:
+                t_clean = t["text"].upper().strip(":")
+                if t_clean in ["M", "F", "ذكر", "أنثى"]:
+                    matched_sex_tokens = [t]
+                    break
+
+        if matched_sex_tokens:
+            raw_sex = matched_sex_tokens[0]["text"].upper().strip(":")
             sex_val = "M" if raw_sex in ["M", "ذكر"] else "F"
             fields.append(ExtractedFieldData(
                 field_name="sex",
                 value=sex_val,
                 raw_value=raw_sex,
-                confidence=0.95,
+                confidence=self._average_token_confidence(matched_sex_tokens),
                 page_number=1,
-                bounding_box=BoundingBox(x=0.25, y=0.70, width=0.15, height=0.05)
+                bounding_box=self._union_token_boxes(matched_sex_tokens)
             ))
         else:
-            fields.append(ExtractedFieldData(
-                field_name="sex",
-                value=None,
-                raw_value="",
-                confidence=0.0,
-                page_number=1
-            ))
+            fields.append(ExtractedFieldData(field_name="sex", value=None, raw_value=None, confidence=0.0, page_number=1, bounding_box=None))
 
         return fields
 
-    def _parse_generic_fields(
+    def _parse_schema_driven_fields(
         self,
         schema: Dict[str, Any],
         tokens: List[Dict[str, Any]],
         full_text: str
     ) -> List[ExtractedFieldData]:
-        """Generic fallback extractor based on schema definition."""
-        fields = []
-        schema_fields = schema.get("fields", []) if schema else []
+        """
+        Extracts structured fields driven by document type schema definition.
+        Searches OCR tokens for field label variations (English, Arabic, and key).
+        Uses spatial proximity layout (values horizontally to the right or on the line below).
+        Constructs real bounding boxes from the union of matched token boxes.
+        Computes real confidence from average of matched token confidences.
+        Never invents values: returns null with confidence 0.0 if not found.
+        """
+        fields: List[ExtractedFieldData] = []
+        schema_fields = schema.get("fields", []) if isinstance(schema, dict) else []
+
         for sf in schema_fields:
-            name = sf.get("name", "field")
-            # Search for keyword
-            m = re.search(rf"{name}\s*:?\s*([^\n\r]+)", full_text, re.IGNORECASE)
-            val = m.group(1).strip() if m else None
-            fields.append(ExtractedFieldData(
-                field_name=name,
-                value=val,
-                raw_value=val or "",
-                confidence=0.85 if val else 0.0,
-                page_number=1,
-                bounding_box=BoundingBox(x=0.2, y=0.4, width=0.4, height=0.05) if val else None
-            ))
+            if isinstance(sf, dict):
+                f_key = sf.get("key") or sf.get("name", "field")
+                name_en = sf.get("name_en", "")
+                name_ar = sf.get("name_ar", "")
+                data_type = sf.get("data_type", "string")
+            else:
+                f_key = getattr(sf, "key", "field")
+                name_en = getattr(sf, "name_en", "")
+                name_ar = getattr(sf, "name_ar", "")
+                data_type = getattr(sf, "data_type", "string")
+
+            # Collect label search terms (at least 3 chars)
+            label_terms = [t.lower().strip() for t in [f_key, name_en, name_ar] if t and len(t.strip()) >= 3]
+
+            # Find candidate label tokens in OCR tokens
+            label_tokens = []
+            for t in tokens:
+                t_lower = t["text"].lower().strip(":")
+                if any(term in t_lower or t_lower in term for term in label_terms if len(term) >= 3):
+                    label_tokens.append(t)
+
+            matched_value_tokens: List[Dict[str, Any]] = []
+            if label_tokens:
+                lbl = label_tokens[0]
+                # Look for value tokens horizontally to the right
+                cand_right = [
+                    t for t in tokens
+                    if abs(t["center_y"] - lbl["center_y"]) < 0.035
+                    and t["left"] >= lbl["right"] - 0.02
+                    and t not in label_tokens
+                ]
+                if cand_right:
+                    matched_value_tokens = cand_right[:8]
+                else:
+                    # Look for value tokens on the line directly below
+                    cand_below = [
+                        t for t in tokens
+                        if 0.005 < t["top"] - lbl["bottom"] < 0.06
+                        and abs(t["center_x"] - lbl["center_x"]) < 0.35
+                        and t not in label_tokens
+                    ]
+                    if cand_below:
+                        matched_value_tokens = cand_below[:8]
+
+            if matched_value_tokens:
+                raw_val = " ".join(t["text"].strip(":") for t in matched_value_tokens).strip()
+                val = raw_val
+
+                # Normalize by data type
+                if data_type == "date":
+                    from app.pipeline.emirates_id_parser import parse_date_string, normalize_arabic_digits
+                    val = parse_date_string(normalize_arabic_digits(raw_val)) or raw_val
+                elif data_type == "number":
+                    from app.pipeline.emirates_id_parser import normalize_arabic_digits
+                    cleaned = re.sub(r"[^\d\.\,]", "", normalize_arabic_digits(raw_val))
+                    val = cleaned.replace(",", "") if cleaned else raw_val
+
+                fields.append(ExtractedFieldData(
+                    field_name=f_key,
+                    value=val if val else None,
+                    raw_value=raw_val if raw_val else None,
+                    confidence=self._average_token_confidence(matched_value_tokens),
+                    page_number=1,
+                    bounding_box=self._union_token_boxes(matched_value_tokens)
+                ))
+            else:
+                fields.append(ExtractedFieldData(
+                    field_name=f_key,
+                    value=None,
+                    raw_value=None,
+                    confidence=0.0,
+                    page_number=1,
+                    bounding_box=None
+                ))
+
         return fields

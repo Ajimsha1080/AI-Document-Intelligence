@@ -1,0 +1,15 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5365174",
+  "company_name_en": "RAK CERAMICS DISTRIBUTION LLC",
+  "company_name_ar": "توزيع رأس الخيمة للسيراميك ذ.م.م",
+  "issuing_authority": "Ras Al Khaimah Economic Zone",
+  "expiry_date": "19/02/2027",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-1.5deg",
+    "gaussian_blur_0.78px",
+    "low_resolution_downscale",
+    "jpeg_q62"
+  ]
+}

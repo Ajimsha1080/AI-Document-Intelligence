@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1990-8494739-1",
-  "name_ar": "مريم أحمد سعيد الكتبي",
-  "name_en": "MARYAM AHMED SAEED ALKETBI",
+  "document_type": "emirates_id",
+  "id_number": "784-1980-8363368-9",
+  "name_ar": "زايد سلطان منصور الزعابي",
+  "name_en": "ZAYED SULTAN MANSOOR ALZAABI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "12/09/1990",
-  "expiry_date": "15/12/2028",
-  "sex": "F"
+  "date_of_birth": "13/12/1980",
+  "expiry_date": "13/09/2031",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

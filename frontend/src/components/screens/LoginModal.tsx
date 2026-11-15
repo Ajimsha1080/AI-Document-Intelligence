@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
-import { ShieldCheck, Lock, Mail, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
+import { ShieldCheck, Lock, Mail, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface LoginModalProps {
@@ -9,7 +9,7 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const { language, dir, toggleLanguage, showToast, refreshDocuments, refreshAuditLogs, t } = useApp();
+  const { language, toggleLanguage, showToast, refreshDocuments, refreshAuditLogs } = useApp();
   const [email, setEmail] = useState("admin@alhilal-bank.ae");
   const [password, setPassword] = useState("AdminSecurePass2026!");
   const [loading, setLoading] = useState(false);

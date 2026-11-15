@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1991-5654764-0",
-  "name_ar": "زايد سلطان منصور الزعابي",
-  "name_en": "ZAYED SULTAN MANSOOR ALZAABI",
+  "document_type": "emirates_id",
+  "id_number": "784-1986-2777930-3",
+  "name_ar": "فاطمة محمد علي الحوسني",
+  "name_en": "FATIMA MOHAMMED ALI ALHOSANI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "14/10/1991",
-  "expiry_date": "05/03/2028",
-  "sex": "M"
+  "date_of_birth": "01/01/1986",
+  "expiry_date": "09/08/2033",
+  "sex": "F",
+  "subset": "clean",
+  "degradations": []
 }

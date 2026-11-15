@@ -152,3 +152,60 @@ DEFAULT_TRADE_LICENSE_SCHEMA = DocumentTypeSchema(
         {"rule": "not_expired", "field": "expiry_date"}
     ]
 )
+
+DEFAULT_COMMERCIAL_INVOICE_SCHEMA = DocumentTypeSchema(
+    version="1.0",
+    fields=[
+        FieldSchema(
+            key="invoice_number",
+            name_en="Invoice Number",
+            name_ar="رقم الفاتورة",
+            data_type="string",
+            required=True,
+            confidence_threshold=0.88
+        ),
+        FieldSchema(
+            key="trn",
+            name_en="Tax Registration Number (TRN)",
+            name_ar="رقم التسجيل الضريبي",
+            data_type="string",
+            required=True,
+            confidence_threshold=0.90
+        ),
+        FieldSchema(
+            key="invoice_date",
+            name_en="Invoice Date",
+            name_ar="تاريخ الفاتورة",
+            data_type="date",
+            required=True,
+            confidence_threshold=0.85
+        ),
+        FieldSchema(
+            key="supplier_name",
+            name_en="Supplier Name",
+            name_ar="اسم المورد",
+            data_type="string",
+            required=True,
+            confidence_threshold=0.85
+        ),
+        FieldSchema(
+            key="total_amount",
+            name_en="Total Amount",
+            name_ar="المبلغ الإجمالي",
+            data_type="number",
+            required=True,
+            confidence_threshold=0.85
+        ),
+        FieldSchema(
+            key="vat_amount",
+            name_en="VAT Amount",
+            name_ar="ضريبة القيمة المضافة",
+            data_type="number",
+            required=False,
+            confidence_threshold=0.80
+        )
+    ],
+    rules=[
+        {"rule": "valid_trn_format", "field": "trn"}
+    ]
+)

@@ -1,0 +1,14 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-5686",
+  "trn": "100345678900003",
+  "invoice_date": "07/03/2026",
+  "supplier_name": "PRIME STEEL & METALS TRADING FZE",
+  "total_amount": "198000.00",
+  "vat_amount": "9900.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "jpeg_q73"
+  ]
+}

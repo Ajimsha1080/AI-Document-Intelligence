@@ -1,0 +1,18 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-2002-3832571-4",
+  "name_ar": "لين شياو يانغ",
+  "name_en": "LIN XIAO YANG",
+  "nationality": "China",
+  "date_of_birth": "14/08/2002",
+  "expiry_date": "15/06/2034",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "gaussian_blur_1.03px",
+    "noise_grain",
+    "low_resolution_downscale",
+    "jpeg_q53"
+  ]
+}

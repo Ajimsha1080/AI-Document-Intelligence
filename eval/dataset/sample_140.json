@@ -1,0 +1,16 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-5740",
+  "trn": "100789012300003",
+  "invoice_date": "01/09/2026",
+  "supplier_name": "DUBAI FIBER OPTIC SYSTEMS LLC",
+  "total_amount": "88400.00",
+  "vat_amount": "4420.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "noise_grain",
+    "uneven_lighting_shadow",
+    "jpeg_q48"
+  ]
+}

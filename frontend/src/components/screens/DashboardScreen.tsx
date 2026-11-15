@@ -1,21 +1,16 @@
 import React from "react";
 import { useApp } from "@/context/AppContext";
 import { toArabicIndicDigits, formatCurrencyAED } from "@/lib/utils";
-import { StatusBadge } from "@/components/common/StatusBadge";
-import { ConfidenceBadge } from "@/components/common/ConfidenceBadge";
 import {
   FileText,
   Clock,
-  CheckCircle2,
   AlertTriangle,
   Coins,
   TrendingUp,
   UploadCloud,
-  History,
   ShieldCheck,
   ArrowRight,
   ArrowLeft,
-  Sparkles,
 } from "lucide-react";
 
 export function DashboardScreen() {
@@ -34,7 +29,6 @@ export function DashboardScreen() {
   const num = (val: string | number) => (useArabicDigits ? toArabicIndicDigits(val) : String(val));
 
   const needsReviewDocs = documents.filter((d) => d.status === "needs_review" || d.status === "failed");
-  const approvedDocs = documents.filter((d) => d.status === "approved");
 
   // Chart data for UAE working week (Monday to Friday or Sunday to Thursday)
   const chartData = [
@@ -171,7 +165,6 @@ export function DashboardScreen() {
           <div className="h-52 w-full pt-4 flex items-end justify-between gap-3 px-2 border-b border-border">
             {chartData.map((d) => {
               const heightPct = Math.round((d.count / 350) * 100);
-              const approvedPct = Math.round((d.approved / 350) * 100);
               return (
                 <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5 group h-full justify-end">
                   <div className="w-full max-w-[42px] flex items-end gap-1 h-full justify-center">

@@ -1,0 +1,17 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5594920",
+  "company_name_en": "AL MAJID MOTORS & SPARE PARTS LLC",
+  "company_name_ar": "الماجد للسيارات وقطع الغيار ذ.م.م",
+  "issuing_authority": "Sharjah Economic Development Department",
+  "expiry_date": "16/09/2028",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "gaussian_blur_1.22px",
+    "noise_grain",
+    "uneven_lighting_shadow",
+    "low_resolution_downscale",
+    "jpeg_q50"
+  ]
+}

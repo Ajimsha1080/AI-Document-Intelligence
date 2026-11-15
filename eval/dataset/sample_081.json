@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1982-6123816-0",
+  "name_ar": "طارق محمود إقبال شودري",
+  "name_en": "TARIQ MAHMOOD IQBAL CHAUDHRY",
+  "nationality": "Pakistan",
+  "date_of_birth": "10/12/1982",
+  "expiry_date": "08/08/2030",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-6.0deg",
+    "gaussian_blur_1.12px"
+  ]
+}

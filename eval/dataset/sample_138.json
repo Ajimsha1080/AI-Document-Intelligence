@@ -1,0 +1,16 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-8758",
+  "trn": "100567890100003",
+  "invoice_date": "27/07/2026",
+  "supplier_name": "PEARL MARITIME SPARE PARTS LLC",
+  "total_amount": "67200.00",
+  "vat_amount": "3360.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_6.0deg",
+    "gaussian_blur_1.3px",
+    "low_resolution_downscale",
+    "jpeg_q47"
+  ]
+}

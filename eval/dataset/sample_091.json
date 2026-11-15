@@ -1,0 +1,14 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1990-1277395-0",
+  "name_ar": "سيباستيان لوك لوفيفر",
+  "name_en": "SEBASTIEN LUC LEFEVRE",
+  "nationality": "France",
+  "date_of_birth": "18/01/1990",
+  "expiry_date": "03/08/2027",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-6.0deg"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1977-8186926-4",
+  "name_ar": "نيها سومان شارما",
+  "name_en": "NEHA SUMAN SHARMA",
+  "nationality": "India",
+  "date_of_birth": "26/07/1977",
+  "expiry_date": "27/11/2028",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "noise_grain",
+    "uneven_lighting_shadow",
+    "jpeg_q51"
+  ]
+}

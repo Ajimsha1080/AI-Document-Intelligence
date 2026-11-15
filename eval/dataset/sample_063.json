@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1976-6568755-0",
+  "name_ar": "عيسى جمعة مطر الدرمكي",
+  "name_en": "ISSA JUMA MATAR ALDARMAKI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "16/12/1976",
+  "expiry_date": "22/01/2032",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-3.0deg",
+    "gaussian_blur_0.77px"
+  ]
+}

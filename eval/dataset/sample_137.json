@@ -1,0 +1,13 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-1267",
+  "trn": "100456789000003",
+  "invoice_date": "26/06/2026",
+  "supplier_name": "CRESCENT MEDICAL LAB SUPPLIES",
+  "total_amount": "39100.00",
+  "vat_amount": "1955.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_4.5deg"
+  ]
+}

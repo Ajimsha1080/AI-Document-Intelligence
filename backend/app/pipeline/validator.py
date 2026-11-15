@@ -19,7 +19,9 @@ def run_validation_rules(
     required_fields = []
     if schema_definition and "fields" in schema_definition:
         required_fields = [
-            f["name"] for f in schema_definition["fields"] if f.get("required", False)
+            f.get("key") or f.get("name")
+            for f in schema_definition["fields"]
+            if f.get("required", False) and (f.get("key") or f.get("name"))
         ]
     elif document_type_code == "emirates_id":
         required_fields = ["id_number", "full_name_ar", "full_name_en", "expiry_date"]
@@ -67,6 +69,14 @@ def run_validation_rules(
                     "severity": "info",
                     "message": f"Emirates ID check digit verified successfully ({formatted_id})."
                 })
+        else:
+            results.append({
+                "rule_name": "EMIRATES_ID_FORMAT_AND_CHECKSUM",
+                "field_name": "id_number",
+                "passed": False,
+                "severity": "error",
+                "message": "Emirates ID number is missing or not detected."
+            })
 
         # Expiry date not past
         exp_field = field_map.get("expiry_date")
@@ -94,6 +104,14 @@ def run_validation_rules(
                         })
                 except Exception:
                     pass
+        else:
+            results.append({
+                "rule_name": "EXPIRY_DATE_VALIDITY",
+                "field_name": "expiry_date",
+                "passed": False,
+                "severity": "error",
+                "message": "Document expiry date is missing or not detected."
+            })
 
         # Birth date plausible (birth date must be in the past)
         dob_field = field_map.get("date_of_birth")
@@ -120,5 +138,13 @@ def run_validation_rules(
                         })
                 except Exception:
                     pass
+        else:
+            results.append({
+                "rule_name": "DATE_OF_BIRTH_PLAUSIBILITY",
+                "field_name": "date_of_birth",
+                "passed": False,
+                "severity": "warning",
+                "message": "Date of birth is missing or not detected."
+            })
 
     return results

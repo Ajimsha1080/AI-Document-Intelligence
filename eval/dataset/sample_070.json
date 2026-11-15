@@ -1,0 +1,16 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1991-5715682-1",
+  "name_ar": "دانة طلال عبدالمحسن التميمي",
+  "name_en": "DANA TALAL ABDELMOHSEN ALTAMIMI",
+  "nationality": "Saudi Arabia",
+  "date_of_birth": "04/05/1991",
+  "expiry_date": "02/03/2034",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "uneven_lighting_shadow",
+    "jpeg_q51"
+  ]
+}

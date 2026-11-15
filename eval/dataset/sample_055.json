@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1990-8897057-1",
+  "name_ar": "غانم محمد جمعة القبيسي",
+  "name_en": "GHANEM MOHAMMED JUMA ALQUBAISI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "25/02/1990",
+  "expiry_date": "25/10/2035",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "uneven_lighting_shadow"
+  ]
+}

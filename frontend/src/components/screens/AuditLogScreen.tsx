@@ -5,16 +5,12 @@ import { formatDateBilingual } from "@/lib/utils";
 import {
   History,
   Search,
-  Download,
-  ShieldCheck,
   FileSpreadsheet,
   FileCode,
-  Eye,
-  Filter,
 } from "lucide-react";
 
 export function AuditLogScreen() {
-  const { auditLogs, language, showToast, t } = useApp();
+  const { auditLogs, language, showToast } = useApp();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [actionFilter, setActionFilter] = useState("all");

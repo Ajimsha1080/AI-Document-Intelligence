@@ -2,6 +2,8 @@ import io
 from typing import Optional, List
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request, Response
+from fastapi.responses import StreamingResponse
+import json
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
 
@@ -41,7 +43,7 @@ async def upload_document(
     # 1. Read and validate content
     content = await file.read()
     validate_file_size(len(content))
-    verified_mime = validate_magic_bytes(content)
+    verified_mime = validate_magic_bytes(content, file.filename)
 
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
@@ -112,11 +114,18 @@ async def upload_document(
 
     # 5. Enqueue background extraction pipeline
     from app.worker.queue import enqueue_document_job
-    job_id = enqueue_document_job(doc_id, actor.tenant_id)
-    if not job_id:
-        import asyncio
-        from app.worker.tasks import process_document_pipeline
-        asyncio.create_task(process_document_pipeline(doc_id, actor.tenant_id))
+    enqueue_document_job(doc_id, actor.tenant_id)
+
+    # Emit real-time queued event
+    from app.services.event_bus import event_bus
+    await event_bus.emit_event(
+        tenant_id=actor.tenant_id,
+        document_id=doc_id,
+        stage="queued",
+        status="queued",
+        progress_pct=5,
+        details={"file_name": safe_filename, "file_size": len(content)}
+    )
 
     return DocumentResponse(
         id=new_doc.id,
@@ -332,7 +341,15 @@ async def delete_document(
         storage_path=storage_path
     )
 
-    # 2. Delete database record (cascades to pages, extracted_fields, validation_results)
+    # 2. Hard delete database record and all derived data (chunks, fields, validations, pages)
+    from app.models.document import DocumentPage, ExtractedField, ValidationResult
+    from app.models.document_chunk import DocumentChunk
+    from sqlalchemy import delete
+
+    await db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == id))
+    await db.execute(delete(ExtractedField).where(ExtractedField.document_id == id))
+    await db.execute(delete(ValidationResult).where(ValidationResult.document_id == id))
+    await db.execute(delete(DocumentPage).where(DocumentPage.document_id == id))
     await db.delete(doc)
 
     # 3. Log immutable audit trail
@@ -685,4 +702,78 @@ async def export_document_data(
         }, indent=2),
         media_type="application/json",
         headers={"Content-Disposition": f'attachment; filename="document_{id}_export.json"'}
+    )
+
+
+@router.get("/events/stream")
+@router.get("/events")
+async def stream_tenant_events(
+    request: Request,
+    actor: AuthenticatedActor = Depends(get_current_actor),
+):
+    """
+    Server-Sent Events (SSE) stream for all pipeline events belonging to the current tenant.
+    Enforces strict tenant isolation: users never receive another tenant's events.
+    """
+    import asyncio
+    from app.services.event_bus import event_bus
+
+    async def event_generator():
+        try:
+            async for evt in event_bus.subscribe_tenant(actor.tenant_id):
+                if await request.is_disconnected():
+                    break
+                data = json.dumps(evt, ensure_ascii=False)
+                yield f"data: {data}\n\n"
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+@router.get("/{id}/events")
+async def stream_document_events(
+    id: str,
+    request: Request,
+    actor: AuthenticatedActor = Depends(get_current_actor),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Server-Sent Events (SSE) stream for a specific document.
+    Enforces tenant isolation: rejects requests if document belongs to another tenant.
+    """
+    stmt = select(Document).where(and_(Document.id == id, Document.tenant_id == actor.tenant_id))
+    res = await db.execute(stmt)
+    doc = res.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    import asyncio
+    from app.services.event_bus import event_bus
+
+    async def event_generator():
+        try:
+            async for evt in event_bus.subscribe_document(actor.tenant_id, id):
+                if await request.is_disconnected():
+                    break
+                data = json.dumps(evt, ensure_ascii=False)
+                yield f"data: {data}\n\n"
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
     )

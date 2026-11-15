@@ -1,19 +1,16 @@
 import React, { useState, useMemo } from "react";
 import { useApp } from "@/context/AppContext";
-import { DocumentItem, DocumentStatus, DocumentTypeCode } from "@/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ConfidenceBadge } from "@/components/common/ConfidenceBadge";
 import { formatDateBilingual } from "@/lib/utils";
 import {
   Search,
-  Filter,
   Download,
   Trash2,
   CheckCircle2,
   Eye,
   FileSpreadsheet,
   FileCode,
-  ChevronDown,
 } from "lucide-react";
 
 export function DataTable() {
@@ -27,7 +24,6 @@ export function DataTable() {
     language,
     showToast,
     addAuditLog,
-    t,
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState("");

@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-2001-8371538-0",
+  "name_ar": "عائشة جاويد مالك",
+  "name_en": "AYESHA JAVED MALIK",
+  "nationality": "Pakistan",
+  "date_of_birth": "14/07/2001",
+  "expiry_date": "17/01/2028",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "jpeg_q73"
+  ]
+}

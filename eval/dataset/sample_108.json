@@ -1,0 +1,16 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5135428",
+  "company_name_en": "OASIS MARITIME SERVICES LLC",
+  "company_name_ar": "خدمات الواحة البحرية ذ.م.م",
+  "issuing_authority": "Ras Al Khaimah Economic Zone",
+  "expiry_date": "20/01/2032",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_6.0deg",
+    "gaussian_blur_1.22px",
+    "noise_grain",
+    "low_resolution_downscale",
+    "jpeg_q74"
+  ]
+}

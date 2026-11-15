@@ -123,6 +123,8 @@ class Settings(BaseSettings):
                 violations.append("DATABASE_URL is using SQLite instead of production PostgreSQL with pgvector")
             elif "postgres:postgres" in self.DATABASE_URL.lower():
                 violations.append("DATABASE_URL is using default 'postgres:postgres' credentials")
+            if self.MODEL_PROVIDER_BACKEND.lower() == "mock":
+                violations.append("MODEL_PROVIDER_BACKEND is set to 'mock' which is forbidden in production")
                 
             if violations:
                 msg = (

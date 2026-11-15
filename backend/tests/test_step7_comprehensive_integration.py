@@ -4,23 +4,19 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
+from PIL import Image
 from app.models.document import Document, ExtractedField, DocumentPage, ValidationResult
 from app.models.audit import AuditLog
 from app.worker.tasks import process_document_pipeline
 from app.services.retention_service import run_retention_policy_sweep
 
-SYNTHETIC_EID_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="630">
-  <rect width="1000" height="630" fill="#f0f4f8"/>
-  <text x="250" y="80">UNITED ARAB EMIRATES FEDERAL AUTHORITY FOR IDENTITY</text>
-  <text x="250" y="120">بطاقة الهوية الإماراتية Identity Card</text>
-  <text x="250" y="200">الاسم: سالم راشد سيف الشامسي</text>
-  <text x="250" y="260">Name: SALEM RASHED SAIF ALSHAMSI</text>
-  <text x="250" y="340">Identity Number / رقم الهوية: 784-1988-1234567-1</text>
-  <text x="250" y="420">Nationality / الجنسية: United Arab Emirates</text>
-  <text x="250" y="480">Date of Birth / تاريخ الميلاد: 15/04/1988</text>
-  <text x="600" y="480">Expiry Date / تاريخ الانتهاء: 30/12/2028</text>
-  <text x="250" y="540">Sex / الجنس: M</text>
-</svg>""".encode("utf-8")
+def _create_test_png():
+    buf = io.BytesIO()
+    img = Image.new("RGB", (1000, 630), color=(240, 244, 248))
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+SYNTHETIC_EID_PNG = _create_test_png()
 
 @pytest.mark.asyncio
 async def test_invalid_and_oversized_file_rejection(async_client: AsyncClient, seeded_data: dict):
@@ -49,6 +45,50 @@ async def test_invalid_and_oversized_file_rejection(async_client: AsyncClient, s
     assert res_big.status_code == 413
     assert "exceeds maximum permissible size" in res_big.json()["detail"]
 
+    # 3. Reject SVG uploads strictly
+    svg_bytes = b"<svg xmlns='http://www.w3.org/2000/svg'><text>Forbidden SVG</text></svg>"
+    res_svg = await async_client.post(
+        "/api/v1/documents/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("vector.svg", io.BytesIO(svg_bytes), "image/svg+xml")}
+    )
+    assert res_svg.status_code == 400
+    assert "SVG files are not permitted" in res_svg.json()["detail"]
+
+    # 4. Reject file with fake extension (PNG bytes uploaded with .pdf extension)
+    res_fake_ext = await async_client.post(
+        "/api/v1/documents/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("spoofed.pdf", io.BytesIO(SYNTHETIC_EID_PNG), "application/pdf")}
+    )
+    assert res_fake_ext.status_code == 400
+    assert "extension" in res_fake_ext.json()["detail"].lower()
+
+    # 5. Reject malformed PDF
+    malformed_pdf = b"%PDF-1.5\nMalformed truncated content without trailer"
+    res_malformed = await async_client.post(
+        "/api/v1/documents/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("corrupt.pdf", io.BytesIO(malformed_pdf), "application/pdf")}
+    )
+    assert res_malformed.status_code == 400
+    assert "PDF" in res_malformed.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_pdf_rasterization_before_ocr():
+    """Step 4: Verifies that PDFs are rasterized to pixel images before OCR."""
+    from app.pipeline.preprocessor import ImagePreprocessor
+
+    buf = io.BytesIO()
+    img = Image.new("RGB", (600, 400), color=(255, 255, 255))
+    img.save(buf, format="PDF")
+    pdf_bytes = buf.getvalue()
+
+    processed_bytes, meta = ImagePreprocessor.preprocess_image(pdf_bytes)
+    assert meta.get("rasterized_pdf") is True
+    assert processed_bytes.startswith(b"\x89PNG")
+
 @pytest.mark.asyncio
 async def test_tenant_isolation_across_all_lifecycle_endpoints(
     async_client: AsyncClient,
@@ -65,7 +105,7 @@ async def test_tenant_isolation_across_all_lifecycle_endpoints(
     t2_token = seeded_data["tenant2_token"]
 
     # 1. Tenant 1 uploads document
-    files = {"file": ("t1_isolated_doc.svg", io.BytesIO(SYNTHETIC_EID_SVG), "image/png")}
+    files = {"file": ("t1_isolated_doc.png", io.BytesIO(SYNTHETIC_EID_PNG), "image/png")}
     up = await async_client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {t1_token}"},
@@ -142,7 +182,7 @@ async def test_hard_delete_removes_all_derived_data_and_leaves_audit_record(
     tenant = seeded_data["tenant_1"]
 
     # 1. Upload & process
-    files = {"file": ("doc_for_deletion.svg", io.BytesIO(SYNTHETIC_EID_SVG), "image/png")}
+    files = {"file": ("doc_for_deletion.png", io.BytesIO(SYNTHETIC_EID_PNG), "image/png")}
     up = await async_client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {token}"},
@@ -164,6 +204,10 @@ async def test_hard_delete_removes_all_derived_data_and_leaves_audit_record(
     assert del_res.status_code == 200
 
     # 3. Assert all derived rows are wiped from database
+    from app.models.document_chunk import DocumentChunk
+    c_after = await db_session.execute(select(DocumentChunk).where(DocumentChunk.document_id == doc_id))
+    assert len(c_after.scalars().all()) == 0
+
     f_after = await db_session.execute(select(ExtractedField).where(ExtractedField.document_id == doc_id))
     assert len(f_after.scalars().all()) == 0
 

@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1980-2503603-3",
+  "name_ar": "حمدان سعيد خليفة المنصوري",
+  "name_en": "HAMDAN SAEED KHALIFA ALMANSOORI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "23/03/1980",
+  "expiry_date": "03/02/2029",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-6.0deg",
+    "gaussian_blur_0.79px"
+  ]
+}

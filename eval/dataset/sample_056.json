@@ -1,0 +1,16 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-2000-6683855-6",
+  "name_ar": "روضة علي سالم الشحي",
+  "name_en": "ROWDA ALI SALEM ALSHEHHI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "04/10/2000",
+  "expiry_date": "18/09/2029",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "noise_grain",
+    "jpeg_q54"
+  ]
+}

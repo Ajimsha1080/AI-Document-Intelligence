@@ -21,10 +21,10 @@ export function FieldRow({ field, docId }: FieldRowProps) {
   } = useApp();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [val, setVal] = useState(field.value);
+  const [val, setVal] = useState(field.value || "");
 
   useEffect(() => {
-    setVal(field.value);
+    setVal(field.value || "");
   }, [field.value]);
 
   const isActive = activeFieldKey === field.key;
@@ -35,13 +35,16 @@ export function FieldRow({ field, docId }: FieldRowProps) {
   };
 
   const handleRestore = () => {
-    setVal(field.originalValue);
-    updateDocumentField(docId, field.key, field.originalValue);
+    setVal(field.originalValue || "");
+    updateDocumentField(docId, field.key, field.originalValue || "");
     setIsEditing(false);
   };
 
+  const isMissing = field.value === null || field.value === undefined || field.value === "";
   const isSensitive = field.key.includes("id_number") || field.key.includes("trn");
-  const displayVal = piiMasked && isSensitive && !isEditing
+  const displayVal = isMissing
+    ? (language === "ar" ? "غير موجود (بحاجة للمراجعة)" : "Not found (Review required)")
+    : piiMasked && isSensitive && !isEditing && field.value
     ? field.value.replace(/\d(?=\d{4})/g, "*")
     : val;
 
@@ -121,11 +124,18 @@ export function FieldRow({ field, docId }: FieldRowProps) {
               e.stopPropagation();
               setIsEditing(true);
             }}
-            className="flex-1 px-2.5 py-1.5 rounded bg-secondary/50 hover:bg-secondary font-mono text-foreground font-medium truncate border border-transparent hover:border-border transition-all flex items-center justify-between"
-            title="Click to edit value"
+            className={cn(
+              "flex-1 px-2.5 py-1.5 rounded font-mono font-medium truncate border transition-all flex items-center justify-between",
+              isMissing
+                ? "bg-amber-500/10 border-amber-400 text-amber-800 dark:text-amber-300 italic"
+                : "bg-secondary/50 hover:bg-secondary text-foreground border-transparent hover:border-border"
+            )}
+            title={isMissing ? "Field unreadable or missing. Click to manually enter." : "Click to edit value"}
           >
             <span className="truncate">{displayVal}</span>
-            <span className="text-[10px] text-muted-foreground opacity-60 ms-2">Edit</span>
+            <span className="text-[10px] text-muted-foreground opacity-60 ms-2">
+              {isMissing ? "Enter" : "Edit"}
+            </span>
           </div>
         )}
       </div>

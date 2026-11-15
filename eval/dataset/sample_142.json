@@ -1,0 +1,14 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-2722",
+  "trn": "100901234500003",
+  "invoice_date": "03/11/2026",
+  "supplier_name": "AL ZAHRA SANITARY WARE TRADING",
+  "total_amount": "34500.00",
+  "vat_amount": "1725.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "jpeg_q52"
+  ]
+}

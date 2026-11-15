@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1994-9965799-9",
-  "name_ar": "ديفيد روبرت ميلر",
-  "name_en": "DAVID ROBERT MILLER",
-  "nationality": "United Kingdom",
-  "date_of_birth": "23/05/1994",
-  "expiry_date": "06/09/2031",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1981-4699687-5",
+  "name_ar": "ماريا سانتوس كروز",
+  "name_en": "MARIA SANTOS CRUZ",
+  "nationality": "Philippines",
+  "date_of_birth": "16/08/1981",
+  "expiry_date": "21/08/2031",
+  "sex": "F",
+  "subset": "clean",
+  "degradations": []
 }

@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1991-2779996-5",
+  "name_ar": "شارلوت إليزابيث ديفيز",
+  "name_en": "CHARLOTTE ELIZABETH DAVIES",
+  "nationality": "United Kingdom",
+  "date_of_birth": "28/03/1991",
+  "expiry_date": "24/11/2029",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "jpeg_q71"
+  ]
+}

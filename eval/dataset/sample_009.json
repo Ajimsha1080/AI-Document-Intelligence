@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1980-9027260-4",
-  "name_ar": "لطيفة ناصر سعيد الظاهري",
-  "name_en": "LATIFA NASSER SAEED ALDHAHERI",
+  "document_type": "emirates_id",
+  "id_number": "784-2004-9974039-5",
+  "name_ar": "سعيد راشد حميد الكعبي",
+  "name_en": "SAEED RASHED HUMAID ALKAABI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "16/01/1980",
-  "expiry_date": "17/12/2027",
-  "sex": "F"
+  "date_of_birth": "23/06/2004",
+  "expiry_date": "17/12/2030",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

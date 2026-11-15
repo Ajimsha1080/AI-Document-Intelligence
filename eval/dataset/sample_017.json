@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1990-6241381-2",
-  "name_ar": "ليلى سامي كمال البلوشي",
-  "name_en": "LAILA SAMI KAMAL ALBALOUSHI",
-  "nationality": "Oman",
-  "date_of_birth": "14/11/1990",
-  "expiry_date": "12/02/2028",
-  "sex": "F"
+  "document_type": "emirates_id",
+  "id_number": "784-1992-1234948-6",
+  "name_ar": "عمر نبيل فهد التميمي",
+  "name_en": "OMAR NABIL FAHD ALTAMIMI",
+  "nationality": "Saudi Arabia",
+  "date_of_birth": "04/04/1992",
+  "expiry_date": "27/06/2033",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

@@ -1,0 +1,13 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5480047",
+  "company_name_en": "ARABIAN GULF CONTRACTING CO LLC",
+  "company_name_ar": "شركة الخليج العربي للمقاولات ذ.م.م",
+  "issuing_authority": "Department of Economy and Tourism Dubai",
+  "expiry_date": "02/03/2028",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_4.5deg",
+    "gaussian_blur_0.78px"
+  ]
+}

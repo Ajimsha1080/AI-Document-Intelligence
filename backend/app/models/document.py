@@ -23,6 +23,7 @@ class Document(Base, TenantAwareMixin, TimestampMixin):
     pages = relationship("DocumentPage", back_populates="document", cascade="all, delete-orphan")
     extracted_fields = relationship("ExtractedField", back_populates="document", cascade="all, delete-orphan")
     validation_results = relationship("ValidationResult", back_populates="document", cascade="all, delete-orphan")
+    chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
 
 class DocumentPage(Base, TenantAwareMixin):
     __tablename__ = "document_pages"

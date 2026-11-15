@@ -11,7 +11,7 @@ if backend_dir not in sys.path:
 
 from app.core.database import Base, get_db
 import app.models  # Ensure all ORM models are registered
-from app.main import app
+from app.main import app as fastapi_app
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.core.security import hash_password, create_access_token
@@ -34,7 +34,7 @@ async def override_get_db():
     async with TestingSessionLocal() as session:
         yield session
 
-app.dependency_overrides[get_db] = override_get_db
+fastapi_app.dependency_overrides[get_db] = override_get_db
 
 @pytest.fixture(autouse=True)
 async def setup_database():
@@ -46,7 +46,7 @@ async def setup_database():
 
 @pytest.fixture
 async def async_client():
-    transport = ASGITransport(app=app)
+    transport = ASGITransport(app=fastapi_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 

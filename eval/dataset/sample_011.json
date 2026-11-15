@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1986-8417623-7",
-  "name_ar": "نورة سلطان بطي القبيسي",
-  "name_en": "NOURA SULTAN BUTTI ALQUBAISI",
+  "document_type": "emirates_id",
+  "id_number": "784-1982-2787469-4",
+  "name_ar": "خالد إبراهيم يوسف الحمادي",
+  "name_en": "KHALID IBRAHIM YOUSUF ALHAMMADI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "01/05/1986",
-  "expiry_date": "22/03/2030",
-  "sex": "F"
+  "date_of_birth": "18/11/1982",
+  "expiry_date": "03/09/2029",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

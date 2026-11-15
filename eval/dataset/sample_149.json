@@ -1,0 +1,13 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-1159",
+  "trn": "100678901200003",
+  "invoice_date": "10/06/2026",
+  "supplier_name": "OASIS COLD STORAGE LOGISTICS",
+  "total_amount": "61000.00",
+  "vat_amount": "3050.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_8.0deg"
+  ]
+}

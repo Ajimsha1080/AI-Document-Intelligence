@@ -1,0 +1,18 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1983-6885813-4",
+  "name_ar": "أريج بدر ناصر العجمي",
+  "name_en": "AREEJ BADER NASSER ALAJMI",
+  "nationality": "Kuwait",
+  "date_of_birth": "17/10/1983",
+  "expiry_date": "14/11/2029",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "gaussian_blur_1.09px",
+    "noise_grain",
+    "low_resolution_downscale",
+    "jpeg_q47"
+  ]
+}

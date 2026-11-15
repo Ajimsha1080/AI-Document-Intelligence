@@ -1,9 +1,16 @@
 {
-  "id_number": "784-2000-1652068-4",
-  "name_ar": "جان باتيست دوبوا",
-  "name_en": "JEAN BAPTISTE DUBOIS",
-  "nationality": "France",
-  "date_of_birth": "12/04/2000",
-  "expiry_date": "15/12/2030",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1985-9952737-5",
+  "name_ar": "إيلينا صوفي شميت",
+  "name_en": "ELENA SOPHIE SCHMIDT",
+  "nationality": "Germany",
+  "date_of_birth": "22/12/1985",
+  "expiry_date": "07/06/2033",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-1.5deg",
+    "noise_grain",
+    "jpeg_q65"
+  ]
 }

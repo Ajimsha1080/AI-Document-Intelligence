@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1981-5188322-4",
-  "name_ar": "بريا شاندرا سيخار",
-  "name_en": "PRIYA CHANDRA SEKHAR",
+  "document_type": "emirates_id",
+  "id_number": "784-1992-7004547-1",
+  "name_ar": "راجيش فينكات كومار",
+  "name_en": "RAJESH VENKAT KUMAR",
   "nationality": "India",
-  "date_of_birth": "02/01/1981",
-  "expiry_date": "08/06/2028",
-  "sex": "F"
+  "date_of_birth": "15/02/1992",
+  "expiry_date": "12/01/2030",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

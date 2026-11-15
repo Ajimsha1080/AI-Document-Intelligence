@@ -1,0 +1,13 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-7249",
+  "trn": "100678901200003",
+  "invoice_date": "28/08/2026",
+  "supplier_name": "AL AIN PACKAGING FACTORY LLC",
+  "total_amount": "15900.00",
+  "vat_amount": "795.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_8.0deg"
+  ]
+}

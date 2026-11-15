@@ -1,0 +1,18 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1973-1284383-8",
+  "name_ar": "جاسمين روز نافارو",
+  "name_en": "JASMINE ROSE NAVARRO",
+  "nationality": "Philippines",
+  "date_of_birth": "10/05/1973",
+  "expiry_date": "08/03/2034",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-1.5deg",
+    "gaussian_blur_0.72px",
+    "noise_grain",
+    "low_resolution_downscale",
+    "jpeg_q61"
+  ]
+}

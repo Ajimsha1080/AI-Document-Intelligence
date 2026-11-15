@@ -1,0 +1,19 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1983-9991215-7",
+  "name_ar": "حصة منصور سيف الهاجري",
+  "name_en": "HESSA MANSOOR SAIF ALHAJERI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "14/06/1983",
+  "expiry_date": "03/10/2031",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "gaussian_blur_1.13px",
+    "noise_grain",
+    "uneven_lighting_shadow",
+    "low_resolution_downscale",
+    "jpeg_q66"
+  ]
+}

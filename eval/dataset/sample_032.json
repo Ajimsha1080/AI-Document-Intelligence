@@ -1,9 +1,16 @@
 {
-  "id_number": "784-1987-4579537-1",
-  "name_ar": "صوفيا كلير براون",
-  "name_en": "SOPHIA CLAIRE BROWN",
-  "nationality": "Australia",
-  "date_of_birth": "18/11/1987",
-  "expiry_date": "11/03/2030",
-  "sex": "F"
+  "document_type": "emirates_id",
+  "id_number": "784-1984-2607531-7",
+  "name_ar": "ألكسندر جيمس تايلور",
+  "name_en": "ALEXANDER JAMES TAYLOR",
+  "nationality": "Canada",
+  "date_of_birth": "23/07/1984",
+  "expiry_date": "20/06/2035",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "noise_grain",
+    "jpeg_q52"
+  ]
 }

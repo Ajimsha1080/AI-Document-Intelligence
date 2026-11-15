@@ -1,0 +1,13 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5250301",
+  "company_name_en": "AL BARSHA FOOD INDUSTRIES LLC",
+  "company_name_ar": "البرشاء للصناعات الغذائية ذ.م.م",
+  "issuing_authority": "Department of Economy and Tourism Dubai",
+  "expiry_date": "20/08/2031",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-6.0deg",
+    "gaussian_blur_0.89px"
+  ]
+}

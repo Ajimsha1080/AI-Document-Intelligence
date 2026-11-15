@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1976-4164749-6",
-  "name_ar": "إيما جين ويلسون",
-  "name_en": "EMMA JANE WILSON",
+  "document_type": "emirates_id",
+  "id_number": "784-1987-7579666-1",
+  "name_ar": "ديفيد روبرت ميلر",
+  "name_en": "DAVID ROBERT MILLER",
   "nationality": "United Kingdom",
-  "date_of_birth": "25/07/1976",
-  "expiry_date": "21/03/2031",
-  "sex": "F"
+  "date_of_birth": "17/10/1987",
+  "expiry_date": "04/07/2030",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

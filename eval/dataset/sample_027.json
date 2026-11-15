@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1975-1047166-3",
-  "name_ar": "جون مارك باوتيستا",
-  "name_en": "JOHN MARK BAUTISTA",
-  "nationality": "Philippines",
-  "date_of_birth": "03/02/1975",
-  "expiry_date": "08/08/2031",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1978-7630453-2",
+  "name_ar": "محمد عارف خان",
+  "name_en": "MOHAMMED ARIF KHAN",
+  "nationality": "Pakistan",
+  "date_of_birth": "10/06/1978",
+  "expiry_date": "05/09/2027",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

@@ -1,9 +1,12 @@
 {
-  "id_number": "784-2000-2531324-6",
-  "name_ar": "فاطمة محمد علي الحوسني",
-  "name_en": "FATIMA MOHAMMED ALI ALHOSANI",
+  "document_type": "emirates_id",
+  "id_number": "784-1988-3138412-2",
+  "name_ar": "سالم راشد سيف الشامسي",
+  "name_en": "SALEM RASHED SAIF ALSHAMSI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "25/01/2000",
-  "expiry_date": "28/04/2033",
-  "sex": "F"
+  "date_of_birth": "14/11/1988",
+  "expiry_date": "02/02/2035",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

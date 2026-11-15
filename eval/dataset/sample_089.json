@@ -1,0 +1,14 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1980-3998512-6",
+  "name_ar": "هانز كريستيان فيشر",
+  "name_en": "HANS CHRISTIAN FISCHER",
+  "nationality": "Germany",
+  "date_of_birth": "06/05/1980",
+  "expiry_date": "14/05/2034",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_8.0deg"
+  ]
+}

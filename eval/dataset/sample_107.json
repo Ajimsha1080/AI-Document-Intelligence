@@ -1,0 +1,12 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5097137",
+  "company_name_en": "CRESCENT HEALTHCARE SOLUTIONS LLC",
+  "company_name_ar": "حلول الهلال للرعاية الصحية ذ.م.م",
+  "issuing_authority": "Department of Economy and Tourism Dubai",
+  "expiry_date": "01/04/2029",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_4.5deg"
+  ]
+}

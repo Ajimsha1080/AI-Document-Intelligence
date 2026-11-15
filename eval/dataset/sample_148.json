@@ -1,0 +1,15 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-2668",
+  "trn": "100567890100003",
+  "invoice_date": "09/05/2026",
+  "supplier_name": "ELITE VEHICLE FLEET LEASING LLC",
+  "total_amount": "76300.00",
+  "vat_amount": "3815.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_6.0deg",
+    "noise_grain",
+    "jpeg_q59"
+  ]
+}

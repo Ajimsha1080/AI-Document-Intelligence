@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1990-4080260-7",
-  "name_ar": "ميثاء سيف عيسى المزروعي",
-  "name_en": "MAITHA SAIF ISSA ALMAZROUEI",
+  "document_type": "emirates_id",
+  "id_number": "784-1986-9029753-0",
+  "name_ar": "مبارك خلفان مبارك الهاملي",
+  "name_en": "MUBARAK KHALFAN MUBARAK ALHAMELI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "23/05/1990",
-  "expiry_date": "25/12/2033",
-  "sex": "F"
+  "date_of_birth": "26/09/1986",
+  "expiry_date": "13/10/2034",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

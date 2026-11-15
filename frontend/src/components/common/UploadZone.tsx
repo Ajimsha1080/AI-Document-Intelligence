@@ -1,43 +1,42 @@
+"use client";
+
 import React, { useState, useRef } from "react";
-import { useApp } from "@/context/AppContext";
-import { DocumentTypeCode, DocumentItem } from "@/types";
-import { StatusBadge } from "@/components/common/StatusBadge";
-import { ConfidenceBadge } from "@/components/common/ConfidenceBadge";
-import { api } from "@/lib/api";
 import {
   UploadCloud,
-  FileCheck,
   File,
-  Loader2,
   CheckCircle2,
-  AlertCircle,
   Sparkles,
   ArrowRight,
   ArrowLeft,
-  X,
+  FileCheck,
+  Loader2,
 } from "lucide-react";
+import { useApp } from "@/context/AppContext";
+import { api, PipelineStageEvent } from "@/lib/api";
+import { DocumentTypeCode } from "@/types";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { ConfidenceBadge } from "@/components/common/ConfidenceBadge";
 
 interface UploadingFile {
   id: string;
   name: string;
   sizeKB: number;
   progress: number;
-  status: "preprocessing" | "ocr" | "done" | "error";
+  status: "queued" | "preprocessing" | "ocr" | "parsing" | "validating" | "done" | "error";
+  stageLabel?: string;
   type: DocumentTypeCode | "auto";
-  detectedType?: DocumentTypeCode;
 }
 
 export function UploadZone() {
   const {
-    addDocument,
     documents,
     setSelectedDocumentId,
+    addDocument,
+    refreshDocuments,
     setCurrentScreen,
-    dataMode,
     language,
     dir,
     showToast,
-    t,
   } = useApp();
 
   const [isDragging, setIsDragging] = useState(false);
@@ -67,85 +66,97 @@ export function UploadZone() {
         id: fileId,
         name: f.name,
         sizeKB: Math.round(f.size / 1024),
-        progress: 15,
-        status: "preprocessing",
+        progress: 10,
+        status: "queued",
+        stageLabel: "Queued",
         type: selectedType,
       };
 
       setQueue((prev) => [item, ...prev]);
 
       try {
-        if (dataMode === "live") {
-          // 1. Upload to live FastAPI server
+        const docTypeParam = selectedType === "auto" ? "emirates_id" : selectedType;
+        const initialDoc = await api.documents.upload(f, docTypeParam, (p) => {
           setQueue((q) =>
-            q.map((x) => (x.id === fileId ? { ...x, progress: 40, status: "ocr" } : x))
+            q.map((x) => (x.id === fileId ? { ...x, progress: Math.min(p, 25) } : x))
           );
+        });
 
-          const docTypeParam = selectedType === "auto" ? "emirates_id" : selectedType;
-          const initialDoc = await api.documents.upload(f, docTypeParam, (p) => {
-            setQueue((q) =>
-              q.map((x) => (x.id === fileId ? { ...x, progress: Math.min(p, 60) } : x))
-            );
-          });
+        // Subscribe to real Server-Sent Events (SSE)
+        const unsubscribe = api.documents.subscribeDocumentEvents(initialDoc.id, async (evt: PipelineStageEvent) => {
+          const stage = evt.stage;
+          let progress = evt.progress_pct || 50;
+          let stageLabel: string = stage;
+          let status: UploadingFile["status"] = "ocr";
 
-          // 2. Poll extraction pipeline status
-          let currentDoc = initialDoc;
-          let attempts = 0;
-          while (
-            attempts < 40 &&
-            (currentDoc.status === "processing" || (currentDoc.status as string) === "queued")
-          ) {
-            await new Promise((resolve) => setTimeout(resolve, 1200));
-            attempts++;
-            try {
-              currentDoc = await api.documents.get(initialDoc.id);
-            } catch {
-              // keep waiting
-            }
+          if (stage === "queued") {
+            progress = 10;
+            status = "queued";
+            stageLabel = "Queued in Sovereign Pipeline";
+          } else if (stage === "preprocessing") {
+            progress = 25;
+            status = "preprocessing";
+            stageLabel = "Image Preprocessing (Deskew/Denoise)";
+          } else if (stage === "ocr") {
+            progress = 50;
+            status = "ocr";
+            stageLabel = "Local OCR Token Extraction";
+          } else if (stage === "parsing") {
+            progress = 75;
+            status = "parsing";
+            stageLabel = "Layout Parsing & Entity Recognition";
+          } else if (stage === "validating") {
+            progress = 90;
+            status = "validating";
+            stageLabel = "Compliance & Check Digit Validation";
+          } else if (stage === "needs_review" || stage === "approved") {
+            progress = 100;
+            status = "done";
+            stageLabel = stage === "approved" ? "Approved" : "Needs Review";
+            unsubscribe();
+
+            // Fetch live finished document to populate context
+            (async () => {
+              try {
+                const finishedDoc = await api.documents.get(initialDoc.id);
+                addDocument(finishedDoc);
+                setSelectedDocumentId(finishedDoc.id);
+                await refreshDocuments();
+                showToast(
+                  "success",
+                  `Document ${finishedDoc.referenceNumber} processed (${finishedDoc.status.replace("_", " ")})`,
+                  `تمت معالجة المستند ${finishedDoc.referenceNumber} بنجاح`
+                );
+              } catch {
+                addDocument(initialDoc);
+                setSelectedDocumentId(initialDoc.id);
+              }
+            })();
+          } else if (stage === "failed") {
+            progress = 100;
+            status = "error";
+            stageLabel = "Processing Failed";
+            unsubscribe();
+            refreshDocuments();
+            showToast("error", `Document processing failed`, "فشلت معالجة المستند");
           }
 
-          // 3. Mark complete & update application context
           setQueue((q) =>
             q.map((x) =>
               x.id === fileId
                 ? {
                     ...x,
-                    progress: 100,
-                    status: currentDoc.status === "failed" ? "error" : "done",
-                    detectedType: currentDoc.documentType,
+                    progress,
+                    status,
+                    stageLabel,
                   }
                 : x
             )
           );
-
-          addDocument(currentDoc);
-          setSelectedDocumentId(currentDoc.id);
-          showToast(
-            currentDoc.status === "failed" ? "error" : "success",
-            `Document ${currentDoc.referenceNumber} processed (${currentDoc.status.replace("_", " ")})`,
-            `تمت معالجة المستند ${currentDoc.referenceNumber} بنجاح`
-          );
-        } else {
-          // Mock mode with deterministic flow
-          setQueue((q) =>
-            q.map((x) => (x.id === fileId ? { ...x, progress: 75, status: "ocr" } : x))
-          );
-          await new Promise((resolve) => setTimeout(resolve, 600));
-
-          const mockDoc = await api.documents.upload(f, selectedType === "auto" ? "emirates_id" : selectedType);
-          setQueue((q) =>
-            q.map((x) =>
-              x.id === fileId
-                ? { ...x, progress: 100, status: "done", detectedType: mockDoc.documentType }
-                : x
-            )
-          );
-          addDocument(mockDoc);
-          setSelectedDocumentId(mockDoc.id);
-        }
+        });
       } catch (err: any) {
         setQueue((q) =>
-          q.map((x) => (x.id === fileId ? { ...x, progress: 100, status: "error" } : x))
+          q.map((x) => (x.id === fileId ? { ...x, progress: 100, status: "error", stageLabel: "Upload Error" } : x))
         );
         showToast("error", `Upload failed: ${err.message}`, "فشل رفع ومعالجة المستند");
       }
@@ -174,8 +185,8 @@ export function UploadZone() {
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {language === "ar"
-                ? "يدعم صيغ PDF، PNG، JPG، TIFF، DOCX مع فك الميلان وإزالة الضوضاء تلقائياً"
-                : "Accepts PDF, PNG, JPG, TIFF, DOCX with automatic deskew, denoise, and orientation fix"}
+                ? "يدعم صيغ PDF، PNG، JPG، TIFF مع فك الميلان وإزالة الضوضاء تلقائياً"
+                : "Accepts PDF, PNG, JPG, TIFF with automatic deskew, denoise, and orientation fix"}
             </p>
           </div>
 
@@ -213,7 +224,7 @@ export function UploadZone() {
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".pdf,.png,.jpg,.jpeg,.tiff,.docx"
+            accept=".pdf,.png,.jpg,.jpeg,.tiff"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -229,7 +240,7 @@ export function UploadZone() {
                 : "Drag & drop files here, or browse your local files"}
             </div>
             <div className="text-xs text-muted-foreground">
-              PDF, PNG, JPG, TIFF, DOCX • {language === "ar" ? "حجم أقصى ٥٠ ميجابايت" : "Up to 50MB per file"}
+              PDF, PNG, JPG, TIFF • {language === "ar" ? "حجم أقصى ٥٠ ميجابايت" : "Up to 50MB per file"}
             </div>
           </div>
 
@@ -249,7 +260,7 @@ export function UploadZone() {
             <div className="flex items-center gap-2">
               <Loader2 className="w-4 h-4 text-primary animate-spin" />
               <h3 className="text-xs font-bold text-foreground">
-                {language === "ar" ? "طابور المعالجة الآلية الحالي" : "Active Ingestion Pipeline"}
+                {language === "ar" ? "طابور المعالجة اللحظية الحقيقي" : "Active Ingestion Pipeline (Live Real-Time)"}
               </h3>
             </div>
             <button
@@ -282,7 +293,7 @@ export function UploadZone() {
                     ) : (
                       <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
                         <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
-                        <span>{item.status === "preprocessing" ? "Preprocessing (Deskew)" : "Sovereign OCR & Layout"}</span>
+                        <span>{item.stageLabel || "Processing..."}</span>
                       </span>
                     )}
                   </div>

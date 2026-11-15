@@ -1,0 +1,16 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1990-2890139-7",
+  "name_ar": "مها كاظم حسن الشمري",
+  "name_en": "MAHA KADHIM HASSAN ALSHAMMARI",
+  "nationality": "Iraq",
+  "date_of_birth": "28/07/1990",
+  "expiry_date": "13/02/2028",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "noise_grain",
+    "jpeg_q61"
+  ]
+}

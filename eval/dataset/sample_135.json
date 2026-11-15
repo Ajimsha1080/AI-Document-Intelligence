@@ -1,0 +1,15 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-4285",
+  "trn": "100234567800003",
+  "invoice_date": "24/04/2026",
+  "supplier_name": "SOVEREIGN CLOUD INFRASTRUCTURE FZE",
+  "total_amount": "95000.00",
+  "vat_amount": "4750.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "gaussian_blur_1.14px",
+    "uneven_lighting_shadow"
+  ]
+}

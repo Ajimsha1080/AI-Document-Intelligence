@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1977-1054118-2",
+  "name_ar": "جهاد غسان توفيق النجار",
+  "name_en": "JIHAD GHASSAN TAWFIQ ALNAJJAR",
+  "nationality": "Jordan",
+  "date_of_birth": "10/11/1977",
+  "expiry_date": "06/02/2031",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_8.0deg",
+    "gaussian_blur_1.16px"
+  ]
+}

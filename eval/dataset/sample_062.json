@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1999-7688313-4",
+  "name_ar": "شمسة ناصر إبراهيم المعمري",
+  "name_en": "SHAMSA NASSER IBRAHIM ALMAAMARI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "16/12/1999",
+  "expiry_date": "27/01/2027",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "jpeg_q70"
+  ]
+}

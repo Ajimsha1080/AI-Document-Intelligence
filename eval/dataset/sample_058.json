@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-2004-6592688-7",
+  "name_ar": "علياء حمدان خليفة الكعبي",
+  "name_en": "ALYAA HAMDAN KHALIFA ALKAABI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "10/10/2004",
+  "expiry_date": "17/04/2030",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_6.0deg",
+    "jpeg_q50"
+  ]
+}

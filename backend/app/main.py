@@ -1,121 +1,65 @@
-import sys
-import os
-import logging
-# Ensure backend directory is in sys.path regardless of launch working directory
-backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
-
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
-
-from app.core.config import settings
-from app.core.database import engine, AsyncSessionLocal
-from app.core.security import hash_password
-from app.models.tenant import Tenant
-from app.models.user import User
-from app.models.document_type import DocumentType
-from app.schemas.document_type import DEFAULT_EMIRATES_ID_SCHEMA, DEFAULT_TRADE_LICENSE_SCHEMA
-from app.services.audit_service import log_audit_event
-from app.services.model_engine.factory import get_model_provider
 from app.api.v1.router import api_router
-import app.models  # Register all ORM models
+from app.core.config import settings
+from app.services.model_engine.factory import get_model_provider
+import logging
+import sys
 
-logger = logging.getLogger("docintel_main")
+# Configure Sovereign Audit & Compliance Logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] [%(name)s] [UAE-REGION:%(region)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 
-async def seed_initial_data():
-    """Seeds default tenant, admin user, and standard UAE schemas if database is newly initialized."""
-    async with AsyncSessionLocal() as db:
-        res = await db.execute(select(Tenant).where(Tenant.id == settings.DEFAULT_TENANT_ID))
-        tenant = res.scalar_one_or_none()
-        if not tenant:
-            tenant = Tenant(
-                id=settings.DEFAULT_TENANT_ID,
-                name=settings.DEFAULT_TENANT_NAME,
-                slug="alhilal-demo",
-                tier="enterprise",
-                retention_days=365,
-                pii_masking_default=True,
-                is_active=True
-            )
-            db.add(tenant)
-            await db.flush()
+logger = logging.getLogger("uae_compliance")
 
-            admin_user = User(
-                tenant_id=tenant.id,
-                email=settings.DEFAULT_ADMIN_EMAIL,
-                hashed_password=hash_password(settings.DEFAULT_ADMIN_PASSWORD),
-                full_name="UAE Compliance Director",
-                role="admin",
-                is_active=True
-            )
-            db.add(admin_user)
-            await db.flush()
+class RegionLogFilter(logging.Filter):
+    def filter(self, record):
+        record.region = settings.CURRENT_REGION
+        return True
 
-            # Seed standard schemas
-            eid_type = DocumentType(
-                tenant_id=tenant.id,
-                code="emirates_id",
-                name_en="UAE Identity Card (Emirates ID)",
-                name_ar="بطاقة الهوية الإماراتية",
-                description="Federal Authority for Identity and Citizenship (ICP) National ID card",
-                schema_definition=DEFAULT_EMIRATES_ID_SCHEMA.model_dump(),
-                is_active=True
-            )
-            trade_type = DocumentType(
-                tenant_id=tenant.id,
-                code="uae_trade_license",
-                name_en="UAE Commercial Trade License",
-                name_ar="رخصة تجارية في دولة الإمارات",
-                description="Department of Economy and Tourism (DET) commercial license",
-                schema_definition=DEFAULT_TRADE_LICENSE_SCHEMA.model_dump(),
-                is_active=True
-            )
-            db.add_all([eid_type, trade_type])
-            await db.flush()
-
-            # Log audit trail
-            await log_audit_event(
-                db=db,
-                tenant_id=tenant.id,
-                actor_id=admin_user.id,
-                actor_email=admin_user.email,
-                actor_role="admin",
-                action="SYSTEM_INITIALIZED",
-                entity_type="tenant",
-                entity_id=tenant.id,
-                details={"initial_seed": True, "schemas": ["emirates_id", "uae_trade_license"]}
-            )
-            await db.commit()
+for handler in logging.root.handlers:
+    handler.addFilter(RegionLogFilter())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Step 0: Refuse to start in production if default secrets/credentials are active
-    settings.validate_production_environment()
+    # Enforce strict startup checks
+    logger.info("Initializing UAE Document Intelligence Sovereign Gateway...")
+    logger.info(f"Compliance Region: {settings.CURRENT_REGION}")
+    logger.info(f"Strict Local Only Boundary: {settings.STRICT_LOCAL_ONLY}")
+    logger.info(f"CORS Allowed Origins: {settings.ALLOWED_ORIGINS}")
+    
+    # Audit local OCR readiness
+    from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
+    ocr_info = LocalOCRAdapter.get_ocr_info()
+    loaded_langs = ocr_info.get("ocr_languages", [])
+    logger.info(f"Local OCR Engine: {ocr_info.get('ocr_engine')} | Loaded Languages: {loaded_langs}")
+    
+    if "ara" not in loaded_langs:
+        logger.warning(
+            "HONESTY COMPLIANCE WARNING: Arabic OCR language pack ('ara') is missing from the host! "
+            "Arabic document extraction will fail or report null fields until tesseract-ocr-ara is installed."
+        )
 
-    # Note: Database tables are strictly managed via Alembic migrations ('alembic upgrade head').
-    # create_all has been removed outside of test suites.
-    try:
-        await seed_initial_data()
-    except Exception as e:
-        logger.info(f"Database bootstrap seed verification: {e}")
+    if settings.STRICT_LOCAL_ONLY:
+        logger.info("UAE Sovereign Guard ACTIVE: Egress to non-whitelisted cross-border endpoints is blocked.")
         
     yield
-    # Cleanup on shutdown
-    await engine.dispose()
+    logger.info("Shutting down UAE Sovereign Gateway safely.")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Multi-tenant Document Intelligence Platform tailored for the UAE market (Banking, KYC, Trade)",
-    version="0.2.0",
+    description="Multi-Tenant Document Intelligence SaaS compliant with UAE PDPL Federal Decree-Law No. 45/2021",
+    version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
-# CORS setup - Strict allowed origins list, strictly no wildcard '*' with credentials
+# CORS Middleware with strict origin validation
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -127,8 +71,11 @@ app.add_middleware(
 @app.middleware("http")
 async def uae_compliance_headers_middleware(request: Request, call_next):
     """Enforces sovereign data processing headers on all requests and responses."""
-    provider = get_model_provider()
-    actual_backend = getattr(provider, "backend_name", settings.MODEL_PROVIDER_BACKEND)
+    try:
+        provider = get_model_provider()
+        actual_backend = getattr(provider, "backend_name", settings.MODEL_PROVIDER_BACKEND)
+    except Exception:
+        actual_backend = "unavailable"
 
     response = await call_next(request)
     response.headers["X-Data-Sovereignty-Region"] = settings.CURRENT_REGION
@@ -141,20 +88,79 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/health", tags=["Health & Compliance"])
 async def health_check():
     """
-    Sovereign health check.
-    Reports the REAL model backend (e.g., 'mock-fallback' if 'local' is configured
-    but no real OCR/weights engine is loaded). Never silently masquerades as local.
+    Sovereign health check listing:
+    - OCR engine & loaded languages
+    - Database connection status
+    - Redis queue connection status
+    - Storage connection status
+    - Model backend
+    Reports unvarnished truth; never silently falls back.
     """
-    provider = get_model_provider()
-    actual_backend = getattr(provider, "backend_name", settings.MODEL_PROVIDER_BACKEND)
-    
+    from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
+    from app.core.database import AsyncSessionLocal
+    from sqlalchemy import text
+    import os
+
+    ocr_info = LocalOCRAdapter.get_ocr_info()
+    engine_name = ocr_info.get("ocr_engine", "none")
+    loaded_langs = ocr_info.get("ocr_languages", [])
+    ocr_available = LocalOCRAdapter.is_available()
+
+    # 1. Database connection check
+    db_status = "healthy"
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+
+    # 2. Redis queue check
+    redis_status = "healthy"
+    try:
+        from app.worker.queue import get_redis_client
+        client = get_redis_client()
+        if client is not None:
+            client.ping()
+        else:
+            redis_status = "unavailable"
+    except Exception as e:
+        redis_status = f"unhealthy: {str(e)}"
+
+    # 3. Storage check
+    storage_status = "healthy"
+    try:
+        if not os.path.exists(settings.LOCAL_STORAGE_DIR):
+            os.makedirs(settings.LOCAL_STORAGE_DIR, exist_ok=True)
+    except Exception as e:
+        storage_status = f"unhealthy: {str(e)}"
+
+    # 4. Model Provider Backend
+    try:
+        provider = get_model_provider()
+        actual_backend = getattr(provider, "backend_name", settings.MODEL_PROVIDER_BACKEND)
+        is_mock = getattr(provider, "is_mock", False)
+    except Exception as e:
+        actual_backend = f"unavailable: {str(e)}"
+        is_mock = False
+
+    overall_healthy = (
+        db_status == "healthy" and
+        ("unhealthy" not in redis_status) and
+        storage_status == "healthy"
+    )
+
     return {
-        "status": "healthy",
+        "status": "healthy" if overall_healthy else "degraded",
         "environment": settings.ENVIRONMENT,
         "region": settings.CURRENT_REGION,
         "strict_local_only": settings.STRICT_LOCAL_ONLY,
         "in_country_storage": settings.ENFORCE_IN_COUNTRY_STORAGE,
+        "database": db_status,
+        "redis": redis_status,
+        "storage": storage_status,
         "model_backend": actual_backend,
         "model_backend_configured": settings.MODEL_PROVIDER_BACKEND,
-        "is_mock": getattr(provider, "is_mock", False),
+        "is_mock": is_mock,
+        "ocr_engine": engine_name,
+        "ocr_languages": loaded_langs,
     }

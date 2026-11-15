@@ -1,0 +1,17 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-8812",
+  "trn": "100901234500003",
+  "invoice_date": "21/01/2026",
+  "supplier_name": "ARABIAN PAPER & PRINTING PRODUCTS",
+  "total_amount": "6300.00",
+  "vat_amount": "315.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "gaussian_blur_1.15px",
+    "noise_grain",
+    "low_resolution_downscale",
+    "jpeg_q57"
+  ]
+}

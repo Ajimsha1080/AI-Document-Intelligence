@@ -1,9 +1,17 @@
 {
-  "id_number": "784-1982-9209057-2",
-  "name_ar": "لوكاس هانز ماير",
-  "name_en": "LUKAS HANS MEYER",
-  "nationality": "Germany",
-  "date_of_birth": "12/03/1982",
-  "expiry_date": "10/06/2027",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1983-2702811-8",
+  "name_ar": "مي لينغ وونغ",
+  "name_en": "MEI LING WONG",
+  "nationality": "China",
+  "date_of_birth": "17/12/1983",
+  "expiry_date": "24/03/2027",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "gaussian_blur_1.23px",
+    "low_resolution_downscale",
+    "jpeg_q45"
+  ]
 }

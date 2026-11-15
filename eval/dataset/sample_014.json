@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1991-8205245-8",
-  "name_ar": "أحمد طارق حسن خليل",
-  "name_en": "AHMED TARIQ HASSAN KHALIL",
-  "nationality": "Egypt",
-  "date_of_birth": "08/01/1991",
-  "expiry_date": "14/01/2029",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1980-4358375-0",
+  "name_ar": "ميثاء سيف عيسى المزروعي",
+  "name_en": "MAITHA SAIF ISSA ALMAZROUEI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "13/04/1980",
+  "expiry_date": "18/09/2031",
+  "sex": "F",
+  "subset": "clean",
+  "degradations": []
 }

@@ -32,8 +32,6 @@ export function DocumentViewer() {
   const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 15, 60));
   const handleResetZoom = () => setZoomLevel(100);
 
-  const activeField = selectedDocument.fields.find((f) => f.key === activeFieldKey);
-
   return (
     <div className="flex flex-col h-full bg-slate-900/5 dark:bg-slate-950/60 rounded-xl border border-border overflow-hidden select-none">
       {/* Viewer Toolbar */}
@@ -198,7 +196,7 @@ export function DocumentViewer() {
               {/* Footer */}
               <div className="border-t border-slate-200 pt-2 flex items-center justify-between text-[9px] text-slate-400 font-mono">
                 <span>CARD CHIP SECURE</span>
-                <span>SYNTHETIC SAMPLE • COMPLIANT WITH UAE PDPL</span>
+                <span>SOVEREIGN ARCHIVE • COMPLIANT WITH UAE PDPL</span>
               </div>
             </div>
           ) : selectedDocument.documentType === "uae_trade_license" ? (
@@ -236,7 +234,7 @@ export function DocumentViewer() {
                 <span className="font-semibold text-slate-800">Dubai Department of Economy and Tourism (DET)</span>
               </div>
 
-              {/* Official Seal Mock */}
+              {/* Official Seal */}
               <div className="pt-6 flex justify-end">
                 <div className="w-24 h-24 rounded-full border-2 border-dashed border-rose-600 flex flex-col items-center justify-center text-rose-700 text-[10px] font-bold rotate-12">
                   <span>GOVT OF DUBAI</span>

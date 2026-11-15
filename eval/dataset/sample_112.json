@@ -1,0 +1,14 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5288592",
+  "company_name_en": "PALM JUMEIRAH HOSPITALITY GROUP",
+  "company_name_ar": "مجموعة نخلة جميرا للضيافة",
+  "issuing_authority": "Department of Economy and Tourism Dubai",
+  "expiry_date": "15/10/2032",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-4.5deg",
+    "noise_grain",
+    "jpeg_q75"
+  ]
+}

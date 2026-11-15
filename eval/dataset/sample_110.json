@@ -1,0 +1,14 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5212010",
+  "company_name_en": "ZAYED SOLAR ENERGY SYSTEMS LLC",
+  "company_name_ar": "أنظمة زايد للطاقة الشمسية ذ.م.م",
+  "issuing_authority": "Abu Dhabi Department of Economic Development",
+  "expiry_date": "03/07/2032",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "uneven_lighting_shadow",
+    "jpeg_q73"
+  ]
+}

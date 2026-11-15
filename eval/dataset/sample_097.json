@@ -1,0 +1,14 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-2000-1286473-0",
+  "name_ar": "كينجي هيروشي تاناكا",
+  "name_en": "KENJI HIROSHI TANAKA",
+  "nationality": "Japan",
+  "date_of_birth": "06/06/2000",
+  "expiry_date": "22/01/2035",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_4.5deg"
+  ]
+}

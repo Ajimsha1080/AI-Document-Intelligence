@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1975-4704849-2",
-  "name_ar": "محمد عارف خان",
-  "name_en": "MOHAMMED ARIF KHAN",
-  "nationality": "Pakistan",
-  "date_of_birth": "09/08/1975",
-  "expiry_date": "09/12/2030",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1981-9539947-6",
+  "name_ar": "بريا شاندرا سيخار",
+  "name_en": "PRIYA CHANDRA SEKHAR",
+  "nationality": "India",
+  "date_of_birth": "17/09/1981",
+  "expiry_date": "11/07/2032",
+  "sex": "F",
+  "subset": "clean",
+  "degradations": []
 }

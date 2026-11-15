@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1990-6040427-6",
-  "name_ar": "شيخة عمر خليفة السويدي",
-  "name_en": "SHAIKHA OMAR KHALIFA ALSUWAIDI",
+  "document_type": "emirates_id",
+  "id_number": "784-1983-6687979-3",
+  "name_ar": "عبدالله حمد سالم المري",
+  "name_en": "ABDULLAH HAMAD SALEM ALMARRI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "18/07/1990",
-  "expiry_date": "21/10/2030",
-  "sex": "F"
+  "date_of_birth": "02/04/1983",
+  "expiry_date": "16/08/2030",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

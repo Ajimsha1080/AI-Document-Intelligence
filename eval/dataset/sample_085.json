@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1998-3934577-6",
+  "name_ar": "جيمس أنتوني كلارك",
+  "name_en": "JAMES ANTHONY CLARK",
+  "nationality": "United Kingdom",
+  "date_of_birth": "16/07/1998",
+  "expiry_date": "22/05/2027",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "uneven_lighting_shadow"
+  ]
+}

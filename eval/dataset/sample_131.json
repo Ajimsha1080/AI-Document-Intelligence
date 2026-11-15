@@ -1,0 +1,13 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-1321",
+  "trn": "100890123400003",
+  "invoice_date": "20/12/2026",
+  "supplier_name": "DUBAI INDUSTRIAL TOOLS CO LLC",
+  "total_amount": "45600.00",
+  "vat_amount": "2280.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-6.0deg"
+  ]
+}

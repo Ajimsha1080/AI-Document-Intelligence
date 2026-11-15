@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1986-6410896-0",
-  "name_ar": "منصور خالد سيف النعيمي",
-  "name_en": "MANSOOR KHALID SAIF ALNUAIMI",
+  "document_type": "emirates_id",
+  "id_number": "784-1980-9624557-0",
+  "name_ar": "شيخة عمر خليفة السويدي",
+  "name_en": "SHAIKHA OMAR KHALIFA ALSUWAIDI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "08/01/1986",
-  "expiry_date": "07/01/2030",
-  "sex": "M"
+  "date_of_birth": "21/11/1980",
+  "expiry_date": "24/02/2029",
+  "sex": "F",
+  "subset": "clean",
+  "degradations": []
 }

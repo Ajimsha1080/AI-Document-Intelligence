@@ -1,9 +1,18 @@
 {
-  "id_number": "784-1988-2082282-7",
-  "name_ar": "إلياس مراد قدور",
-  "name_en": "ELIAS MOURAD KADDOUR",
-  "nationality": "Algeria",
-  "date_of_birth": "24/12/1988",
-  "expiry_date": "24/02/2032",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1973-1005565-8",
+  "name_ar": "آمنة الصادق المهدي",
+  "name_en": "AMNA ELSADIQ ELMAHDI",
+  "nationality": "Sudan",
+  "date_of_birth": "04/03/1973",
+  "expiry_date": "21/12/2030",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "gaussian_blur_1.04px",
+    "noise_grain",
+    "low_resolution_downscale",
+    "jpeg_q71"
+  ]
 }

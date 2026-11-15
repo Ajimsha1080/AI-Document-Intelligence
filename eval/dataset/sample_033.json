@@ -1,9 +1,15 @@
 {
-  "id_number": "784-1995-2279895-0",
-  "name_ar": "حسن علي رضا رضائي",
-  "name_en": "HASSAN ALI REZA REZAIE",
-  "nationality": "Iran",
-  "date_of_birth": "24/04/1995",
-  "expiry_date": "03/08/2029",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1991-1259760-6",
+  "name_ar": "صوفيا كلير براون",
+  "name_en": "SOPHIA CLAIRE BROWN",
+  "nationality": "Australia",
+  "date_of_birth": "10/12/1991",
+  "expiry_date": "10/03/2035",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-3.0deg",
+    "gaussian_blur_0.8px"
+  ]
 }

@@ -12,7 +12,6 @@ import {
   Copy,
   Check,
   Send,
-  Lock,
 } from "lucide-react";
 
 export function SettingsScreen() {
@@ -34,7 +33,6 @@ export function SettingsScreen() {
     language,
     showToast,
     activeTenant,
-    t,
   } = useApp();
 
   // Invite user state
@@ -65,7 +63,6 @@ export function SettingsScreen() {
     if (generatedKey) {
       navigator.clipboard.writeText(generatedKey);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
       showToast("success", "API Key copied to clipboard!", "تم نسخ المفتاح إلى الحافظة!");
     }
   };
@@ -146,7 +143,7 @@ export function SettingsScreen() {
               <span className="font-bold text-foreground block text-[11px]">
                 {language === "ar" ? "إضافة مستخدم جديد" : "Provision New User"}
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                 <input
                   type="text"
                   placeholder="Full Name"
@@ -161,6 +158,15 @@ export function SettingsScreen() {
                   onChange={(e) => setNewUserEmail(e.target.value)}
                   className="px-2.5 py-1.5 rounded border border-border bg-card text-foreground text-xs font-mono"
                 />
+                <select
+                  value={newUserRole}
+                  onChange={(e) => setNewUserRole(e.target.value as any)}
+                  className="px-2.5 py-1.5 rounded border border-border bg-card text-foreground text-xs font-semibold"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="reviewer">Reviewer</option>
+                  <option value="viewer">Viewer</option>
+                </select>
                 <button
                   onClick={handleAddUser}
                   className="px-3 py-1.5 rounded bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs shadow-sm flex items-center justify-center gap-1"

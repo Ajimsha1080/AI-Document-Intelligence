@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1985-3395467-7",
+  "name_ar": "فالنتينا جوليا موريتي",
+  "name_en": "VALENTINA GIULIA MORETTI",
+  "nationality": "Italy",
+  "date_of_birth": "17/10/1985",
+  "expiry_date": "01/02/2028",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-1.5deg",
+    "jpeg_q51"
+  ]
+}

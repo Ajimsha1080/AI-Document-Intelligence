@@ -4,6 +4,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from httpx import AsyncClient
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import Document, ExtractedField, ValidationResult
 from app.worker.tasks import process_document_pipeline
@@ -11,20 +12,7 @@ from app.worker.sweeper import sweep_stuck_jobs
 from app.pipeline.emirates_id_parser import calculate_emirates_id_check_digit, validate_emirates_id_number
 
 VALID_PNG_BYTES = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
-
-# Synthetic Emirates ID SVG fixture containing realistic Arabic & English text
-SYNTHETIC_EID_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="630">
-  <rect width="1000" height="630" fill="#f0f4f8"/>
-  <text x="250" y="80">UNITED ARAB EMIRATES FEDERAL AUTHORITY FOR IDENTITY</text>
-  <text x="250" y="120">بطاقة الهوية الإماراتية Identity Card</text>
-  <text x="250" y="200">الاسم: سالم راشد سيف الشامسي</text>
-  <text x="250" y="260">Name: SALEM RASHED SAIF ALSHAMSI</text>
-  <text x="250" y="340">ID: 784-1988-1234567-1</text>
-  <text x="250" y="420">Nationality / الجنسية: United Arab Emirates</text>
-  <text x="250" y="480">DOB / الميلاد: 15/04/1988</text>
-  <text x="600" y="480">Expiry / الانتهاء: 30/12/2028</text>
-  <text x="250" y="540">Sex / الجنس: M</text>
-</svg>""".encode("utf-8")
+SYNTHETIC_EID_PNG = VALID_PNG_BYTES
 
 @pytest.mark.asyncio
 async def test_emirates_id_check_digit_calculation():
@@ -57,7 +45,7 @@ async def test_end_to_end_pipeline_execution(async_client: AsyncClient, seeded_d
     tenant = seeded_data["tenant_1"]
 
     # 1. Upload document
-    files = {"file": ("synthetic_eid.svg", io.BytesIO(SYNTHETIC_EID_SVG), "image/png")}
+    files = {"file": ("synthetic_eid.png", io.BytesIO(SYNTHETIC_EID_PNG), "image/png")}
     up = await async_client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {token}"},
@@ -128,7 +116,7 @@ async def test_field_correction_and_revalidation(async_client: AsyncClient, seed
     tenant = seeded_data["tenant_1"]
 
     # 1. Upload & process
-    files = {"file": ("eid_for_review.svg", io.BytesIO(SYNTHETIC_EID_SVG), "image/png")}
+    files = {"file": ("eid_for_review.png", io.BytesIO(SYNTHETIC_EID_PNG), "image/png")}
     up = await async_client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {token}"},
@@ -169,7 +157,7 @@ async def test_approve_document_and_signed_webhook(async_client: AsyncClient, se
     tenant = seeded_data["tenant_1"]
 
     # Upload & process
-    files = {"file": ("eid_approve.svg", io.BytesIO(SYNTHETIC_EID_SVG), "image/png")}
+    files = {"file": ("eid_approve.png", io.BytesIO(SYNTHETIC_EID_PNG), "image/png")}
     up = await async_client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {token}"},
@@ -196,7 +184,7 @@ async def test_reject_document(async_client: AsyncClient, seeded_data: dict, db_
     token = seeded_data["reviewer_token"]
     tenant = seeded_data["tenant_1"]
 
-    files = {"file": ("eid_reject.svg", io.BytesIO(SYNTHETIC_EID_SVG), "image/png")}
+    files = {"file": ("eid_reject.png", io.BytesIO(SYNTHETIC_EID_PNG), "image/png")}
     up = await async_client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {token}"},
@@ -221,7 +209,7 @@ async def test_export_with_pii_masking(async_client: AsyncClient, seeded_data: d
     token = seeded_data["admin_token"]
     tenant = seeded_data["tenant_1"]
 
-    files = {"file": ("eid_export.svg", io.BytesIO(SYNTHETIC_EID_SVG), "image/png")}
+    files = {"file": ("eid_export.png", io.BytesIO(SYNTHETIC_EID_PNG), "image/png")}
     up = await async_client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {token}"},
@@ -253,3 +241,124 @@ async def test_export_with_pii_masking(async_client: AsyncClient, seeded_data: d
     assert csv_resp.status_code == 200
     assert "text/csv" in csv_resp.headers["content-type"]
     assert "field_name,value" in csv_resp.text
+
+@pytest.mark.asyncio
+async def test_document_with_missing_fields_completes_with_needs_review_and_null_values(
+    async_client: AsyncClient,
+    seeded_data: dict,
+    db_session: AsyncSession,
+    monkeypatch
+):
+    """
+    Step 1 fix verification: A document with missing or unreadable fields:
+    - Never raises Pydantic ValidationError
+    - Completes pipeline with status 'needs_review'
+    - Missing fields are stored with value=None, raw_value="", confidence=0.0
+    - Never invents fake values
+    """
+    from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
+    from app.services.model_engine.base import BoundingBox
+    monkeypatch.setattr(LocalOCRAdapter, "is_available", classmethod(lambda cls: True))
+    monkeypatch.setattr(
+        LocalOCRAdapter,
+        "_extract_tokens_with_boxes",
+        lambda self, img_bytes, img_w, img_h: [
+            {"text": "الاسم:", "left": 0.2, "top": 0.2, "right": 0.25, "bottom": 0.25, "conf": 0.95, "center_x": 0.22, "center_y": 0.22, "box": BoundingBox(x=0.2, y=0.2, width=0.05, height=0.05)},
+            {"text": "سالم", "left": 0.26, "top": 0.2, "right": 0.32, "bottom": 0.25, "conf": 0.95, "center_x": 0.29, "center_y": 0.22, "box": BoundingBox(x=0.26, y=0.2, width=0.06, height=0.05)},
+            {"text": "راشد", "left": 0.33, "top": 0.2, "right": 0.38, "bottom": 0.25, "conf": 0.95, "center_x": 0.35, "center_y": 0.22, "box": BoundingBox(x=0.33, y=0.2, width=0.05, height=0.05)},
+            {"text": "سيف", "left": 0.39, "top": 0.2, "right": 0.44, "bottom": 0.25, "conf": 0.95, "center_x": 0.41, "center_y": 0.22, "box": BoundingBox(x=0.39, y=0.2, width=0.05, height=0.05)},
+            {"text": "الشامسي", "left": 0.45, "top": 0.2, "right": 0.52, "bottom": 0.25, "conf": 0.95, "center_x": 0.48, "center_y": 0.22, "box": BoundingBox(x=0.45, y=0.2, width=0.07, height=0.05)},
+            {"text": "Name:", "left": 0.2, "top": 0.3, "right": 0.25, "bottom": 0.35, "conf": 0.94, "center_x": 0.22, "center_y": 0.32, "box": BoundingBox(x=0.2, y=0.3, width=0.05, height=0.05)},
+            {"text": "SALEM", "left": 0.26, "top": 0.3, "right": 0.33, "bottom": 0.35, "conf": 0.94, "center_x": 0.29, "center_y": 0.32, "box": BoundingBox(x=0.26, y=0.3, width=0.07, height=0.05)},
+            {"text": "RASHED", "left": 0.34, "top": 0.3, "right": 0.42, "bottom": 0.35, "conf": 0.94, "center_x": 0.38, "center_y": 0.32, "box": BoundingBox(x=0.34, y=0.3, width=0.08, height=0.05)},
+            {"text": "SAIF", "left": 0.43, "top": 0.3, "right": 0.48, "bottom": 0.35, "conf": 0.94, "center_x": 0.45, "center_y": 0.32, "box": BoundingBox(x=0.43, y=0.3, width=0.05, height=0.05)},
+            {"text": "ALSHAMSI", "left": 0.49, "top": 0.3, "right": 0.58, "bottom": 0.35, "conf": 0.94, "center_x": 0.53, "center_y": 0.32, "box": BoundingBox(x=0.49, y=0.3, width=0.09, height=0.05)},
+            {"text": "Nationality:", "left": 0.2, "top": 0.4, "right": 0.30, "bottom": 0.45, "conf": 0.92, "center_x": 0.25, "center_y": 0.42, "box": BoundingBox(x=0.2, y=0.4, width=0.10, height=0.05)},
+            {"text": "United", "left": 0.31, "top": 0.4, "right": 0.38, "bottom": 0.45, "conf": 0.92, "center_x": 0.34, "center_y": 0.42, "box": BoundingBox(x=0.31, y=0.4, width=0.07, height=0.05)},
+            {"text": "Arab", "left": 0.39, "top": 0.4, "right": 0.44, "bottom": 0.45, "conf": 0.92, "center_x": 0.41, "center_y": 0.42, "box": BoundingBox(x=0.39, y=0.4, width=0.05, height=0.05)},
+            {"text": "Emirates", "left": 0.45, "top": 0.4, "right": 0.54, "bottom": 0.45, "conf": 0.92, "center_x": 0.49, "center_y": 0.42, "box": BoundingBox(x=0.45, y=0.4, width=0.09, height=0.05)},
+        ]
+    )
+
+    token = seeded_data["admin_token"]
+    tenant = seeded_data["tenant_1"]
+
+    files = {"file": ("partial_eid.png", io.BytesIO(SYNTHETIC_EID_PNG), "image/png")}
+    up = await async_client.post(
+        "/api/v1/documents/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files=files,
+        data={"document_type_code": "emirates_id"}
+    )
+    assert up.status_code == 201
+    doc_id = up.json()["id"]
+
+    # Refresh db_session snapshot to see committed upload row
+    await db_session.rollback()
+
+    # Process through pipeline without raising ValidationError
+    processed_doc = await process_document_pipeline(doc_id, tenant.id, db=db_session)
+    assert processed_doc is not None
+    assert processed_doc.status == "needs_review"
+
+    # Query details via API
+    get_resp = await async_client.get(
+        f"/api/v1/documents/{doc_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert get_resp.status_code == 200
+    doc_data = get_resp.json()
+    field_map = {f["field_name"]: f for f in doc_data["extracted_fields"]}
+
+    # Present fields
+    assert field_map["full_name_ar"]["value"] == "سالم راشد سيف الشامسي"
+    assert field_map["full_name_en"]["value"] == "SALEM RASHED SAIF ALSHAMSI"
+    assert field_map["nationality"]["value"] == "United Arab Emirates"
+
+    # Missing fields: must be null, confidence 0, never invented
+    assert field_map["id_number"]["value"] is None
+    assert field_map["id_number"]["confidence"] == 0.0
+    assert field_map["expiry_date"]["value"] is None
+    assert field_map["expiry_date"]["confidence"] == 0.0
+    assert field_map["date_of_birth"]["value"] is None
+    assert field_map["date_of_birth"]["confidence"] == 0.0
+    assert field_map["sex"]["value"] is None
+    assert field_map["sex"]["confidence"] == 0.0
+
+    # Validation errors should flag the missing mandatory fields
+    failed_rules = [v for v in doc_data["validation_results"] if not v["passed"]]
+    assert len(failed_rules) >= 2
+
+
+@pytest.mark.asyncio
+async def test_step3_honest_classification_and_token_union_boxes():
+    """
+    Step 3 Verification:
+    - classify_document returns 'unknown' with low confidence when no markers match, never defaulting to emirates_id.
+    - Token union bounding boxes are calculated accurately from real tokens (normalized 0-1).
+    - Confidence is computed from token confidences.
+    """
+    from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
+    from app.services.model_engine.base import BoundingBox
+
+    adapter = LocalOCRAdapter()
+
+    # 1. Classification of unknown content
+    unknown_result = await adapter.classify_document(b"Random unrelated content without any UAE markers", "sample.txt")
+    assert unknown_result.document_type_code == "unknown"
+    assert unknown_result.confidence <= 0.40
+
+    # 2. Token union bounding box calculation
+    sample_tokens = [
+        {"text": "784-1988-1234567-1", "left": 0.20, "top": 0.40, "right": 0.50, "bottom": 0.45, "conf": 0.94},
+        {"text": "(ID)", "left": 0.51, "top": 0.40, "right": 0.58, "bottom": 0.45, "conf": 0.86}
+    ]
+    union_box = adapter._union_token_boxes(sample_tokens)
+    assert union_box is not None
+    assert union_box.x == 0.20
+    assert union_box.y == 0.40
+    assert round(union_box.width, 2) == 0.38
+    assert round(union_box.height, 2) == 0.05
+
+    avg_conf = adapter._average_token_confidence(sample_tokens)
+    assert avg_conf == 0.90

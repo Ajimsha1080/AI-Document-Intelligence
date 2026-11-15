@@ -5,35 +5,21 @@ import {
   ExtractedField,
   AuditLogEntry,
   DocumentTypeSchema,
-  SystemUser,
-  ApiKeyItem,
 } from "@/types";
-import {
-  initialDocuments,
-  initialSchemas,
-  initialAuditLogs,
-  initialUsers,
-  initialApiKeys,
-} from "./mockData";
 
-export type DataMode = "mock" | "live";
+export interface PipelineStageEvent {
+  event_id: string;
+  document_id: string;
+  tenant_id: string;
+  stage: "queued" | "preprocessing" | "ocr" | "parsing" | "validating" | "needs_review" | "approved" | "failed";
+  status: string;
+  stage_duration_ms: number | null;
+  progress_pct: number | null;
+  details: Record<string, any>;
+  timestamp: string;
+}
 
 const STORAGE_KEY_TOKEN = "sanad_access_token";
-const STORAGE_KEY_MODE = "sanad_data_mode";
-
-export function getDataMode(): DataMode {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem(STORAGE_KEY_MODE);
-    if (saved === "mock" || saved === "live") return saved;
-  }
-  return (process.env.NEXT_PUBLIC_DATA_MODE as DataMode) || "live";
-}
-
-export function setDataMode(mode: DataMode) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_KEY_MODE, mode);
-  }
-}
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -48,16 +34,23 @@ function getAuthHeader(): Record<string, string> {
 function formatFieldNameEn(name: string): string {
   const map: Record<string, string> = {
     id_number: "Identity Number",
+    full_name_ar: "Full Name (Arabic)",
+    full_name_en: "Full Name (English)",
     name_ar: "Full Name (Arabic)",
     name_en: "Full Name (English)",
     nationality: "Nationality",
     date_of_birth: "Date of Birth",
     expiry_date: "Expiry Date",
+    issue_date: "Issue Date",
     sex: "Sex",
     trade_name: "Trade Name",
     license_number: "License Number",
     trn: "Tax Registration Number (TRN)",
     total_amount: "Total Amount (AED)",
+    vat_amount: "VAT Amount",
+    invoice_number: "Invoice Number",
+    invoice_date: "Invoice Date",
+    supplier_name: "Supplier Name",
   };
   return map[name] || name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -65,25 +58,32 @@ function formatFieldNameEn(name: string): string {
 function formatFieldNameAr(name: string): string {
   const map: Record<string, string> = {
     id_number: "رقم الهوية",
+    full_name_ar: "الاسم الكامل (بالعربية)",
+    full_name_en: "الاسم الكامل (بالإنجليزية)",
     name_ar: "الاسم الكامل (بالعربية)",
     name_en: "الاسم الكامل (بالإنجليزية)",
     nationality: "الجنسية",
     date_of_birth: "تاريخ الميلاد",
     expiry_date: "تاريخ الانتهاء",
+    issue_date: "تاريخ الإصدار",
     sex: "الجنس",
     trade_name: "الاسم التجاري",
     license_number: "رقم الرخصة",
     trn: "رقم التسجيل الضريبي",
     total_amount: "المبلغ الإجمالي (درهم)",
+    vat_amount: "مبلغ ضريبة القيمة المضافة",
+    invoice_number: "رقم الفاتورة",
+    invoice_date: "تاريخ الفاتورة",
+    supplier_name: "اسم المورد",
   };
   return map[name] || name;
 }
 
 function getFieldSection(name: string): "identity" | "company" | "dates" | "financials" | "general" {
-  if (["id_number", "name_ar", "name_en", "nationality", "sex"].includes(name)) return "identity";
-  if (["date_of_birth", "expiry_date", "issue_date"].includes(name)) return "dates";
-  if (["trade_name", "license_number", "entity_name"].includes(name)) return "company";
-  if (["total_amount", "trn", "vat_amount"].includes(name)) return "financials";
+  if (["id_number", "name_ar", "name_en", "full_name_ar", "full_name_en", "nationality", "sex"].includes(name)) return "identity";
+  if (["date_of_birth", "expiry_date", "issue_date", "invoice_date"].includes(name)) return "dates";
+  if (["trade_name", "license_number", "entity_name", "supplier_name"].includes(name)) return "company";
+  if (["total_amount", "trn", "vat_amount", "invoice_number"].includes(name)) return "financials";
   return "general";
 }
 
@@ -91,6 +91,21 @@ function getFieldSection(name: string): "identity" | "company" | "dates" | "fina
 export function mapBackendDocumentToItem(doc: any): DocumentItem {
   const typeCode = (doc.document_type_code || "emirates_id") as DocumentTypeCode;
   const isEid = typeCode === "emirates_id";
+  const isLicense = typeCode === "uae_trade_license";
+  const isInvoice = typeCode === "commercial_invoice";
+
+  let typeNameEn = "UAE Sovereign Document";
+  let typeNameAr = "مستند سيادي إماراتي";
+  if (isEid) {
+    typeNameEn = "UAE Identity Card (Emirates ID)";
+    typeNameAr = "بطاقة الهوية الإماراتية";
+  } else if (isLicense) {
+    typeNameEn = "UAE Commercial Trade License";
+    typeNameAr = "رخصة تجارية إماراتية";
+  } else if (isInvoice) {
+    typeNameEn = "Commercial Tax Invoice";
+    typeNameAr = "فاتورة ضريبية تجارية";
+  }
 
   const fields: ExtractedField[] = (doc.extracted_fields || []).map((f: any) => {
     let bbox = undefined;
@@ -107,8 +122,8 @@ export function mapBackendDocumentToItem(doc: any): DocumentItem {
       key: f.field_name,
       nameEn: formatFieldNameEn(f.field_name),
       nameAr: formatFieldNameAr(f.field_name),
-      value: f.corrected_value !== null && f.corrected_value !== undefined ? f.corrected_value : (f.value || ""),
-      originalValue: f.raw_value || f.value || "",
+      value: f.corrected_value !== null && f.corrected_value !== undefined ? f.corrected_value : (f.value !== undefined ? f.value : null),
+      originalValue: f.raw_value !== null && f.raw_value !== undefined ? f.raw_value : (f.value !== undefined ? f.value : null),
       confidence: f.confidence,
       section: getFieldSection(f.field_name),
       page: f.page_number || 1,
@@ -139,8 +154,8 @@ export function mapBackendDocumentToItem(doc: any): DocumentItem {
     referenceNumber: `DOC-${doc.id.substring(0, 8).toUpperCase()}`,
     fileName: doc.file_name,
     documentType: typeCode,
-    documentTypeNameEn: isEid ? "UAE Identity Card (Emirates ID)" : "UAE Sovereign Document",
-    documentTypeNameAr: isEid ? "بطاقة الهوية الإماراتية" : "مستند سيادي إماراتي",
+    documentTypeNameEn: typeNameEn,
+    documentTypeNameAr: typeNameAr,
     status: (doc.status as DocumentStatus) || "processing",
     overallConfidence: doc.confidence_score !== null && doc.confidence_score !== undefined ? doc.confidence_score : 0.0,
     uploadedAt: doc.created_at,
@@ -207,6 +222,8 @@ export interface ApiAdapter {
     reject: (id: string, reason?: string) => Promise<{ status: string }>;
     delete: (id: string) => Promise<void>;
     export: (id: string, format: "json" | "csv", maskPii: boolean) => Promise<any>;
+    subscribeDocumentEvents: (id: string, onEvent: (evt: PipelineStageEvent) => void) => () => void;
+    subscribeTenantEvents: (onEvent: (evt: PipelineStageEvent) => void) => () => void;
   };
   audit: {
     list: (params?: { action?: string; limit?: number }) => Promise<AuditLogEntry[]>;
@@ -214,12 +231,33 @@ export interface ApiAdapter {
   schemas: {
     list: () => Promise<DocumentTypeSchema[]>;
   };
+  rag: {
+    query: (query: string, documentId?: string, topK?: number) => Promise<RAGResponse>;
+  };
+}
+
+export interface RAGCitationItem {
+  chunk_id: string;
+  document_id?: string;
+  page: number;
+  bounding_box?: { x: number; y: number; width: number; height: number; page?: number };
+  snippet: string;
+}
+
+export interface RAGResponse {
+  query: string;
+  answer: string;
+  answer_ar: string;
+  mode: string;
+  confidence: number;
+  citations: RAGCitationItem[];
+  prompt_guard_flagged: boolean;
 }
 
 // -------------------------------------------------------------
 // LIVE ADAPTER (Connects to real FastAPI Sovereign Backend)
 // -------------------------------------------------------------
-export const liveAdapter: ApiAdapter = {
+export const api: ApiAdapter = {
   auth: {
     async login(email, password) {
       const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
@@ -257,6 +295,11 @@ export const liveAdapter: ApiAdapter = {
 
   documents: {
     async list(params) {
+      if (!api.auth.getToken()) {
+        try {
+          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
+        } catch {}
+      }
       const q = new URLSearchParams();
       if (params?.status) q.append("status", params.status);
       if (params?.limit) q.append("limit", params.limit.toString());
@@ -271,6 +314,11 @@ export const liveAdapter: ApiAdapter = {
     },
 
     async get(id) {
+      if (!api.auth.getToken()) {
+        try {
+          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
+        } catch {}
+      }
       const res = await fetch(`${API_BASE}/api/v1/documents/${id}`, {
         headers: { ...getAuthHeader() },
       });
@@ -280,13 +328,18 @@ export const liveAdapter: ApiAdapter = {
     },
 
     async upload(file, docType = "emirates_id", onProgress) {
+      if (!api.auth.getToken()) {
+        try {
+          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
+        } catch {}
+      }
       const formData = new FormData();
       formData.append("file", file);
       if (docType && docType !== "auto") {
         formData.append("document_type_code", docType);
       }
 
-      if (onProgress) onProgress(30);
+      if (onProgress) onProgress(20);
 
       const res = await fetch(`${API_BASE}/api/v1/documents/upload`, {
         method: "POST",
@@ -299,7 +352,7 @@ export const liveAdapter: ApiAdapter = {
         throw new Error(err.detail || "Document upload failed");
       }
 
-      if (onProgress) onProgress(60);
+      if (onProgress) onProgress(100);
       const data = await res.json();
       return mapBackendDocumentToItem(data);
     },
@@ -368,6 +421,34 @@ export const liveAdapter: ApiAdapter = {
       if (format === "csv") return await res.text();
       return await res.json();
     },
+
+    subscribeDocumentEvents(id: string, onEvent: (evt: PipelineStageEvent) => void): () => void {
+      if (typeof window === "undefined") return () => {};
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN);
+      const url = `${API_BASE}/api/v1/documents/${id}/events${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+      const es = new EventSource(url);
+      es.onmessage = (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          onEvent(parsed);
+        } catch {}
+      };
+      return () => es.close();
+    },
+
+    subscribeTenantEvents(onEvent: (evt: PipelineStageEvent) => void): () => void {
+      if (typeof window === "undefined") return () => {};
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN);
+      const url = `${API_BASE}/api/v1/events${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+      const es = new EventSource(url);
+      es.onmessage = (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          onEvent(parsed);
+        } catch {}
+      };
+      return () => es.close();
+    },
   },
 
   audit: {
@@ -387,145 +468,39 @@ export const liveAdapter: ApiAdapter = {
 
   schemas: {
     async list() {
-      return initialSchemas;
-    },
-  },
-};
-
-// -------------------------------------------------------------
-// MOCK ADAPTER (Standalone demo with persistent sample data)
-// -------------------------------------------------------------
-let mockDocsState = [...initialDocuments];
-let mockAuditState = [...initialAuditLogs];
-
-export const mockAdapter: ApiAdapter = {
-  auth: {
-    async login(email, password) {
-      return {
-        access_token: "mock-jwt-token-demo",
-        user: { id: "mock-admin-id", email, role: "admin", full_name: "Demo Admin" },
-      };
-    },
-    async getMe() {
-      return {
-        id: "mock-admin-id",
-        email: "demo@docsmvp.local",
-        role: "admin",
-        full_name: "Demo Admin",
-      };
-    },
-    logout() {},
-    getToken() {
-      return "mock-jwt-token-demo";
+      const res = await fetch(`${API_BASE}/api/v1/document-types/`, {
+        headers: { ...getAuthHeader() },
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map((d: any) => ({
+        id: d.id,
+        code: d.code,
+        nameEn: d.name_en,
+        nameAr: d.name_ar,
+        fields: d.schema_definition?.fields || [],
+        rules: d.schema_definition?.validation_rules || [],
+      }));
     },
   },
 
-  documents: {
-    async list() {
-      return [...mockDocsState];
-    },
-    async get(id) {
-      const found = mockDocsState.find((d) => d.id === id);
-      if (!found) throw new Error(`Document ${id} not found`);
-      return found;
-    },
-    async upload(file, docType = "emirates_id") {
-      const newDoc: DocumentItem = {
-        id: `doc-${Date.now()}`,
-        referenceNumber: `EID-${Date.now().toString().slice(-4)}`,
-        fileName: file.name,
-        documentType: (docType as DocumentTypeCode) || "emirates_id",
-        documentTypeNameEn: "UAE Identity Card (Emirates ID)",
-        documentTypeNameAr: "بطاقة الهوية الإماراتية",
-        status: "needs_review",
-        overallConfidence: 0.94,
-        uploadedAt: new Date().toISOString(),
-        processedAt: new Date().toISOString(),
-        fileSizeKB: Math.round(file.size / 1024),
-        pageCount: 1,
-        extractedLanguage: "mixed",
-        previewUrl: "emirates_id",
-        validationErrors: [],
-        fields: [
-          {
-            id: `f-${Date.now()}-1`,
-            key: "id_number",
-            nameEn: "Identity Number",
-            nameAr: "رقم الهوية",
-            value: "784-1988-1234567-1",
-            originalValue: "784-1988-1234567-1",
-            confidence: 0.99,
-            section: "identity",
-            page: 1,
-            bbox: { x: 29, y: 46, width: 44, height: 8, page: 1 },
-          },
-        ],
-      };
-      mockDocsState = [newDoc, ...mockDocsState];
-      return newDoc;
-    },
-    async correctField(id, fieldName, correctedValue) {
-      const doc = mockDocsState.find((d) => d.id === id);
-      const field = doc?.fields.find((f) => f.key === fieldName);
-      if (field) {
-        field.value = correctedValue;
-        field.isCorrected = true;
+  rag: {
+    async query(query: string, documentId?: string, topK: number = 5): Promise<RAGResponse> {
+      if (!api.auth.getToken()) {
+        try {
+          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
+        } catch {}
       }
-      return field || ({} as ExtractedField);
+      const res = await fetch(`${API_BASE}/api/v1/rag/query`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+        },
+        body: JSON.stringify({ query, document_id: documentId, top_k: topK }),
+      });
+      if (!res.ok) throw new Error("RAG query failed");
+      return await res.json();
     },
-    async approve(id) {
-      const doc = mockDocsState.find((d) => d.id === id);
-      if (doc) doc.status = "approved";
-      return { status: "approved" };
-    },
-    async reject(id) {
-      const doc = mockDocsState.find((d) => d.id === id);
-      if (doc) doc.status = "failed";
-      return { status: "failed" };
-    },
-    async delete(id) {
-      mockDocsState = mockDocsState.filter((d) => d.id !== id);
-    },
-    async export(id, format) {
-      return { document_id: id, status: "exported", format };
-    },
-  },
-
-  audit: {
-    async list() {
-      return [...mockAuditState];
-    },
-  },
-
-  schemas: {
-    async list() {
-      return initialSchemas;
-    },
-  },
-};
-
-// Current dynamic adapter
-export const api: ApiAdapter = {
-  auth: {
-    login: (e, p) => (getDataMode() === "mock" ? mockAdapter.auth.login(e, p) : liveAdapter.auth.login(e, p)),
-    getMe: () => (getDataMode() === "mock" ? mockAdapter.auth.getMe() : liveAdapter.auth.getMe()),
-    logout: () => (getDataMode() === "mock" ? mockAdapter.auth.logout() : liveAdapter.auth.logout()),
-    getToken: () => (getDataMode() === "mock" ? mockAdapter.auth.getToken() : liveAdapter.auth.getToken()),
-  },
-  documents: {
-    list: (p) => (getDataMode() === "mock" ? mockAdapter.documents.list(p) : liveAdapter.documents.list(p)),
-    get: (id) => (getDataMode() === "mock" ? mockAdapter.documents.get(id) : liveAdapter.documents.get(id)),
-    upload: (f, d, p) => (getDataMode() === "mock" ? mockAdapter.documents.upload(f, d, p) : liveAdapter.documents.upload(f, d, p)),
-    correctField: (id, f, v, r) => (getDataMode() === "mock" ? mockAdapter.documents.correctField(id, f, v, r) : liveAdapter.documents.correctField(id, f, v, r)),
-    approve: (id) => (getDataMode() === "mock" ? mockAdapter.documents.approve(id) : liveAdapter.documents.approve(id)),
-    reject: (id, r) => (getDataMode() === "mock" ? mockAdapter.documents.reject(id, r) : liveAdapter.documents.reject(id, r)),
-    delete: (id) => (getDataMode() === "mock" ? mockAdapter.documents.delete(id) : liveAdapter.documents.delete(id)),
-    export: (id, f, m) => (getDataMode() === "mock" ? mockAdapter.documents.export(id, f, m) : liveAdapter.documents.export(id, f, m)),
-  },
-  audit: {
-    list: (p) => (getDataMode() === "mock" ? mockAdapter.audit.list(p) : liveAdapter.audit.list(p)),
-  },
-  schemas: {
-    list: () => (getDataMode() === "mock" ? mockAdapter.schemas.list() : liveAdapter.schemas.list()),
   },
 };

@@ -1,0 +1,16 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1980-2786038-0",
+  "name_ar": "سنان عمار يحيى الجبوري",
+  "name_en": "SINAN AMMAR YAHYA ALJABOURI",
+  "nationality": "Iraq",
+  "date_of_birth": "15/11/1980",
+  "expiry_date": "04/04/2031",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "gaussian_blur_1.13px",
+    "uneven_lighting_shadow"
+  ]
+}

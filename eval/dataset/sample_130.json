@@ -1,0 +1,11 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-2830",
+  "trn": "100789012300003",
+  "invoice_date": "19/11/2026",
+  "supplier_name": "AL WAHDA CATERING & SERVICES LLC",
+  "total_amount": "18750.00",
+  "vat_amount": "937.50",
+  "subset": "clean",
+  "degradations": []
+}

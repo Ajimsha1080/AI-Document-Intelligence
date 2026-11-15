@@ -1,0 +1,12 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5173719",
+  "company_name_en": "FALCON ENGINEERING CONSULTANCY",
+  "company_name_ar": "فالكون للاستشارات الهندسية",
+  "issuing_authority": "Department of Economy and Tourism Dubai",
+  "expiry_date": "23/12/2028",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_8.0deg"
+  ]
+}

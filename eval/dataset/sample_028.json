@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1989-4295584-4",
-  "name_ar": "ماريا سانتوس كروز",
-  "name_en": "MARIA SANTOS CRUZ",
+  "document_type": "emirates_id",
+  "id_number": "784-1974-9472519-1",
+  "name_ar": "جون مارك باوتيستا",
+  "name_en": "JOHN MARK BAUTISTA",
   "nationality": "Philippines",
-  "date_of_birth": "13/10/1989",
-  "expiry_date": "09/11/2033",
-  "sex": "F"
+  "date_of_birth": "07/06/1974",
+  "expiry_date": "06/03/2028",
+  "sex": "M",
+  "subset": "clean",
+  "degradations": []
 }

@@ -1,9 +1,15 @@
 {
-  "id_number": "784-2001-7486694-5",
-  "name_ar": "نورالدين فاروق بكير",
-  "name_en": "NOUREDDINE FAROUK BEKIR",
-  "nationality": "Tunisia",
-  "date_of_birth": "21/01/2001",
-  "expiry_date": "04/02/2027",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1999-2837695-5",
+  "name_ar": "حسن علي رضا رضائي",
+  "name_en": "HASSAN ALI REZA REZAIE",
+  "nationality": "Iran",
+  "date_of_birth": "27/01/1999",
+  "expiry_date": "10/05/2034",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-1.5deg",
+    "jpeg_q62"
+  ]
 }

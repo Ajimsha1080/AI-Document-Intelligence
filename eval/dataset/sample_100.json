@@ -1,0 +1,17 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-2004-5935222-3",
+  "name_ar": "غابرييلا لويزا سانتوس",
+  "name_en": "GABRIELA LUISA SANTOS",
+  "nationality": "Brazil",
+  "date_of_birth": "08/09/2004",
+  "expiry_date": "09/05/2034",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-8.0deg",
+    "noise_grain",
+    "uneven_lighting_shadow",
+    "jpeg_q75"
+  ]
+}

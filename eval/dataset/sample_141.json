@@ -1,0 +1,14 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-4231",
+  "trn": "100890123400003",
+  "invoice_date": "02/10/2026",
+  "supplier_name": "GLOBAL SAFETY WEAR & UNIFORMS FZE",
+  "total_amount": "12600.00",
+  "vat_amount": "630.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-6.0deg",
+    "gaussian_blur_0.86px"
+  ]
+}

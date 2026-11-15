@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1996-2395460-1",
-  "name_ar": "خالد إبراهيم يوسف الحمادي",
-  "name_en": "KHALID IBRAHIM YOUSUF ALHAMMADI",
+  "document_type": "emirates_id",
+  "id_number": "784-1989-4770801-6",
+  "name_ar": "لطيفة ناصر سعيد الظاهري",
+  "name_en": "LATIFA NASSER SAEED ALDHAHERI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "28/10/1996",
-  "expiry_date": "18/04/2033",
-  "sex": "M"
+  "date_of_birth": "15/01/1989",
+  "expiry_date": "28/11/2030",
+  "sex": "F",
+  "subset": "clean",
+  "degradations": []
 }

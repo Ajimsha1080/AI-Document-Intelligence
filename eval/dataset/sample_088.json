@@ -1,0 +1,16 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1994-4588646-0",
+  "name_ar": "إيزابيلا غريس إيفانز",
+  "name_en": "ISABELLA GRACE EVANS",
+  "nationality": "New Zealand",
+  "date_of_birth": "12/02/1994",
+  "expiry_date": "26/10/2034",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_6.0deg",
+    "noise_grain",
+    "jpeg_q65"
+  ]
+}

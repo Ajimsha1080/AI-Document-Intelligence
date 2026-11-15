@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1994-9521276-5",
+  "name_ar": "كارلوس إدواردو سيلفا",
+  "name_en": "CARLOS EDUARDO SILVA",
+  "nationality": "Brazil",
+  "date_of_birth": "05/11/1994",
+  "expiry_date": "16/03/2034",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_8.0deg",
+    "gaussian_blur_1.11px"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-2776",
+  "trn": "100345678900003",
+  "invoice_date": "25/05/2026",
+  "supplier_name": "AL SHAMAL FLEET MANAGEMENT LLC",
+  "total_amount": "53800.00",
+  "vat_amount": "2690.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_3.0deg",
+    "noise_grain",
+    "jpeg_q58"
+  ]
+}

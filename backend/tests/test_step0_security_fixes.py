@@ -59,7 +59,20 @@ async def test_production_refusal_on_default_secrets():
         )
     assert "DATABASE_URL" in str(exc_info.value)
 
-    # 5. Clean production settings should pass validation
+    # 5. Mock model backend in production must be refused
+    with pytest.raises(RuntimeError) as exc_info:
+        Settings(
+            ENVIRONMENT="production",
+            SECRET_KEY="a" * 32,
+            DEFAULT_ADMIN_PASSWORD="CustomAdminPassword123!",
+            S3_ACCESS_KEY="custom_s3_key",
+            S3_SECRET_KEY="custom_s3_secret_32_chars_minimum",
+            DATABASE_URL="postgresql+asyncpg://prod_user:prod_pass@uae-pg:5432/docintel",
+            MODEL_PROVIDER_BACKEND="mock"
+        )
+    assert "MODEL_PROVIDER_BACKEND" in str(exc_info.value)
+
+    # 6. Clean production settings should pass validation
     prod_valid = Settings(
         ENVIRONMENT="production",
         SECRET_KEY="a" * 32,
@@ -81,24 +94,43 @@ async def test_cors_no_wildcard_with_credentials():
     assert "https://bank.uae.ae" in s.ALLOWED_ORIGINS
 
 @pytest.mark.asyncio
-async def test_health_reports_real_model_backend(async_client: AsyncClient):
+async def test_health_reports_real_model_backend(async_client: AsyncClient, monkeypatch):
     """
-    Step 0: Make /health report the REAL model backend.
+    Step 0: Make /health report the REAL model backend deterministically.
     If 'local' has no real engine loaded, report 'mock-fallback' and log a warning.
+    When real engine is loaded, report 'local'.
     Never silently fall back.
     """
+    from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
+
+    # Case 1: Real OCR engine is not available -> returns mock-fallback
+    monkeypatch.setattr(LocalOCRAdapter, "is_available", classmethod(lambda cls: False))
+    monkeypatch.setattr(LocalOCRAdapter, "get_ocr_info", classmethod(lambda cls: {"ocr_engine": "none", "ocr_languages": []}))
     resp = await async_client.get("/health")
     assert resp.status_code == 200
     data = resp.json()
-    
-    # Since real OCR engine/weights are not loaded in base test environment,
-    # it must report 'mock-fallback', NOT masquerade as 'local'
     assert data["model_backend"] == "mock-fallback"
     assert data["model_backend_configured"] == "local"
     assert data["is_mock"] is True
-
-    # Response headers must also report the real backend
+    assert data["ocr_engine"] == "none"
+    assert data["ocr_languages"] == []
+    assert "database" in data
+    assert "redis" in data
+    assert "storage" in data
     assert resp.headers.get("x-model-provider-mode") == "mock-fallback"
+
+    # Case 2: Real OCR engine is available -> returns local and loaded languages
+    monkeypatch.setattr(LocalOCRAdapter, "is_available", classmethod(lambda cls: True))
+    monkeypatch.setattr(LocalOCRAdapter, "get_ocr_info", classmethod(lambda cls: {"ocr_engine": "tesseract", "ocr_languages": ["ara", "eng", "osd"]}))
+    resp_real = await async_client.get("/health")
+    assert resp_real.status_code == 200
+    data_real = resp_real.json()
+    assert data_real["model_backend"] == "local"
+    assert data_real["is_mock"] is False
+    assert data_real["ocr_engine"] == "tesseract"
+    assert "ara" in data_real["ocr_languages"]
+    assert "eng" in data_real["ocr_languages"]
+    assert resp_real.headers.get("x-model-provider-mode") == "local"
 
 @pytest.mark.asyncio
 async def test_login_rate_limiting_and_temporary_lockout(async_client: AsyncClient, seeded_data: dict):

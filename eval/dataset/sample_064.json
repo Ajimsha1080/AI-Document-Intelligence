@@ -1,0 +1,16 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1997-5068424-5",
+  "name_ar": "موزة خميس سعيد الكندي",
+  "name_en": "MOUZA KHAMIS SAEED ALKINDI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "24/02/1997",
+  "expiry_date": "03/03/2032",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-1.5deg",
+    "noise_grain",
+    "jpeg_q73"
+  ]
+}

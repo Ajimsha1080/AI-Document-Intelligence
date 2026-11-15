@@ -1,0 +1,12 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5556629",
+  "company_name_en": "DEIRA TRADING & IMPORT EXPORT LLC",
+  "company_name_ar": "ديرة للتجارة والاستيراد والتصدير ذ.م.م",
+  "issuing_authority": "Department of Economy and Tourism Dubai",
+  "expiry_date": "26/02/2028",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_8.0deg"
+  ]
+}

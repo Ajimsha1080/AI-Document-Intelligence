@@ -1,0 +1,14 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1972-2651637-1",
+  "name_ar": "فيكرام براكاش باتيل",
+  "name_en": "VIKRAM PRAKASH PATEL",
+  "nationality": "India",
+  "date_of_birth": "14/03/1972",
+  "expiry_date": "13/04/2028",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_8.0deg"
+  ]
+}

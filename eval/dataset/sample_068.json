@@ -1,0 +1,16 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1996-1993320-5",
+  "name_ar": "رانية حسام الدين العطار",
+  "name_en": "RANIA HOSSAM ELDIN ALATTAR",
+  "nationality": "Syrian Arab Republic",
+  "date_of_birth": "11/05/1996",
+  "expiry_date": "04/06/2031",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_6.0deg",
+    "noise_grain",
+    "jpeg_q75"
+  ]
+}

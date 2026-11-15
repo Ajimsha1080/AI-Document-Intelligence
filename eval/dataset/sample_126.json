@@ -1,0 +1,11 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-8866",
+  "trn": "100345678900003",
+  "invoice_date": "15/07/2026",
+  "supplier_name": "BARAKAH SUPPLIES & EQUIPMENT FZE",
+  "total_amount": "14500.00",
+  "vat_amount": "725.00",
+  "subset": "clean",
+  "degradations": []
+}

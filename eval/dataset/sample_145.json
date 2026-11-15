@@ -1,0 +1,14 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-7195",
+  "trn": "100234567800003",
+  "invoice_date": "06/02/2026",
+  "supplier_name": "AL FALAH SECURITY SYSTEMS LLC",
+  "total_amount": "41800.00",
+  "vat_amount": "2090.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "uneven_lighting_shadow"
+  ]
+}

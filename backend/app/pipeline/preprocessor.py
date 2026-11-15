@@ -27,11 +27,27 @@ class ImagePreprocessor:
             "resolution_adequate": True
         }
 
-        try:
-            img = Image.open(io.BytesIO(content))
-        except Exception:
-            # If not a standard decodable image (e.g. PDF or raw document), return original
-            return content, meta
+        # Check for PDF and rasterize first page before OCR
+        if content.startswith(b"%PDF"):
+            try:
+                import pypdfium2 as pdfium
+                pdf = pdfium.PdfDocument(content)
+                if hasattr(pdf, "is_encrypted") and pdf.is_encrypted():
+                    raise ValueError("Encrypted or password-protected PDF cannot be processed.")
+                if len(pdf) == 0:
+                    raise ValueError("Malformed or empty PDF document. No pages found.")
+                page = pdf[0]
+                # Render to PIL image at 300 DPI equivalent
+                img = page.render(scale=3.0).to_pil()
+                meta["rasterized_pdf"] = True
+            except Exception as e:
+                raise ValueError(f"Failed to rasterize PDF document: {e}")
+        else:
+            try:
+                img = Image.open(io.BytesIO(content))
+            except Exception:
+                # If not decodable, return original
+                return content, meta
 
         meta["original_width"], meta["original_height"] = img.size
 

@@ -1,0 +1,11 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-7357",
+  "trn": "100456789000003",
+  "invoice_date": "16/08/2026",
+  "supplier_name": "AL KHALEEJ BUILDING MATERIALS LLC",
+  "total_amount": "82500.00",
+  "vat_amount": "4125.00",
+  "subset": "clean",
+  "degradations": []
+}

@@ -1,0 +1,13 @@
+{
+  "document_type": "uae_trade_license",
+  "license_number": "CN-5786375",
+  "company_name_en": "DUBAI SILICON VENTURES LLC",
+  "company_name_ar": "دبي سيليكون للاستثمار ذ.م.م",
+  "issuing_authority": "Dubai Silicon Oasis Authority",
+  "expiry_date": "13/04/2031",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "uneven_lighting_shadow"
+  ]
+}

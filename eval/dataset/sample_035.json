@@ -1,9 +1,15 @@
 {
-  "id_number": "784-1999-3628327-6",
-  "name_ar": "آمنة الصادق المهدي",
-  "name_en": "AMNA ELSADIQ ELMAHDI",
-  "nationality": "Sudan",
-  "date_of_birth": "26/11/1999",
-  "expiry_date": "09/03/2030",
-  "sex": "F"
+  "document_type": "emirates_id",
+  "id_number": "784-1976-8595493-1",
+  "name_ar": "نورالدين فاروق بكير",
+  "name_en": "NOUREDDINE FAROUK BEKIR",
+  "nationality": "Tunisia",
+  "date_of_birth": "01/05/1976",
+  "expiry_date": "12/04/2033",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "uneven_lighting_shadow"
+  ]
 }

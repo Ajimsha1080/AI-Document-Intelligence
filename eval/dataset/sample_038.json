@@ -1,9 +1,15 @@
 {
-  "id_number": "784-1978-9213471-5",
-  "name_ar": "فيكتور ألكسيفيتش سميرنوف",
-  "name_en": "VIKTOR ALEKSEEVICH SMIRNOV",
-  "nationality": "Russian Federation",
-  "date_of_birth": "09/02/1978",
-  "expiry_date": "12/02/2028",
-  "sex": "M"
+  "document_type": "emirates_id",
+  "id_number": "784-1976-5184375-3",
+  "name_ar": "سميرة بنجلون الإدريسي",
+  "name_en": "SAMIRA BENJELLOUN IDRISSI",
+  "nationality": "Morocco",
+  "date_of_birth": "13/08/1976",
+  "expiry_date": "16/05/2029",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_6.0deg",
+    "jpeg_q64"
+  ]
 }

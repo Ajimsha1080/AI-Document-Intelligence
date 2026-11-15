@@ -1,0 +1,17 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1998-1425701-2",
+  "name_ar": "ديبا سوريش مينون",
+  "name_en": "DEEPA SURESH MENON",
+  "nationality": "India",
+  "date_of_birth": "28/09/1998",
+  "expiry_date": "07/04/2032",
+  "sex": "F",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_6.0deg",
+    "gaussian_blur_0.75px",
+    "low_resolution_downscale",
+    "jpeg_q46"
+  ]
+}

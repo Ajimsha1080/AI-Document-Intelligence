@@ -7,14 +7,11 @@ import { ConfidenceBadge } from "@/components/common/ConfidenceBadge";
 import {
   CheckCircle2,
   XCircle,
-  RotateCcw,
   AlertTriangle,
   Table as TableIcon,
-  ShieldCheck,
   Keyboard,
   ArrowRight,
   ArrowLeft,
-  ChevronDown,
 } from "lucide-react";
 
 export function ReviewScreen() {

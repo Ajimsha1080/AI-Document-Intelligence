@@ -1,9 +1,12 @@
 {
-  "id_number": "784-1988-9537301-1",
-  "name_ar": "عبدالله حمد سالم المري",
-  "name_en": "ABDULLAH HAMAD SALEM ALMARRI",
+  "document_type": "emirates_id",
+  "id_number": "784-1991-2044177-1",
+  "name_ar": "مريم أحمد سعيد الكتبي",
+  "name_en": "MARYAM AHMED SAEED ALKETBI",
   "nationality": "United Arab Emirates",
-  "date_of_birth": "24/02/1988",
-  "expiry_date": "23/09/2031",
-  "sex": "M"
+  "date_of_birth": "11/05/1991",
+  "expiry_date": "09/08/2029",
+  "sex": "F",
+  "subset": "clean",
+  "degradations": []
 }

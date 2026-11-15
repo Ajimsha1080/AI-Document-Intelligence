@@ -9,9 +9,17 @@ from app.models.document import Document, ExtractedField, DocumentPage, Validati
 from app.models.audit import AuditLog
 from app.services.retention_service import run_retention_policy_sweep
 
+from PIL import Image
+
+def _generate_valid_pdf():
+    buf = io.BytesIO()
+    img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+    img.save(buf, format="PDF")
+    return buf.getvalue()
+
 # Valid sample file binaries
 VALID_PNG_BYTES = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
-VALID_PDF_BYTES = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\ntrailer\n<<\n/Root 1 0 R\n>>\n%%EOF"
+VALID_PDF_BYTES = _generate_valid_pdf()
 INVALID_EXE_BYTES = b"MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff\x00\x00"
 
 @pytest.mark.asyncio

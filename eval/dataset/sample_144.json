@@ -1,0 +1,17 @@
+{
+  "document_type": "commercial_invoice",
+  "invoice_number": "INV-2026-8704",
+  "trn": "100123456700003",
+  "invoice_date": "05/01/2026",
+  "supplier_name": "HORIZON AIR CONDITIONING SPARES",
+  "total_amount": "22100.00",
+  "vat_amount": "1105.00",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_-1.5deg",
+    "gaussian_blur_0.76px",
+    "noise_grain",
+    "low_resolution_downscale",
+    "jpeg_q58"
+  ]
+}

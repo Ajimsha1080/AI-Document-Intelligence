@@ -1,0 +1,15 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1987-8981034-2",
+  "name_ar": "حميد خليفة حمد الشامسي",
+  "name_en": "HUMAID KHALIFA HAMAD ALSHAMSI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "11/01/1987",
+  "expiry_date": "14/09/2031",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_1.5deg",
+    "uneven_lighting_shadow"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "document_type": "emirates_id",
+  "id_number": "784-1987-1668396-0",
+  "name_ar": "مطر خلفان راشد النيادي",
+  "name_en": "MATAR KHALFAN RASHED ALNEYADI",
+  "nationality": "United Arab Emirates",
+  "date_of_birth": "25/12/1987",
+  "expiry_date": "15/09/2031",
+  "sex": "M",
+  "subset": "degraded",
+  "degradations": [
+    "rotation_8.0deg"
+  ]
+}
