@@ -4,28 +4,29 @@
 
 @layer base {
   :root {
+    /* Premium YC / Linear Slate & Zinc Palette (Light Mode) */
     --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    --foreground: 240 10% 4%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 240 10% 4%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 240 10% 4%;
 
-    /* UAE Sovereign Emerald Accent: #065f46 (hsl 166 88% 20%) */
-    --primary: 166 88% 20%;
-    --primary-foreground: 166 100% 97%;
-    --primary-hover: 166 85% 16%;
+    /* Refined Sovereign Emerald Brand (#065f46 / #047857) */
+    --primary: 160 84% 22%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 160 84% 18%;
 
-    --secondary: 210 25% 93%;
-    --secondary-foreground: 222 47% 14%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 215 16% 45%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
 
-    --accent: 166 40% 92%;
-    --accent-foreground: 166 88% 18%;
+    --accent: 240 5% 93%;
+    --accent-foreground: 240 6% 10%;
 
     --success: 158 64% 36%;
     --success-foreground: 0 0% 100%;
@@ -33,52 +34,53 @@
     --warning: 38 92% 45%;
     --warning-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 50%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 166 88% 22%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 160 84% 26%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
   }
 
   .dark {
-    --background: 224 35% 8%;
-    --foreground: 210 30% 96%;
+    /* Deep Studio Graphite / Linear Dark Canvas (#09090b) */
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
 
-    --card: 224 30% 11%;
-    --card-foreground: 210 30% 96%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 224 30% 11%;
-    --popover-foreground: 210 30% 96%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
 
-    /* Dark Mode Sovereign Emerald: brightened for contrast */
-    --primary: 160 84% 36%;
-    --primary-foreground: 224 35% 8%;
-    --primary-hover: 160 84% 42%;
+    /* Dark Mode Sovereign Accent (#10b981 / #059669) */
+    --primary: 158 64% 45%;
+    --primary-foreground: 240 10% 4%;
+    --primary-hover: 158 64% 52%;
 
-    --secondary: 224 25% 17%;
-    --secondary-foreground: 210 30% 94%;
+    --secondary: 240 6% 12%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 224 25% 16%;
-    --muted-foreground: 217 19% 65%;
+    --muted: 240 6% 12%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 166 40% 18%;
-    --accent-foreground: 160 84% 45%;
+    --accent: 240 6% 16%;
+    --accent-foreground: 0 0% 98%;
 
-    --success: 158 64% 42%;
-    --success-foreground: 224 35% 8%;
+    --success: 158 64% 45%;
+    --success-foreground: 240 10% 4%;
 
-    --warning: 38 92% 52%;
-    --warning-foreground: 224 35% 8%;
+    --warning: 38 92% 54%;
+    --warning-foreground: 240 10% 4%;
 
-    --destructive: 0 75% 55%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 224 20% 20%;
-    --input: 224 20% 20%;
-    --ring: 160 84% 40%;
+    --border: 240 6% 16%;
+    --input: 240 6% 16%;
+    --ring: 158 64% 45%;
   }
 
   * {
@@ -86,39 +88,57 @@
   }
 
   body {
-    @apply bg-background text-foreground transition-colors duration-150;
+    @apply bg-background text-foreground antialiased selection:bg-emerald-500/20 selection:text-emerald-900 dark:selection:text-emerald-100;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: -0.011em;
   }
 
   /* Bi-directional typography handling */
   [dir="rtl"] {
-    font-family: "IBM Plex Sans Arabic", "Noto Naskh Arabic", "Tajawal", "Segoe UI", sans-serif;
+    font-family: "IBM Plex Sans Arabic", "Noto Naskh Arabic", "Tajawal", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     letter-spacing: 0;
   }
 
   [dir="ltr"] {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
   }
 }
 
-/* Custom scrollbars for document viewer & data tables */
+@layer components {
+  /* YC / Linear Style Micro-Finishes */
+  .yc-card {
+    @apply rounded-xl border border-border/80 bg-card text-card-foreground shadow-sm transition-all duration-150;
+  }
+
+  .yc-card-hover {
+    @apply hover:border-zinc-300 dark:hover:border-zinc-700/80 hover:shadow-sm;
+  }
+
+  .yc-badge {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border;
+  }
+
+  .yc-btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white/90 shadow-sm transition-all duration-150 active:scale-[0.98];
+  }
+
+  .yc-btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium border border-border/80 bg-background hover:bg-secondary text-foreground shadow-sm transition-all duration-150 active:scale-[0.98];
+  }
+}
+
+/* Minimalist scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.25);
+  background: hsl(var(--muted-foreground) / 0.2);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.4);
-}
-
-/* Focus outline for enterprise accessibility (WCAG AA) */
-:focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
+  background: hsl(var(--muted-foreground) / 0.35);
 }

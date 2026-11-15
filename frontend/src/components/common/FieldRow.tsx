@@ -52,10 +52,10 @@ export function FieldRow({ field, docId }: FieldRowProps) {
     <div
       onClick={() => setActiveFieldKey(field.key)}
       className={cn(
-        "p-3 rounded-lg border transition-all text-xs space-y-2 cursor-pointer",
+        "p-3 rounded-lg border transition-all text-xs space-y-2 cursor-pointer shadow-xs",
         isActive
-          ? "bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-500 ring-1 ring-emerald-500 shadow-sm"
-          : "bg-card border-border hover:border-slate-300 dark:hover:border-slate-700"
+          ? "bg-secondary/80 border-primary/60 ring-1 ring-primary/40 shadow-xs"
+          : "bg-card border-border/80 hover:border-zinc-300 dark:hover:border-zinc-700"
       )}
     >
       {/* Header: Name & Badges */}

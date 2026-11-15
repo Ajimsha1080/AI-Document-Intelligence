@@ -222,19 +222,19 @@ export function ReviewScreen() {
           </div>
 
           {/* Action Footer Bar */}
-          <div className="p-3 border-t border-border bg-secondary/40 space-y-2">
+          <div className="p-3 border-t border-border/80 bg-secondary/30 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <button
                 onClick={() => approveDocument(selectedDocument.id)}
-                className="flex-1 py-2 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition"
+                className="flex-1 py-2 px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold text-xs flex items-center justify-center gap-1.5 shadow-xs hover:bg-zinc-800 dark:hover:bg-white/90 transition active:scale-[0.98]"
               >
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
                 <span>{t("actionApprove")} (Enter)</span>
               </button>
 
               <button
                 onClick={() => rejectDocument(selectedDocument.id)}
-                className="py-2 px-3 rounded-lg border border-rose-300 dark:border-rose-900 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-bold text-xs flex items-center justify-center gap-1 transition"
+                className="py-2 px-3 rounded-lg border border-border/80 bg-secondary/40 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-xs flex items-center justify-center gap-1 transition"
               >
                 <XCircle className="w-4 h-4" />
                 <span>{t("actionReject")}</span>
@@ -246,17 +246,17 @@ export function ReviewScreen() {
                     documents[(documents.findIndex((d) => d.id === selectedDocument.id) + 1) % documents.length].id
                   );
                 }}
-                className="py-2 px-3 rounded-lg border border-border bg-card hover:bg-secondary font-bold text-xs text-foreground flex items-center justify-center gap-1 transition"
+                className="py-2 px-3 rounded-lg border border-border/80 bg-secondary/40 hover:bg-secondary font-semibold text-xs text-foreground flex items-center justify-center gap-1 transition shadow-xs"
                 title="Next Document"
               >
                 <span>Next</span>
-                <Arrow className="w-3.5 h-3.5" />
+                <Arrow className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
             </div>
 
             {/* Keyboard Shortcuts Hint */}
             <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground font-mono">
-              <Keyboard className="w-3 h-3" />
+              <Keyboard className="w-3 h-3 text-muted-foreground/80" />
               <span>{t("shortcutHint")}</span>
             </div>
           </div>

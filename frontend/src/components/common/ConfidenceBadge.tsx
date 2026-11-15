@@ -1,7 +1,6 @@
 import React from "react";
 import { cn, toArabicIndicDigits } from "@/lib/utils";
 import { useApp } from "@/context/AppContext";
-import { ShieldCheck, ShieldAlert, AlertCircle } from "lucide-react";
 
 interface ConfidenceBadgeProps {
   score: number; // 0 to 1 or 0 to 100
@@ -24,22 +23,21 @@ export function ConfidenceBadge({ score, showLabel = true, className }: Confiden
   const config = {
     high: {
       label: t("confidenceHigh"),
-      icon: ShieldCheck,
-      classes: "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60",
+      dotClass: "bg-emerald-500",
+      classes: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
     },
     medium: {
       label: t("confidenceMedium"),
-      icon: ShieldAlert,
-      classes: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60",
+      dotClass: "bg-amber-500",
+      classes: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
     },
     low: {
       label: t("confidenceLow"),
-      icon: AlertCircle,
-      classes: "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60 font-semibold",
+      dotClass: "bg-rose-500",
+      classes: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20",
     },
   }[variant];
 
-  const Icon = config.icon;
   const displayScore = useArabicDigits
     ? `${toArabicIndicDigits(normalized)}%`
     : `${normalized}%`;
@@ -47,15 +45,15 @@ export function ConfidenceBadge({ score, showLabel = true, className }: Confiden
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border",
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-mono font-medium border select-none",
         config.classes,
         className
       )}
       title={`${config.label} (${displayScore})`}
     >
-      <Icon className="w-3.5 h-3.5" />
-      <span className="font-mono font-semibold">{displayScore}</span>
-      {showLabel && <span className="opacity-80 hidden sm:inline">• {config.label}</span>}
+      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", config.dotClass)} />
+      <span className="font-semibold">{displayScore}</span>
+      {showLabel && <span className="opacity-75 hidden sm:inline font-sans font-normal text-[10px]">· {config.label}</span>}
     </span>
   );
 }
