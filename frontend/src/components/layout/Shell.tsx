@@ -11,6 +11,7 @@ import { ReviewScreen } from "@/components/screens/ReviewScreen";
 import { SchemaBuilderScreen } from "@/components/screens/SchemaBuilderScreen";
 import { AuditLogScreen } from "@/components/screens/AuditLogScreen";
 import { SettingsScreen } from "@/components/screens/SettingsScreen";
+import { TeamScreen } from "@/components/screens/TeamScreen";
 import { LoginModal } from "@/components/screens/LoginModal";
 import { SovereignChatbot } from "@/components/common/SovereignChatbot";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
@@ -34,6 +35,8 @@ export function Shell() {
         return <SchemaBuilderScreen />;
       case "audit":
         return <AuditLogScreen />;
+      case "team":
+        return <TeamScreen />;
       case "settings":
         return <SettingsScreen />;
       default:

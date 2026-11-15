@@ -20,6 +20,7 @@ export type ScreenId =
   | "review"
   | "builder"
   | "audit"
+  | "team"
   | "settings";
 
 export type Language = "en" | "ar";
@@ -125,6 +126,25 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 let toastSeq = 1;
 
+const defaultSystemUsers: SystemUser[] = [
+  {
+    id: "usr-1",
+    name: "Ajim Sha",
+    email: "ajimshaptm16@gmail.com",
+    role: "admin",
+    status: "active",
+    lastLogin: "16 Nov 2026",
+  },
+  {
+    id: "usr-2",
+    name: "Mariam Al Nuaimi",
+    email: "mariam.nuaimi@alhilal.ae",
+    role: "reviewer",
+    status: "active",
+    lastLogin: "15 Nov 2026",
+  },
+];
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>("en");
   const [theme, setTheme] = useState<Theme>("light");
@@ -144,7 +164,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Config Collections
   const [schemas, setSchemas] = useState<DocumentTypeSchema[]>(DEFAULT_STANDARD_SCHEMAS);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [users, setUsers] = useState<SystemUser[]>([]);
+  const [users, setUsers] = useState<SystemUser[]>(defaultSystemUsers);
   const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
   const [retentionDays, setRetentionDays] = useState<number>(365);
   const [hardDeleteDerived, setHardDeleteDerived] = useState<boolean>(true);

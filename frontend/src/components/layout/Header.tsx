@@ -141,15 +141,15 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
             className="flex items-center gap-2 ps-1.5 border-s border-border/80 hover:opacity-85 transition text-start"
             title="Click to switch user or view Sovereign SSO gateway"
           >
-            <div className="w-7 h-7 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center font-bold text-xs shadow-xs">
-              AM
+            <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center justify-center font-bold text-xs select-none shadow-xs">
+              AJ
             </div>
             <div className="hidden lg:block text-start leading-tight">
               <div className="text-xs font-semibold text-foreground">
-                Ahmed Al Mansoori
+                Ajim Sha
               </div>
               <div className="text-[10px] text-muted-foreground">
-                Compliance Admin
+                Administrator
               </div>
             </div>
           </button>

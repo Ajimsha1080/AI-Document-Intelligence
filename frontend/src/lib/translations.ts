@@ -57,8 +57,12 @@ export const translations = {
     ar: "منشئ المخططات",
   },
   navAudit: {
-    en: "Immutable Audit Log",
-    ar: "سجل التدقيق والامتثال",
+    en: "Audit trail",
+    ar: "سجل التدقيق",
+  },
+  navTeam: {
+    en: "Team",
+    ar: "فريق العمل",
   },
   navSettings: {
     en: "Settings & Sovereignty",
