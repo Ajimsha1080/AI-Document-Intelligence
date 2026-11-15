@@ -12,6 +12,7 @@ import { SchemaBuilderScreen } from "@/components/screens/SchemaBuilderScreen";
 import { AuditLogScreen } from "@/components/screens/AuditLogScreen";
 import { SettingsScreen } from "@/components/screens/SettingsScreen";
 import { LoginModal } from "@/components/screens/LoginModal";
+import { SovereignChatbot } from "@/components/common/SovereignChatbot";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 
 export function Shell() {
@@ -63,6 +64,9 @@ export function Shell() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
       />
+
+      {/* Sovereign RAG AI Chatbot */}
+      <SovereignChatbot />
 
       {/* Live Toast Notifications */}
       {toasts.length > 0 && (

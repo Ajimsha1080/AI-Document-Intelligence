@@ -10,6 +10,7 @@ import {
   Bell,
   Building2,
   UserCheck,
+  Sparkles,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -66,6 +67,18 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
 
         {/* Right Section Controls */}
         <div className="flex items-center gap-2.5">
+          {/* Sovereign AI Assistant Trigger */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("open-sovereign-chatbot"))}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-600/50 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 text-xs font-bold transition shadow-xs"
+            title="Open Sovereign RAG Assistant"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span className="hidden sm:inline">
+              {language === "ar" ? "المساعد السيادي" : "AI Assistant"}
+            </span>
+          </button>
+
           {/* Active Tenant / Bank */}
           <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-secondary/30 text-xs">
             <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
