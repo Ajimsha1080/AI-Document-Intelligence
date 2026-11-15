@@ -127,6 +127,7 @@ export function DocumentViewer() {
           {/* Document Content Rendering */}
           {selectedDocument.previewUrl && selectedDocument.previewUrl.startsWith("http") ? (
             <div className="relative w-full h-full flex flex-col items-center justify-center p-4 bg-slate-50 min-h-[480px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={selectedDocument.previewUrl}
                 alt={selectedDocument.fileName}
