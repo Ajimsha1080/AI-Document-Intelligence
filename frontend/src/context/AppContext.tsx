@@ -11,6 +11,7 @@ import {
   TableRowItem,
 } from "@/types";
 import { api } from "@/lib/api";
+import { DEFAULT_STANDARD_SCHEMAS } from "@/lib/defaultSchemas";
 
 export type ScreenId =
   | "dashboard"
@@ -141,7 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activePage, setActivePage] = useState<number>(1);
 
   // Config Collections
-  const [schemas, setSchemas] = useState<DocumentTypeSchema[]>([]);
+  const [schemas, setSchemas] = useState<DocumentTypeSchema[]>(DEFAULT_STANDARD_SCHEMAS);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
@@ -241,9 +242,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshSchemas = useCallback(async () => {
     try {
       const liveSchemas = await api.schemas.list();
-      setSchemas(liveSchemas || []);
+      if (liveSchemas && liveSchemas.length > 0) {
+        setSchemas(liveSchemas);
+      }
     } catch {
-      // Ignore
+      // Keep DEFAULT_STANDARD_SCHEMAS
     }
   }, []);
 

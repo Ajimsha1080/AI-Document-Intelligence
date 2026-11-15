@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { DocumentTypeSchema, SchemaFieldDefinition, ValidationRuleDefinition, FieldDataType } from "@/types";
 import {
@@ -9,15 +9,29 @@ import {
 } from "lucide-react";
 
 export function SchemaBuilderScreen() {
-  const { schemas, updateSchema, language } = useApp();
+  const { schemas, updateSchema, language, showToast } = useApp();
 
-  const [selectedSchemaId, setSelectedSchemaId] = useState<string>(schemas[0]?.id || "sch-1");
-  const activeSchema = schemas.find((s) => s.id === selectedSchemaId) || schemas[0];
+  const [selectedSchemaId, setSelectedSchemaId] = useState<string>(schemas[0]?.id || "");
+  const activeSchema = schemas.find((s) => s.id === selectedSchemaId) || schemas[0] || null;
 
   // Editable form state
-  const [fields, setFields] = useState<SchemaFieldDefinition[]>(activeSchema.fields);
-  const [rules, setRules] = useState<ValidationRuleDefinition[]>(activeSchema.rules);
+  const [fields, setFields] = useState<SchemaFieldDefinition[]>(activeSchema?.fields || []);
+  const [rules, setRules] = useState<ValidationRuleDefinition[]>(activeSchema?.rules || []);
   const [activeTab, setActiveTab] = useState<"fields" | "rules" | "json_preview">("fields");
+
+  // Synchronize when activeSchema changes (e.g. initial load or switching schemas)
+  useEffect(() => {
+    if (activeSchema) {
+      setFields(activeSchema.fields || []);
+      setRules(activeSchema.rules || []);
+      if (!selectedSchemaId && activeSchema.id) {
+        setSelectedSchemaId(activeSchema.id);
+      }
+    } else {
+      setFields([]);
+      setRules([]);
+    }
+  }, [activeSchema, selectedSchemaId]);
 
   // New field state
   const [newKey, setNewKey] = useState("");
@@ -31,8 +45,8 @@ export function SchemaBuilderScreen() {
     setSelectedSchemaId(id);
     const s = schemas.find((item) => item.id === id);
     if (s) {
-      setFields(s.fields);
-      setRules(s.rules);
+      setFields(s.fields || []);
+      setRules(s.rules || []);
     }
   };
 
@@ -62,13 +76,35 @@ export function SchemaBuilderScreen() {
   };
 
   const handleSaveSchema = () => {
+    if (!activeSchema) return;
     const updatedSchema: DocumentTypeSchema = {
       ...activeSchema,
       fields,
       rules,
     };
     updateSchema(updatedSchema);
+    showToast(
+      "success",
+      `Schema '${activeSchema.nameEn}' saved and deployed to local pipeline`,
+      `تم حفظ ونشر المخطط '${activeSchema.nameAr}' في نموذج الاستخراج المحلي`
+    );
   };
+
+  if (!activeSchema) {
+    return (
+      <div className="p-8 text-center bg-card border border-border rounded-2xl shadow-sm">
+        <FileCode2 className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+        <h2 className="text-sm font-bold text-foreground">
+          {language === "ar" ? "لا توجد مخططات مستندات معرفة" : "No Document Schemas Available"}
+        </h2>
+        <p className="text-xs text-muted-foreground mt-1">
+          {language === "ar"
+            ? "يرجى التحقق من اتصال الخادم أو تسجيل الدخول بصلاحية المشرف"
+            : "Initializing UAE standard schemas or check server connection."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -91,7 +127,7 @@ export function SchemaBuilderScreen() {
         {/* Schema Switcher */}
         <div className="flex items-center gap-2">
           <select
-            value={selectedSchemaId}
+            value={selectedSchemaId || activeSchema.id}
             onChange={(e) => handleSelectSchema(e.target.value)}
             className="px-3 py-1.5 rounded-lg border border-border bg-secondary font-bold text-foreground text-xs focus:ring-1 focus:ring-primary"
           >
@@ -156,7 +192,7 @@ export function SchemaBuilderScreen() {
             </h3>
 
             <div className="divide-y divide-border/60">
-              {fields.map((f) => (
+              {(fields || []).map((f) => (
                 <div key={f.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div className="space-y-0.5 min-w-0">
                     <div className="font-bold text-foreground flex items-center gap-2">
@@ -173,7 +209,7 @@ export function SchemaBuilderScreen() {
                     <div className="text-[11px] text-muted-foreground flex items-center gap-2">
                       <span>Type: <strong className="text-foreground">{f.dataType}</strong></span>
                       <span>•</span>
-                      <span>Min Confidence: <strong className="font-mono text-foreground">{Math.round(f.confidenceThreshold * 100)}%</strong></span>
+                      <span>Min Confidence: <strong className="font-mono text-foreground">{Math.round((f.confidenceThreshold || 0.85) * 100)}%</strong></span>
                     </div>
                   </div>
 
@@ -198,104 +234,104 @@ export function SchemaBuilderScreen() {
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                <label className="block text-[11px] font-bold text-muted-foreground mb-1">
                   Field Key (snake_case)
                 </label>
                 <input
                   type="text"
+                  placeholder="e.g. passport_number"
                   value={newKey}
                   onChange={(e) => setNewKey(e.target.value)}
-                  placeholder="e.g. passport_number"
-                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-secondary/50 font-mono text-xs focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-foreground font-mono text-xs focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                <label className="block text-[11px] font-bold text-muted-foreground mb-1">
                   Name (English)
                 </label>
                 <input
                   type="text"
+                  placeholder="e.g. Passport Number"
                   value={newNameEn}
                   onChange={(e) => setNewNameEn(e.target.value)}
-                  placeholder="e.g. Passport Number"
-                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-secondary/50 text-xs focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-xs focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                <label className="block text-[11px] font-bold text-muted-foreground mb-1">
                   Name (Arabic)
                 </label>
                 <input
                   type="text"
+                  placeholder="مثال: رقم جواز السفر"
                   value={newNameAr}
                   onChange={(e) => setNewNameAr(e.target.value)}
-                  placeholder="مثال: رقم جواز السفر"
-                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-secondary/50 text-xs focus:ring-1 focus:ring-primary"
-                  dir="rtl"
+                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-xs focus:ring-1 focus:ring-primary"
                 />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                  Data Type
-                </label>
-                <select
-                  value={newType}
-                  onChange={(e) => setNewType(e.target.value as any)}
-                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-secondary text-xs font-semibold focus:ring-1 focus:ring-primary"
-                >
-                  <option value="string">String (نص عام)</option>
-                  <option value="regex">Regex Pattern (تعبير نمطي)</option>
-                  <option value="date">Date (تاريخ)</option>
-                  <option value="number">Numeric (رقمي)</option>
-                  <option value="currency">Currency AED (عملة)</option>
-                </select>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[11px] font-semibold text-muted-foreground mb-1">
-                  <span>Confidence Threshold</span>
-                  <span className="font-mono text-foreground">{Math.round(newThreshold * 100)}%</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-muted-foreground mb-1">
+                    Data Type
+                  </label>
+                  <select
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value as FieldDataType)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-border bg-background text-foreground text-xs focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="string">String</option>
+                    <option value="number">Number</option>
+                    <option value="date">Date</option>
+                    <option value="regex">Regex</option>
+                  </select>
                 </div>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="0.99"
-                  step="0.01"
-                  value={newThreshold}
-                  onChange={(e) => setNewThreshold(Number(e.target.value))}
-                  className="w-full accent-emerald-600"
-                />
+
+                <div>
+                  <label className="block text-[11px] font-bold text-muted-foreground mb-1">
+                    Threshold
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    max="1"
+                    value={newThreshold}
+                    onChange={(e) => setNewThreshold(parseFloat(e.target.value) || 0.85)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-border bg-background text-foreground font-mono text-xs focus:ring-1 focus:ring-primary"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
-                  id="reqChk"
+                  id="req-checkbox"
                   checked={newRequired}
                   onChange={(e) => setNewRequired(e.target.checked)}
                   className="rounded text-primary focus:ring-primary"
                 />
-                <label htmlFor="reqChk" className="text-xs font-semibold text-foreground cursor-pointer">
-                  Required Field (حقل إلزامي)
+                <label htmlFor="req-checkbox" className="text-xs text-foreground font-semibold cursor-pointer">
+                  {language === "ar" ? "حقل إلزامي للاكتمال" : "Required for validation"}
                 </label>
               </div>
 
               <button
                 onClick={handleAddField}
                 disabled={!newKey || !newNameEn}
-                className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs shadow-sm transition disabled:opacity-40"
+                className="w-full py-2 rounded-lg bg-secondary hover:bg-secondary/80 disabled:opacity-40 text-foreground font-bold text-xs flex items-center justify-center gap-1.5 transition"
               >
-                {language === "ar" ? "إضافة الحقل إلى المخطط" : "Add to Schema"}
+                <Plus className="w-3.5 h-3.5" />
+                <span>{language === "ar" ? "إدراج الحقل بالمخطط" : "Insert Field"}</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tab 2: Validation Rules */}
+      {/* Tab 2: Rules Editor */}
       {activeTab === "rules" && (
         <div className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-4 text-xs">
           <h3 className="font-bold text-foreground text-xs uppercase tracking-wider">
@@ -303,11 +339,11 @@ export function SchemaBuilderScreen() {
           </h3>
 
           <div className="divide-y divide-border/60">
-            {rules.map((r) => (
+            {(rules || []).map((r) => (
               <div key={r.id} className="py-3 flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <div className="font-bold text-foreground flex items-center gap-2">
-                    <span>{language === "ar" ? r.nameAr : r.nameEn}</span>
+                    <span>{language === "ar" ? r.nameAr || r.nameEn : r.nameEn || r.nameAr}</span>
                     <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                       {r.severity.toUpperCase()}
                     </span>
@@ -347,7 +383,7 @@ export function SchemaBuilderScreen() {
             </h3>
           </div>
           <pre className="p-4 rounded-xl bg-slate-950 text-emerald-400 font-mono text-xs overflow-x-auto leading-relaxed border border-slate-800 max-h-96">
-            {JSON.stringify({ ...activeSchema, fields, rules }, null, 2)}
+            {JSON.stringify({ ...(activeSchema || {}), fields, rules }, null, 2)}
           </pre>
         </div>
       )}
