@@ -45,8 +45,8 @@ export const translations = {
     ar: "تحميل المستندات",
   },
   navDocuments: {
-    en: "Documents Archive",
-    ar: "أرشيف المستندات",
+    en: "Document Management Center",
+    ar: "مركز إدارة المستندات",
   },
   navReview: {
     en: "Review Queue",

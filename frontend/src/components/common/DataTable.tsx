@@ -11,6 +11,7 @@ import {
   Eye,
   FileSpreadsheet,
   FileCode,
+  FolderOpen,
 } from "lucide-react";
 
 export function DataTable() {
@@ -139,6 +140,43 @@ export function DataTable() {
 
   return (
     <div className="space-y-4">
+      {/* Document Management Center Header */}
+      <div className="p-5 rounded-2xl border border-border bg-card shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
+        <div>
+          <div className="flex items-center gap-2">
+            <FolderOpen className="w-5 h-5 text-primary" />
+            <h1 className="text-base font-extrabold text-foreground">
+              {language === "ar" ? "مركز إدارة المستندات والأرشيف السيادي" : "Document Management & Archive Center"}
+            </h1>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {language === "ar"
+              ? "إدارة وتصفية وتصدير جميع وثائق الهوية والتراخيص التجارية والفواتير المصنفة محلياً"
+              : "Search, filter, review, and export all sovereign in-country classified documents"}
+          </p>
+        </div>
+
+        {/* Action Buttons: Export JSON & Export CSV */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportJSON}
+            className="px-3 py-1.5 rounded-lg border border-border bg-secondary hover:bg-secondary/80 font-bold text-foreground text-xs flex items-center gap-1.5 transition"
+            title="Export JSON"
+          >
+            <FileCode className="w-3.5 h-3.5 text-muted-foreground" />
+            <span>JSON</span>
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="px-3 py-1.5 rounded-lg border border-border bg-secondary hover:bg-secondary/80 font-bold text-foreground text-xs flex items-center gap-1.5 transition"
+            title="Export CSV"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+            <span>CSV</span>
+          </button>
+        </div>
+      </div>
+
       {/* Search and Filters Bar */}
       <div className="p-4 rounded-xl border border-border bg-card shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
         {/* Search */}
