@@ -34,8 +34,9 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
         {/* Sidebar Toggle */}
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary focus:ring-1 focus:ring-primary lg:hidden"
+          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/50 focus:ring-1 focus:ring-primary transition"
           aria-label="Toggle navigation"
+          title={language === "ar" ? "فتح/إغلاق القائمة الجانبية" : "Open/Close Sidebar"}
         >
           <Menu className="w-5 h-5" />
         </button>

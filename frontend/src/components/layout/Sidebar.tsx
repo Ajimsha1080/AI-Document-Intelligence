@@ -12,6 +12,8 @@ import {
   Settings,
   Shield,
   Layers,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -20,6 +22,7 @@ export function Sidebar() {
     currentScreen,
     setCurrentScreen,
     sidebarCollapsed,
+    toggleSidebar,
     language,
     activeTenant,
   } = useApp();
@@ -71,21 +74,45 @@ export function Sidebar() {
       )}
     >
       {/* Brand Header */}
-      <div className="flex items-center gap-3 h-16 px-5 border-b border-border">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-950 flex items-center justify-center text-white shadow-md shadow-emerald-900/20">
-          <Layers className="w-5 h-5 text-gold-light" />
-        </div>
-        <div className={cn("overflow-hidden transition-all", sidebarCollapsed && "lg:hidden")}>
-          <div className="font-extrabold text-sm tracking-tight text-foreground flex items-center gap-1.5">
-            <span>{t("appName")}</span>
-            <span className="px-1.5 py-0.2 text-[9px] font-bold rounded bg-primary/10 text-primary border border-primary/20">
-              UAE
-            </span>
+      <div className="flex items-center justify-between h-16 px-4 border-b border-border">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-950 flex items-center justify-center text-white shadow-md shadow-emerald-900/20">
+            <Layers className="w-5 h-5 text-gold-light" />
           </div>
-          <div className="text-[10px] text-muted-foreground truncate font-medium">
-            {t("appTagline")}
+          <div className={cn("overflow-hidden transition-all", sidebarCollapsed && "lg:hidden")}>
+            <div className="font-extrabold text-sm tracking-tight text-foreground flex items-center gap-1.5">
+              <span>{t("appName")}</span>
+              <span className="px-1.5 py-0.2 text-[9px] font-bold rounded bg-primary/10 text-primary border border-primary/20">
+                UAE
+              </span>
+            </div>
+            <div className="text-[10px] text-muted-foreground truncate font-medium">
+              {t("appTagline")}
+            </div>
           </div>
         </div>
+
+        {/* Sidebar Close / Open Toggle Button */}
+        <button
+          onClick={toggleSidebar}
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/60 transition"
+          title={
+            sidebarCollapsed
+              ? language === "ar"
+                ? "توسيع القائمة"
+                : "Expand Sidebar"
+              : language === "ar"
+              ? "طي القائمة"
+              : "Collapse Sidebar"
+          }
+          aria-label="Toggle Sidebar"
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen className="w-4 h-4 text-primary" />
+          ) : (
+            <PanelLeftClose className="w-4 h-4" />
+          )}
+        </button>
       </div>
 
       {/* Navigation List */}
