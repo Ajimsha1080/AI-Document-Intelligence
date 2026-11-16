@@ -34,6 +34,7 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
     review: { en: "Review Queue", ar: "طابور المراجعة" },
     builder: { en: "Schema Engine", ar: "منشئ المخططات" },
     audit: { en: "Audit Trail", ar: "سجل التدقيق" },
+    team: { en: "Team Access Control", ar: "فريق العمل والصلاحيات" },
     settings: { en: "Sovereignty & Settings", ar: "الإعدادات والسيادة" },
   };
 
@@ -141,7 +142,7 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
             className="flex items-center gap-2 ps-1.5 border-s border-border/80 hover:opacity-85 transition text-start"
             title="Click to switch user or view Sovereign SSO gateway"
           >
-            <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center justify-center font-bold text-xs select-none shadow-xs">
+            <div className="w-7 h-7 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center font-bold text-xs shadow-xs">
               AJ
             </div>
             <div className="hidden lg:block text-start leading-tight">
