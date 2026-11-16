@@ -504,7 +504,7 @@ export const api: ApiAdapter = {
           await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
         } catch {}
       }
-      const res = await fetch(`${API_BASE}/api/v1/rag/query`, {
+      let res = await fetch(`${API_BASE}/api/v1/rag/query`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -512,6 +512,19 @@ export const api: ApiAdapter = {
         },
         body: JSON.stringify({ query, document_id: documentId, top_k: topK }),
       });
+      if (res.status === 401) {
+        try {
+          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
+          res = await fetch(`${API_BASE}/api/v1/rag/query`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeader(),
+            },
+            body: JSON.stringify({ query, document_id: documentId, top_k: topK }),
+          });
+        } catch {}
+      }
       if (!res.ok) throw new Error("RAG query failed");
       return await res.json();
     },
