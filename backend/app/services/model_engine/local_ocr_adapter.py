@@ -34,8 +34,11 @@ class LocalOCRAdapter(BaseModelProvider):
 
     @classmethod
     def get_tesseract_cmd(cls) -> Optional[str]:
+        user_home = os.path.expanduser("~")
         standard_paths = [
             shutil.which("tesseract"),
+            os.path.join(user_home, "Tesseract-OCR", "tesseract.exe"),
+            os.path.join(user_home, "AppData", "Local", "Programs", "Tesseract-OCR", "tesseract.exe"),
             r"C:\Program Files\Tesseract-OCR\tesseract.exe",
             r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
             "/usr/bin/tesseract",
@@ -261,13 +264,16 @@ class LocalOCRAdapter(BaseModelProvider):
         for t in tokens:
             norm_t = normalize_arabic_digits(t["text"])
             m = re.search(r"(?:784[\-\s]?)?(?:\d{4})[\-\s]?(?:\d{7})[\-\s]?(?:\d)", norm_t)
+            if not m and "784" in norm_t:
+                m = re.search(r"784[\-\s]?\d{2,4}[\-\s]?[0-9A-Za-z\!]+", norm_t)
             if m:
                 candidate = m.group(0)
                 valid, fid, _ = validate_emirates_id_number(candidate)
-                if valid or len(re.sub(r"\D", "", candidate)) >= 9:
+                if valid or len(re.sub(r"\D", "", candidate)) >= 5:
                     matched_id_tokens = [t]
                     raw_id = t["text"]
-                    formatted_id = fid if valid else candidate
+                    clean_cand = re.sub(r"[^\d\-]", "", candidate)
+                    formatted_id = fid if valid else (clean_cand if len(clean_cand) >= 7 else candidate)
                     is_valid_id = valid
                     break
 

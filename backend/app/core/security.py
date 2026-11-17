@@ -69,11 +69,11 @@ def mask_pii_value(key: str, val: Any) -> Any:
     clean_key = key.lower()
     
     # Emirates ID pattern (784-XXXX-XXXXXXX-X)
-    if "emirates_id" in clean_key or "eid" in clean_key or re.match(r"^784-\d{4}-\d{7}-\d{1}$", val):
+    if any(k in clean_key for k in ["emirates_id", "eid", "id_number", "national_id"]) or re.match(r"^784-\d{4}-\d{7}-\d{1}$", val) or val.startswith("784-"):
         parts = val.split("-")
         if len(parts) == 4:
             return f"{parts[0]}-****-*******-{parts[3]}"
-        return f"{val[:3]}*******{val[-2:]}" if len(val) > 5 else "***"
+        return f"{parts[0]}-****-*******-{val[-1]}" if len(parts) >= 2 else (f"{val[:4]}****{val[-2:]}" if len(val) > 6 else "****")
         
     # Email pattern
     if "email" in clean_key or "@" in val:

@@ -1,4 +1,5 @@
 import io
+import os
 import json
 import asyncio
 import pytest
@@ -13,6 +14,10 @@ from tests.mock_adapter import MockModelAdapter
 
 
 def _create_test_image_bytes():
+    sample_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "eval", "dataset", "sample_001.png"))
+    if os.path.exists(sample_path):
+        with open(sample_path, "rb") as f:
+            return f.read()
     buf = io.BytesIO()
     img = Image.new("RGB", (400, 300), color=(255, 255, 255))
     img.save(buf, format="PNG")

@@ -1,4 +1,5 @@
 import io
+import os
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +12,10 @@ from app.worker.tasks import process_document_pipeline
 from app.services.retention_service import run_retention_policy_sweep
 
 def _create_test_png():
+    sample_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "eval", "dataset", "sample_001.png"))
+    if os.path.exists(sample_path):
+        with open(sample_path, "rb") as f:
+            return f.read()
     buf = io.BytesIO()
     img = Image.new("RGB", (1000, 630), color=(240, 244, 248))
     img.save(buf, format="PNG")
