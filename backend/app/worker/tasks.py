@@ -173,9 +173,9 @@ async def _run_pipeline_core(document_id: str, tenant_id: str, db: AsyncSession)
         # Generate layout-aware document chunks for Sovereign RAG
         from app.models.document_chunk import DocumentChunk
         from app.services.rag.chunker import chunk_document_tokens, chunk_text_fallback
-        from app.services.rag.providers import LocalHashingSemanticEmbedding
+        from app.services.rag.providers import get_default_embedding_provider
 
-        embedder = LocalHashingSemanticEmbedding()
+        embedder = get_default_embedding_provider()
         all_chunks_data = []
 
         for p in extraction_res.pages:

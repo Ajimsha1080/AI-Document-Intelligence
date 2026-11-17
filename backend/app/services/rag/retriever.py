@@ -5,7 +5,13 @@ from sqlalchemy import select, or_
 
 from app.models.document_chunk import DocumentChunk
 from app.services.rag.arabic_normalizer import normalize_arabic_text
-from app.services.rag.providers import EmbeddingProvider, RerankerProvider, LocalHashingSemanticEmbedding, LocalCrossEncoderReranker
+from app.services.rag.providers import (
+    EmbeddingProvider,
+    RerankerProvider,
+    LocalHashingSemanticEmbedding,
+    LocalCrossEncoderReranker,
+    get_default_embedding_provider
+)
 
 def cosine_similarity(v1: List[float], v2: List[float]) -> float:
     """Computes cosine similarity between two float vectors."""
@@ -29,7 +35,7 @@ class HybridRetriever:
         embedding_provider: Optional[EmbeddingProvider] = None,
         reranker_provider: Optional[RerankerProvider] = None
     ):
-        self.embedder = embedding_provider or LocalHashingSemanticEmbedding()
+        self.embedder = embedding_provider or get_default_embedding_provider()
         self.reranker = reranker_provider or LocalCrossEncoderReranker()
 
     async def retrieve(
@@ -51,8 +57,14 @@ class HybridRetriever:
         if not chunks:
             return []
 
-        # 2. Vector scoring
-        query_vec = self.embedder.embed_query(query)
+        # 2. Vector scoring with dimensional auto-adaptation
+        sample_emb = chunks[0].embedding if chunks and chunks[0].embedding else None
+        sample_dim = len(sample_emb) if sample_emb else None
+        if sample_dim and sample_dim == 128 and getattr(self.embedder, "dim", 384) != 128:
+            query_vec = LocalHashingSemanticEmbedding(dim=128).embed_query(query)
+        else:
+            query_vec = self.embedder.embed_query(query)
+
         vector_candidates = []
         for ch in chunks:
             sim = cosine_similarity(query_vec, ch.embedding or [])

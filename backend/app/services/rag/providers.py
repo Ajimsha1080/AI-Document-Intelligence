@@ -1,10 +1,16 @@
 import abc
-import math
 import hashlib
+import logging
+import math
+import os
 import re
 from typing import List, Dict, Any, Optional
+import httpx
+
 from app.services.rag.arabic_normalizer import normalize_arabic_text
 from app.services.rag.prompt_guard import sanitize_untrusted_text
+
+logger = logging.getLogger("rag_providers")
 
 class EmbeddingProvider(abc.ABC):
     @abc.abstractmethod
@@ -166,3 +172,149 @@ class SovereignLocalGenerator(GeneratorProvider):
             "confidence": round(min(1.0, relevance + 0.3), 3),
             "citations": citations
         }
+
+
+class FastEmbedMultilingualProvider(EmbeddingProvider):
+    """
+    In-Country, Sovereign ONNX Dense Semantic Embedding Provider.
+    Powered by FastEmbed (e.g. BAAI/bge-small-en-v1.5 or intfloat/multilingual-e5-large)
+    with zero external cloud egress and seamless fallback to LocalHashingSemanticEmbedding.
+    """
+    def __init__(self, model_name: Optional[str] = None):
+        self.model_name = model_name or os.environ.get("DOCS_EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+        self._fallback = LocalHashingSemanticEmbedding(dim=128)
+        self._model = None
+        self.dim = 384
+
+        try:
+            from fastembed import TextEmbedding
+            self._model = TextEmbedding(model_name=self.model_name)
+            self.dim = 384 if "small" in self.model_name else 768
+            logger.info("FastEmbed initialized successfully with model %s (dim=%d)", self.model_name, self.dim)
+        except Exception as exc:
+            logger.warning("FastEmbed offline or unavailable (%s); using LocalHashingSemanticEmbedding", exc)
+            self._model = None
+            self.dim = self._fallback.dim
+
+    def embed_texts(self, texts: List[str]) -> List[List[float]]:
+        if self._model is not None:
+            try:
+                embeddings = list(self._model.embed(texts))
+                return [[round(float(x), 6) for x in emb] for emb in embeddings]
+            except Exception as ex:
+                logger.warning("FastEmbed embed_texts error (%s); falling back to local hashing", ex)
+        return self._fallback.embed_texts(texts)
+
+    def embed_query(self, query: str) -> List[float]:
+        if self._model is not None:
+            try:
+                embeddings = list(self._model.embed([query]))
+                if embeddings:
+                    return [round(float(x), 6) for x in embeddings[0]]
+            except Exception as ex:
+                logger.warning("FastEmbed embed_query error (%s); falling back to local hashing", ex)
+        return self._fallback.embed_query(query)
+
+
+class LocalOllamaGenerator(GeneratorProvider):
+    """
+    Sovereign In-Country Local LLM Generator.
+    Connects to local Ollama runtime (e.g. qwen2.5:3b / falcon3) on 127.0.0.1:11434.
+    Synthesizes grounded answers strictly from retrieved evidence chunks with zero cloud egress.
+    Automatically and gracefully falls back to deterministic SovereignLocalGenerator
+    when Ollama is offline, unreachable, or in test environments.
+    """
+    def __init__(
+        self,
+        base_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: float = 2.5,
+        threshold: float = 0.12
+    ):
+        self.base_url = (base_url or os.environ.get("OLLAMA_HOST") or "http://localhost:11434").rstrip("/")
+        self.model = model or os.environ.get("DOCS_LLM_MODEL", "qwen2.5:3b")
+        self.timeout = timeout
+        self.threshold = threshold
+        self.fallback = SovereignLocalGenerator(threshold=threshold)
+
+    def generate(self, query: str, retrieved_chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        if not retrieved_chunks:
+            return self.fallback.generate(query, retrieved_chunks)
+
+        # Evidence validation: if weak relevance, immediately reject without burning LLM cycles
+        top_chunk = retrieved_chunks[0]
+        relevance = top_chunk.get("rerank_score", top_chunk.get("rrf_score", 0.0))
+        if relevance < self.threshold:
+            return self.fallback.generate(query, retrieved_chunks)
+
+        # Validate chunk IDs and collect evidence snippets
+        valid_chunk_ids = {c["id"] for c in retrieved_chunks if "id" in c}
+        citations = []
+        snippets = []
+
+        for c in retrieved_chunks[:3]:
+            cid = c.get("id")
+            if cid and cid in valid_chunk_ids:
+                clean_snippet = sanitize_untrusted_text(c.get("chunk_text", ""))
+                citations.append({
+                    "chunk_id": cid,
+                    "document_id": c.get("document_id"),
+                    "page": c.get("page_number", 1),
+                    "bounding_box": c.get("bounding_box"),
+                    "snippet": clean_snippet[:150]
+                })
+                snippets.append(clean_snippet)
+
+        if not snippets:
+            return self.fallback.generate(query, retrieved_chunks)
+
+        # Format sovereign grounded prompt
+        context_block = "\n".join([f"- {s}" for s in snippets])
+        prompt = (
+            f"You are a sovereign enterprise document intelligence assistant. Answer the question using ONLY the verified document excerpts below. "
+            f"Keep your answer concise and factual. If the excerpts do not contain the answer, say 'Not found in your documents.'\n\n"
+            f"Verified Document Excerpts:\n{context_block}\n\n"
+            f"User Query: {query}\n"
+            f"Answer:"
+        )
+
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                resp = client.post(
+                    f"{self.base_url}/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.1,
+                            "num_predict": 100
+                        }
+                    }
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    raw_answer = data.get("response", "").strip()
+                    if raw_answer:
+                        return {
+                            "answer": raw_answer,
+                            "answer_ar": f"بناءً على المستندات: {raw_answer[:220]}",
+                            "confidence": round(min(1.0, relevance + 0.35), 3),
+                            "citations": citations,
+                            "generator": f"local_ollama/{self.model}"
+                        }
+        except Exception as ex:
+            logger.debug("Ollama inference skipped or unavailable (%s); executing sovereign local generator", ex)
+
+        # Fallback to deterministic sovereign generator
+        return self.fallback.generate(query, retrieved_chunks)
+
+
+def get_default_embedding_provider() -> EmbeddingProvider:
+    """Returns FastEmbed ONNX embedding provider with automatic fallback to subword hashing."""
+    return FastEmbedMultilingualProvider()
+
+
+def get_default_generator_provider(threshold: float = 0.12) -> GeneratorProvider:
+    """Returns sovereign local LLM generator (Ollama) with deterministic fallback."""
+    return LocalOllamaGenerator(threshold=threshold)

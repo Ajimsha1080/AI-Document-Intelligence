@@ -163,4 +163,6 @@ async def health_check():
         "is_mock": is_mock,
         "ocr_engine": engine_name,
         "ocr_languages": loaded_langs,
+        "rag_embedding_engine": "fastembed/BAAI/bge-small-en-v1.5",
+        "rag_generator": "local_ollama/qwen2.5:3b",
     }

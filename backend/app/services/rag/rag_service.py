@@ -5,14 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.rag.prompt_guard import check_prompt_injection, sanitize_untrusted_text
 from app.services.rag.query_router import route_and_lookup_structured_field
 from app.services.rag.retriever import HybridRetriever
-from app.services.rag.providers import SovereignLocalGenerator
+from app.services.rag.providers import get_default_generator_provider, SovereignLocalGenerator
 
 logger = logging.getLogger("rag_service")
 
 class SovereignRAGService:
     def __init__(self):
         self.retriever = HybridRetriever()
-        self.generator = SovereignLocalGenerator(threshold=0.12)
+        self.generator = get_default_generator_provider(threshold=0.12)
 
     async def answer_question(
         self,
