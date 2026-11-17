@@ -142,6 +142,7 @@ async def upload_document(
         updated_at=new_doc.updated_at
     )
 
+@router.get("", response_model=DocumentListResponse, include_in_schema=False)
 @router.get("/", response_model=DocumentListResponse)
 async def list_documents(
     status: Optional[str] = Query(None),

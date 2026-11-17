@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 class BoundingBoxSchema(BaseModel):
     x: float
@@ -68,8 +68,18 @@ class DocumentListResponse(BaseModel):
     documents: List[DocumentResponse]
 
 class FieldCorrectionRequest(BaseModel):
-    corrected_value: str
+    corrected_value: Optional[str] = None
+    value: Optional[str] = None
     reason: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def unify_values(cls, data: Any):
+        if isinstance(data, dict):
+            val = data.get("corrected_value") if data.get("corrected_value") is not None else data.get("value")
+            if val is not None:
+                data["corrected_value"] = str(val)
+        return data
 
 class RejectDocumentRequest(BaseModel):
     rejection_reason: Optional[str] = None

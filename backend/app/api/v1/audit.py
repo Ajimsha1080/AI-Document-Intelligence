@@ -11,6 +11,8 @@ from app.api.deps import require_permission, AuthenticatedActor
 
 router = APIRouter(prefix="/audit", tags=["Audit Logs"])
 
+@router.get("", response_model=List[AuditLogResponse], include_in_schema=False)
+@router.get("/logs", response_model=List[AuditLogResponse], include_in_schema=False)
 @router.get("/", response_model=List[AuditLogResponse])
 async def list_audit_logs(
     action: Optional[str] = Query(None, description="Filter by audit action"),

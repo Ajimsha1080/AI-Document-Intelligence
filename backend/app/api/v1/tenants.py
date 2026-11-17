@@ -74,6 +74,7 @@ async def onboard_tenant(
     await db.refresh(tenant)
     return tenant
 
+@router.get("/current", response_model=TenantResponse, include_in_schema=False)
 @router.get("/me", response_model=TenantResponse)
 async def get_current_tenant_info(
     actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_VIEW)),
@@ -84,6 +85,8 @@ async def get_current_tenant_info(
         raise HTTPException(status_code=404, detail="Tenant not found")
     return tenant
 
+@router.patch("/current", response_model=TenantResponse, include_in_schema=False)
+@router.patch("/current/settings", response_model=TenantResponse, include_in_schema=False)
 @router.patch("/me", response_model=TenantResponse)
 async def update_current_tenant_settings(
     payload: TenantUpdate,

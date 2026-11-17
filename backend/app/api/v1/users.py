@@ -13,6 +13,7 @@ from app.api.deps import require_permission, AuthenticatedActor
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
+@router.get("", response_model=List[UserResponse], include_in_schema=False)
 @router.get("/", response_model=List[UserResponse])
 async def list_users(
     actor: AuthenticatedActor = Depends(require_permission(Permission.USER_MANAGE)),

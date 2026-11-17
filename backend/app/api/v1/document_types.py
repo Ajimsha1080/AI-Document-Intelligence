@@ -17,6 +17,7 @@ from app.api.deps import require_permission, AuthenticatedActor
 
 router = APIRouter(prefix="/document-types", tags=["Document Types"])
 
+@router.get("", response_model=List[DocumentTypeResponse], include_in_schema=False)
 @router.get("/", response_model=List[DocumentTypeResponse])
 async def list_document_types(
     actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_VIEW)),
