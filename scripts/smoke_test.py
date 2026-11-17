@@ -8,7 +8,7 @@ import sys
 import time
 import httpx
 
-BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8080")
+BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8085")
 API_URL = f"{BASE_URL}/api/v1"
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@alhilal-demo.ae")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AdminSecurePass2026!")
