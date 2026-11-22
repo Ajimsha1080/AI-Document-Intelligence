@@ -1,6 +1,8 @@
+"use client";
+
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
-import { ShieldCheck, Lock, Mail, Loader2 } from "lucide-react";
+import { ShieldCheck, Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface LoginModalProps {
@@ -9,7 +11,16 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const { language, toggleLanguage, showToast, refreshDocuments, refreshAuditLogs, isAuthenticated, setIsAuthenticated } = useApp();
+  const {
+    language,
+    toggleLanguage,
+    showToast,
+    refreshDocuments,
+    refreshAuditLogs,
+    isAuthenticated,
+    setIsAuthenticated,
+  } = useApp();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +31,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await api.auth.login(email, password);
+      const res = await api.auth.login(email.trim().toLowerCase(), password);
       setIsAuthenticated(true);
       showToast(
         "success",
@@ -31,132 +42,128 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       await refreshAuditLogs();
       onClose();
     } catch (err: any) {
-      showToast("error", err.message || "Authentication failed", "فشل التحقق من الهوية");
+      showToast(
+        "error",
+        err.message || "Invalid credentials. Please verify your email and password.",
+        "فشل التحقق من الهوية، يرجى التأكد من البيانات المدخلة"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSso = (provider: string) => {
-    showToast(
-      "success",
-      `Authenticated securely via ${provider} Sovereign Federated OIDC`,
-      `تم التحقق من الهوية بنجاح عبر الربط السيادي ${provider}`
-    );
-    onClose();
+  const handleFillDemo = () => {
+    setEmail("admin@alhilal-demo.ae");
+    setPassword("AdminSecurePass2026!");
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 text-xs relative">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 select-none">
+      <div
+        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl flex flex-col gap-6 relative text-zinc-900 dark:text-zinc-100"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Close Button - Only visible if already authenticated */}
         {isAuthenticated && (
           <button
             onClick={onClose}
-            className="absolute top-4 end-4 text-muted-foreground hover:text-foreground font-bold p-1"
+            className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 font-bold p-1 rounded-md"
           >
             ✕
           </button>
         )}
 
-        {/* Header Branding */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-800 to-emerald-950 text-white flex items-center justify-center font-black text-xl mx-auto shadow-lg shadow-emerald-900/30">
-            س
+        {/* Header Branding (Matching DocIntel v2) */}
+        <div className="flex flex-col items-center text-center gap-2">
+          <div className="w-12 h-12 rounded-xl bg-zinc-950 text-emerald-400 dark:bg-zinc-100 dark:text-emerald-700 flex items-center justify-center font-extrabold text-2xl shadow-md">
+            D
           </div>
-          <h2 className="text-lg font-extrabold text-foreground tracking-tight">
-            {language === "ar" ? "تسجيل الدخول المؤسسي • سند" : "Enterprise Sign In • Sanad"}
+          <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {language === "ar" ? "تسجيل الدخول المؤسسي • دوك إنتل" : "Sign in to DocIntel"}
           </h2>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200">
-            <ShieldCheck className="w-3 h-3 text-emerald-600" />
-            <span>UAE Sovereign Identity Gateway</span>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>UAE Sovereign Identity Gateway · UAE North</span>
           </div>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-3.5">
-          <div>
-            <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5 text-start">
+            <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
               {language === "ar" ? "البريد الإلكتروني المؤسسي" : "Work Email"}
             </label>
-            <div className="relative">
-              <Mail className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className="relative flex items-center">
+              <Mail className="absolute left-3 w-4 h-4 text-zinc-400" />
               <input
                 type="email"
+                placeholder="name@organization.ae"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full ps-9 pe-3 py-2 rounded-lg border border-border bg-secondary/50 font-mono text-xs focus:ring-1 focus:ring-primary text-foreground"
+                className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono outline-hidden focus:ring-1 focus:ring-zinc-900 dark:focus:ring-white transition"
                 required
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+          <div className="flex flex-col gap-1.5 text-start">
+            <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
               {language === "ar" ? "كلمة المرور" : "Password"}
             </label>
-            <div className="relative">
-              <Lock className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className="relative flex items-center">
+              <Lock className="absolute left-3 w-4 h-4 text-zinc-400" />
               <input
                 type="password"
+                placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full ps-9 pe-3 py-2 rounded-lg border border-border bg-secondary/50 font-mono text-xs focus:ring-1 focus:ring-primary text-foreground"
+                className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono outline-hidden focus:ring-1 focus:ring-zinc-900 dark:focus:ring-white transition"
                 required
               />
             </div>
+          </div>
+
+          {/* Quick Demo Credentials Autofill Pill */}
+          <div className="flex items-center justify-between text-[11px] text-zinc-400">
+            <span>Default admin:</span>
+            <button
+              type="button"
+              onClick={handleFillDemo}
+              className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
+            >
+              Autofill Demo Admin Credentials
+            </button>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-bold text-xs hover:opacity-90 disabled:opacity-50 transition shadow-xs flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{language === "ar" ? "جارٍ التحقق..." : "Authenticating..."}</span>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Authenticating...</span>
               </>
             ) : (
-              <span>{language === "ar" ? "تسجيل الدخول" : "Sign In with Credentials"}</span>
+              <>
+                <span>{language === "ar" ? "تسجيل الدخول بالبيانات" : "Sign In with Credentials"}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </>
             )}
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="relative flex items-center justify-center">
-          <div className="border-t border-border w-full"></div>
-          <span className="bg-card px-2 text-[10px] uppercase font-bold text-muted-foreground absolute">
-            {language === "ar" ? "أو عبر الهوية الرقمية" : "Or via Sovereign SSO"}
-          </span>
-        </div>
-
-        {/* SSO Buttons */}
-        <div className="space-y-2">
+        {/* Footer info */}
+        <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-2 border-t border-zinc-100 dark:border-zinc-800">
           <button
-            onClick={() => handleSso("UAE PASS (الهوية الرقمية)")}
-            className="w-full py-2 px-3 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 hover:bg-emerald-100/50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-bold text-xs flex items-center justify-center gap-2 transition"
-          >
-            <span>🇦🇪 Sign in with UAE PASS (الهوية الرقمية)</span>
-          </button>
-
-          <button
-            onClick={() => handleSso("Microsoft Entra ID (UAE North)")}
-            className="w-full py-2 px-3 rounded-lg border border-border bg-card hover:bg-secondary text-foreground font-semibold text-xs flex items-center justify-center gap-2 transition"
-          >
-            <span>Microsoft Entra ID (In-Region Tenant)</span>
-          </button>
-        </div>
-
-        {/* Footer Language Toggle */}
-        <div className="pt-2 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
-          <button
+            type="button"
             onClick={toggleLanguage}
-            className="hover:text-foreground font-semibold flex items-center gap-1"
+            className="hover:text-zinc-700 dark:hover:text-zinc-200"
           >
-            <span>🌐 {language === "en" ? "تبديل إلى العربية" : "Switch to English"}</span>
+            {language === "ar" ? "English" : "تبديل إلى العربية"}
           </button>
-          <span>Federal Law 45/2021</span>
+          <span className="font-mono">UAE PDPL Law 45/2021</span>
         </div>
       </div>
     </div>
