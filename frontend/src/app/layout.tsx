@@ -3,9 +3,9 @@ import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
 
 export const metadata: Metadata = {
-  title: "Sanad DocIntel | UAE Sovereign Document Intelligence Platform",
+  title: "DocIntel | UAE Sovereign Document Intelligence Platform",
   description:
-    "Multi-tenant Document Intelligence SaaS tailored for UAE Banking, KYC, and Trade Compliance. 100% In-Country Data Boundary.",
+    "Multi-tenant Document Intelligence SaaS tailored for UAE Banking, KYC, and Trade Compliance. 100% In-Country Sovereign Data Boundary.",
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
-      <body className="antialiased min-h-screen">
+      <body className="antialiased min-h-screen font-sans bg-[#FAFAFA] text-[#0A0A0A]">
         <AppProvider>{children}</AppProvider>
       </body>
     </html>

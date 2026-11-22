@@ -2,217 +2,183 @@
 
 import React from "react";
 import { useApp, ScreenId } from "@/context/AppContext";
-import { TranslationKey } from "@/lib/translations";
-import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  UploadCloud,
-  FileText,
+  Inbox,
   CheckSquare,
+  Sparkles,
   FileCode2,
-  History,
-  Settings,
+  Shield,
   Users,
-  Layers,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Compass,
+  ArrowUpRight,
+  ShieldCheck,
 } from "lucide-react";
-
-interface NavItem {
-  id: ScreenId;
-  labelKey: TranslationKey;
-  icon: any;
-  badge?: string | number;
-}
 
 export function Sidebar() {
   const {
-    t,
     currentScreen,
     setCurrentScreen,
-    sidebarCollapsed,
-    toggleSidebar,
-    language,
-    activeTenant,
-    userRole,
     documents,
+    activeTenant,
+    language,
   } = useApp();
 
+  const totalCount = documents.length;
   const needsReviewCount = documents.filter((d) => d.status === "needs_review").length;
 
-  const navSections: { titleEn: string; titleAr: string; items: NavItem[] }[] = [
+  const navLinks = [
     {
-      titleEn: "Overview",
-      titleAr: "نظرة عامة",
-      items: [
-        { id: "dashboard", labelKey: "navDashboard", icon: LayoutDashboard },
-        ...(userRole !== "viewer" ? [{ id: "upload" as ScreenId, labelKey: "navUpload" as TranslationKey, icon: UploadCloud }] : []),
-      ],
+      id: "command" as ScreenId,
+      label: "Inbox",
+      labelAr: "صندوق الوارد",
+      icon: Inbox,
+      badge: totalCount > 0 ? totalCount : undefined,
     },
     {
-      titleEn: "Intelligence & Review",
-      titleAr: "المعالجة والتدقيق",
-      items: [
-        { id: "documents", labelKey: "navDocuments", icon: FileText },
-        { id: "review", labelKey: "navReview", icon: CheckSquare, badge: needsReviewCount > 0 ? needsReviewCount : undefined },
-      ],
+      id: "review" as ScreenId,
+      label: "My review queue",
+      labelAr: "طابور المراجعة",
+      icon: CheckSquare,
+      badge: needsReviewCount > 0 ? needsReviewCount : undefined,
+      badgeAmber: true,
     },
     {
-      titleEn: "Governance & Schemas",
-      titleAr: "الحوكمة والمخططات",
-      items: [
-        ...(userRole === "admin" ? [{ id: "builder" as ScreenId, labelKey: "navBuilder" as TranslationKey, icon: FileCode2 }] : []),
-        { id: "audit", labelKey: "navAudit", icon: History },
-        ...(userRole === "admin" ? [{ id: "team" as ScreenId, labelKey: "navTeam" as TranslationKey, icon: Users }] : []),
-        ...(userRole === "admin" ? [{ id: "settings" as ScreenId, labelKey: "navSettings" as TranslationKey, icon: Settings }] : []),
-      ],
+      id: "ask" as ScreenId,
+      label: "Ask documents",
+      labelAr: "الاستعلام السيادي",
+      icon: Sparkles,
+    },
+    {
+      id: "schemas" as ScreenId,
+      label: "Document types",
+      labelAr: "أنواع المستندات",
+      icon: FileCode2,
+    },
+    {
+      id: "governance" as ScreenId,
+      label: "Audit & access",
+      labelAr: "التدقيق والحوكمة",
+      icon: Shield,
+    },
+    {
+      id: "team" as ScreenId,
+      label: "Team",
+      labelAr: "فريق العمل",
+      icon: Users,
+    },
+    {
+      id: "welcome" as ScreenId,
+      label: "Getting started",
+      labelAr: "دليل البدء",
+      icon: Compass,
     },
   ];
 
+  const isCurrent = (id: ScreenId) => {
+    if (id === "command" && (currentScreen === "command" || currentScreen === "dashboard" || currentScreen === "documents")) return true;
+    if (id === "schemas" && (currentScreen === "schemas" || currentScreen === "builder")) return true;
+    if (id === "governance" && (currentScreen === "governance" || currentScreen === "audit" || currentScreen === "settings")) return true;
+    return currentScreen === id;
+  };
+
   return (
-    <aside
-      className={cn(
-        "fixed inset-y-0 start-0 z-50 flex flex-col bg-card border-e border-border/80 transition-all duration-200 lg:static select-none",
-        sidebarCollapsed ? "-translate-x-full lg:translate-x-0 lg:w-[68px]" : "translate-x-0 w-64"
-      )}
-    >
-      {/* Workspace Switcher Header */}
-      <div className="h-14 px-3.5 border-b border-border/80 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 shrink-0 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center font-bold text-xs shadow-xs">
-            <Layers className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
-          </div>
-          <div className={cn("min-w-0 overflow-hidden transition-all", sidebarCollapsed && "lg:hidden")}>
-            <div className="font-semibold text-xs text-foreground truncate flex items-center gap-1.5">
-              <span>{language === "ar" ? activeTenant.nameAr : activeTenant.nameEn}</span>
-            </div>
-            <div className="text-[10px] text-muted-foreground truncate font-mono">
-              {activeTenant.tier}
-            </div>
-          </div>
-        </div>
+    <aside className="w-56 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col py-4 px-3 select-none h-full">
+      {/* Navigation Links */}
+      <nav aria-label="Main" className="flex-1 flex flex-col gap-1">
+        <span className="px-2 pb-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+          Workspace
+        </span>
 
-        {/* Sidebar Close / Open Toggle Button */}
-        <button
-          onClick={toggleSidebar}
-          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-transparent hover:border-border transition"
-          title={
-            sidebarCollapsed
-              ? language === "ar"
-                ? "توسيع القائمة"
-                : "Expand Sidebar"
-              : language === "ar"
-              ? "طي القائمة"
-              : "Collapse Sidebar"
-          }
-          aria-label="Toggle Sidebar"
-        >
-          {sidebarCollapsed ? (
-            <PanelLeftOpen className="w-4 h-4 text-primary" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
-          )}
-        </button>
-      </div>
+        {navLinks.map((item) => {
+          const Icon = item.icon;
+          const active = isCurrent(item.id);
 
-      {/* Navigation Sections */}
-      <div className="flex-1 py-3 px-2 space-y-4 overflow-y-auto">
-        {navSections.map((sec, secIdx) => (
-          <div key={secIdx} className="space-y-0.5">
-            <div
-              className={cn(
-                "px-2.5 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground/60 uppercase",
-                sidebarCollapsed && "lg:hidden"
-              )}
+          return (
+            <button
+              key={item.id}
+              onClick={() => setCurrentScreen(item.id)}
+              className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition text-start ${
+                active
+                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs"
+                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+              }`}
             >
-              {language === "ar" ? sec.titleAr : sec.titleEn}
-            </div>
+              <div className="flex items-center gap-2.5 truncate">
+                <Icon
+                  className={`w-4 h-4 shrink-0 ${
+                    active ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-400"
+                  }`}
+                />
+                <span className="truncate">{language === "ar" ? item.labelAr : item.label}</span>
+              </div>
 
-            {sec.items.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentScreen === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setCurrentScreen(item.id)}
-                  className={cn(
-                    "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all group text-start relative",
-                    isActive
-                      ? "bg-secondary text-foreground font-semibold shadow-xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-                  )}
-                  title={t(item.labelKey)}
+              {item.badge !== undefined && (
+                <span
+                  className={`font-mono text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                    item.badgeAmber
+                      ? "text-amber-800 bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
+                      : "text-zinc-500 bg-zinc-200 dark:bg-zinc-800"
+                  }`}
                 >
-                  {/* Active Indicator Bar */}
-                  {isActive && (
-                    <span className="absolute start-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-e-full" />
-                  )}
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
 
-                  <Icon
-                    className={cn(
-                      "w-4 h-4 shrink-0 transition-colors",
-                      isActive
-                        ? "text-primary"
-                        : "text-muted-foreground group-hover:text-foreground"
-                    )}
-                  />
-                  <span className={cn("flex-1 truncate", sidebarCollapsed && "lg:hidden")}>
-                    {t(item.labelKey)}
-                  </span>
-
-                  {item.badge && (
-                    <span
-                      className={cn(
-                        "px-1.5 py-0.2 text-[10px] font-bold rounded-md font-mono",
-                        sidebarCollapsed && "lg:hidden",
-                        isActive
-                          ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30"
-                          : "bg-secondary text-muted-foreground border border-border"
-                      )}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      {/* Sovereign Data Boundary Status Footer */}
-      <div className={cn("p-2.5 m-2 rounded-lg bg-secondary/40 border border-border/80 text-[11px]", sidebarCollapsed && "lg:hidden")}>
-        <div className="flex items-center gap-1.5 font-medium text-foreground text-xs">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        {/* Saved Views (Matching v2/Command.dc.html) */}
+        <div className="pt-4 flex flex-col gap-1">
+          <span className="px-2 pb-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+            Saved Views
           </span>
-          <span className="text-[11px] font-semibold">Zero-Egress Boundary</span>
+          <button
+            onClick={() => setCurrentScreen("command")}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start"
+          >
+            <span>Expiring IDs</span>
+            <span className="font-mono text-[10px] text-zinc-400">12</span>
+          </button>
+          <button
+            onClick={() => setCurrentScreen("command")}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start"
+          >
+            <span>Invoices &gt; AED 100k</span>
+            <span className="font-mono text-[10px] text-zinc-400">4</span>
+          </button>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
-          Federal Decree-Law No. 45/2021
-        </p>
-        <div className="mt-1.5 pt-1.5 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
-          <span>{activeTenant.region.split("(")[0].trim()}</span>
-          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">In-Cluster</span>
-        </div>
-      </div>
 
-      {/* User Profile Footer (Ajim Sha - Administrator) */}
-      <div className="p-3 border-t border-border/80 flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 shrink-0 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 flex items-center justify-center font-bold text-xs select-none shadow-xs">
-            AJ
-          </div>
-          <div className={cn("min-w-0 overflow-hidden leading-tight", sidebarCollapsed && "lg:hidden")}>
-            <div className="font-semibold text-xs text-foreground truncate">
-              Ajim Sha
-            </div>
-            <div className="text-[11px] text-muted-foreground truncate">
-              Administrator
-            </div>
-          </div>
+        {/* Public Landing Page Showcase */}
+        <div className="pt-3">
+          <button
+            onClick={() => setCurrentScreen("landing")}
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition text-start ${
+              currentScreen === "landing"
+                ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold"
+                : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Landing Page</span>
+            </span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400" />
+          </button>
+        </div>
+      </nav>
+
+      {/* Sovereign Air-Gap Status Box at bottom (Matching v2/Landing.dc.html) */}
+      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-xs flex flex-col gap-1.5">
+        <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100 text-[11px]">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>Sovereign Boundary</span>
+        </div>
+        <p className="text-[10px] text-zinc-500 leading-snug">
+          100% In-Country UAE Data Boundary (Federal Decree-Law 45/2021)
+        </p>
+        <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+          <span>{activeTenant.tier.split(" ")[0]}</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-bold">In-Region</span>
         </div>
       </div>
     </aside>

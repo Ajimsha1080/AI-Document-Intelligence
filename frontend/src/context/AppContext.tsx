@@ -14,14 +14,20 @@ import { api } from "@/lib/api";
 import { DEFAULT_STANDARD_SCHEMAS } from "@/lib/defaultSchemas";
 
 export type ScreenId =
+  | "command"
   | "dashboard"
   | "upload"
   | "documents"
   | "review"
   | "builder"
+  | "schemas"
   | "audit"
+  | "governance"
   | "team"
-  | "settings";
+  | "settings"
+  | "ask"
+  | "welcome"
+  | "landing";
 
 export type Language = "en" | "ar";
 export type Theme = "light" | "dark";
@@ -52,6 +58,10 @@ interface AppContextType {
   activeTenant: TenantInfo;
   currentScreen: ScreenId;
   sidebarCollapsed: boolean;
+  isUploadModalOpen: boolean;
+  isCommandPaletteOpen: boolean;
+  setIsUploadModalOpen: (open: boolean) => void;
+  setIsCommandPaletteOpen: (open: boolean) => void;
   toggleLanguage: () => void;
   toggleTheme: () => void;
   toggleArabicDigits: () => void;
@@ -145,6 +155,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [useArabicDigits, setUseArabicDigits] = useState<boolean>(false);
   const [currentScreen, setCurrentScreen] = useState<ScreenId>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [activeTenant] = useState<TenantInfo>(defaultTenant);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -635,6 +647,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         activeTenant,
         currentScreen,
         sidebarCollapsed,
+        isUploadModalOpen,
+        isCommandPaletteOpen,
+        setIsUploadModalOpen,
+        setIsCommandPaletteOpen,
         toggleLanguage,
         toggleTheme,
         toggleArabicDigits,
