@@ -310,6 +310,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [loadUserProfile, refreshDocuments, refreshAuditLogs, refreshSchemas, refreshUsers, refreshApiKeys, refreshTenantSettings]);
 
   const logout = useCallback(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("sanad_auto_login");
+    }
     api.auth.logout();
     setIsAuthenticated(false);
     setCurrentUser(null);
