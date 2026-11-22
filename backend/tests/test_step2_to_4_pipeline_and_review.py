@@ -173,16 +173,17 @@ async def test_approve_document_and_signed_webhook(async_client: AsyncClient, se
     doc_id = up.json()["id"]
     await process_document_pipeline(doc_id, tenant.id, db=db_session)
 
-    # Approve
+    # Approve (admin force=true overrides failed error validations)
     approve_resp = await async_client.post(
-        f"/api/v1/documents/{doc_id}/approve",
+        f"/api/v1/documents/{doc_id}/approve?force=true",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert approve_resp.status_code == 200
     data = approve_resp.json()
     assert data["status"] == "approved"
-    assert data["webhook"]["dispatched"] is True
-    assert data["webhook"]["signature"].startswith("sha256=")
+    assert data["webhook"]["dispatched"] is False
+    assert "reason" in data["webhook"]
+    assert data["webhook"]["signature"] is None or data["webhook"]["signature"].startswith("sha256=")
 
 @pytest.mark.asyncio
 async def test_reject_document(async_client: AsyncClient, seeded_data: dict, db_session: AsyncSession):

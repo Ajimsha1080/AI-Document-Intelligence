@@ -9,9 +9,9 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const { language, toggleLanguage, showToast, refreshDocuments, refreshAuditLogs } = useApp();
-  const [email, setEmail] = useState("admin@alhilal-bank.ae");
-  const [password, setPassword] = useState("AdminSecurePass2026!");
+  const { language, toggleLanguage, showToast, refreshDocuments, refreshAuditLogs, isAuthenticated, setIsAuthenticated } = useApp();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -21,6 +21,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setLoading(true);
     try {
       const res = await api.auth.login(email, password);
+      setIsAuthenticated(true);
       showToast(
         "success",
         `Authenticated as ${res.user.full_name || email} (${res.user.role})`,
@@ -48,13 +49,15 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 text-xs relative">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 end-4 text-muted-foreground hover:text-foreground font-bold p-1"
-        >
-          ✕
-        </button>
+        {/* Close Button - Only visible if already authenticated */}
+        {isAuthenticated && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 end-4 text-muted-foreground hover:text-foreground font-bold p-1"
+          >
+            ✕
+          </button>
+        )}
 
         {/* Header Branding */}
         <div className="text-center space-y-2">

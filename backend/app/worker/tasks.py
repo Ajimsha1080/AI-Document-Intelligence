@@ -64,6 +64,19 @@ async def _run_pipeline_core(document_id: str, tenant_id: str, db: AsyncSession)
         if not doc_type_code:
             classification = await provider.classify_document(processed_bytes, doc.file_name)
             doc_type_code = classification.document_type_code
+            doc.language_detected = classification.language
+            if doc_type_code != "unknown":
+                dt_stmt = select(DocumentType).where(
+                    and_(DocumentType.tenant_id == doc.tenant_id, DocumentType.code == doc_type_code)
+                )
+                dt_res = await db.execute(dt_stmt)
+                matching_dt = dt_res.scalar_one_or_none()
+                if matching_dt:
+                    doc.document_type_id = matching_dt.id
+                    schema_def = matching_dt.schema_definition or {}
+        else:
+            classification = await provider.classify_document(processed_bytes, doc.file_name)
+            doc.language_detected = classification.language
 
         if doc_type_code == "unknown":
             doc.status = "needs_review"
@@ -140,7 +153,16 @@ async def _run_pipeline_core(document_id: str, tenant_id: str, db: AsyncSession)
             details={"fields_extracted": len(extraction_res.fields)}
         )
 
-        # 8. Save pages
+        # 8. Clean up old records before saving new ones (idempotent / retry safe)
+        from sqlalchemy import delete
+        from app.models.document_chunk import DocumentChunk
+        await db.execute(delete(ExtractedField).where(ExtractedField.document_id == doc.id))
+        await db.execute(delete(DocumentPage).where(DocumentPage.document_id == doc.id))
+        await db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == doc.id))
+        await db.execute(delete(ValidationResult).where(ValidationResult.document_id == doc.id))
+        await db.flush()
+
+        # 9. Save pages
         for p in extraction_res.pages:
             page_row = DocumentPage(
                 document_id=doc.id,
@@ -284,21 +306,41 @@ async def _run_pipeline_core(document_id: str, tenant_id: str, db: AsyncSession)
 
     except Exception as e:
         logger.exception(f"Pipeline error processing document {document_id}: {e}")
-        doc.status = "failed"
-        await log_audit_event(
-            db=db,
-            tenant_id=doc.tenant_id,
-            actor_id="system_worker",
-            actor_email="worker@pipeline.local",
-            actor_role="system",
-            action="DOCUMENT_PROCESS_FAILED",
-            entity_type="document",
-            entity_id=doc.id,
+        await db.rollback()
+        try:
+            stmt = select(Document).where(and_(Document.id == document_id, Document.tenant_id == tenant_id))
+            res = await db.execute(stmt)
+            failed_doc = res.scalar_one_or_none()
+            if failed_doc:
+                failed_doc.status = "failed"
+                await log_audit_event(
+                    db=db,
+                    tenant_id=tenant_id,
+                    actor_id="system_worker",
+                    actor_email="worker@pipeline.local",
+                    actor_role="system",
+                    action="DOCUMENT_PROCESS_FAILED",
+                    entity_type="document",
+                    entity_id=document_id,
+                    details={"error": str(e)}
+                )
+                await db.commit()
+        except Exception as save_err:
+            logger.error(f"Failed to record failed status in DB: {save_err}")
+            await db.rollback()
+
+        total_ms = (time.perf_counter() - t_start) * 1000 if 't_start' in locals() else 0.0
+        await event_bus.emit_event(
+            tenant_id=tenant_id,
+            document_id=document_id,
+            stage="failed",
+            status="failed",
+            stage_duration_ms=total_ms,
+            progress_pct=100,
             details={"error": str(e)}
         )
-        await db.commit()
-        await db.refresh(doc)
-        return doc
+        # Re-raise so RQ can retry
+        raise
 
 async def process_document_pipeline(
     document_id: str,

@@ -1,12 +1,13 @@
 import io
+import re
 from typing import Tuple, Dict, Any
 from PIL import Image, ImageOps, ImageFilter
 
 class ImagePreprocessor:
     """
     Sovereign preprocessor for incoming document images.
-    Performs rotation fix, orientation correction, deskew, denoising,
-    and resolution enhancement without any external network dependencies.
+    Performs orientation correction (only via Tesseract OSD), deskew, denoising,
+    and resolution enhancement without external network calls.
     """
 
     @classmethod
@@ -59,34 +60,46 @@ class ImagePreprocessor:
         except Exception:
             pass
 
-        # 2. Orientation & Landscape check for ID cards (Standard UAE ID aspect ratio is ~1.58)
         w, h = img.size
-        if h > w * 1.2:
-            # Document is oriented vertically; rotate 90 degrees clockwise to landscape
-            img = img.rotate(270, expand=True)
-            meta["rotated_degrees"] = 90
-            w, h = img.size
+
+        # 2. Orientation check: ONLY rotate when Tesseract OSD explicitly specifies rotation.
+        # Do not unconditionally rotate portrait images (which breaks invoices/licenses).
+        try:
+            from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
+            tess_cmd = LocalOCRAdapter.get_tesseract_cmd()
+            if tess_cmd:
+                import pytesseract
+                pytesseract.pytesseract.tesseract_cmd = tess_cmd
+                osd = pytesseract.image_to_osd(img)
+                rot_match = re.search(r"Rotate:\s*(\d+)", osd)
+                if rot_match:
+                    rot_deg = int(rot_match.group(1))
+                    if rot_deg in (90, 180, 270):
+                        img = img.rotate(360 - rot_deg, expand=True)
+                        meta["rotated_degrees"] = rot_deg
+                        w, h = img.size
+        except Exception:
+            pass
 
         # 3. Resolution check & High-Quality Upscaling for low-DPI scans
-        # OCR requires at least 1000px on long edge for reliable Arabic diacritics & digits
+        # Initial scan quality check: adequate if max dimension is at least 600px
+        meta["resolution_adequate"] = (max(w, h) >= 600)
+
+        # Upscale if below 1000px for optimal OCR recognition
         if max(w, h) < 1000:
             scale_factor = 1000.0 / max(w, h)
             new_w = int(w * scale_factor)
             new_h = int(h * scale_factor)
             img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
             meta["upscaled"] = True
-            meta["resolution_adequate"] = True
             w, h = img.size
-        elif max(w, h) < 600:
-            meta["resolution_adequate"] = False
 
-        # 4. Denoising: Gentle median filter to remove scanner salt-and-pepper noise
-        # Preserve edges for OCR readability
+        # 4. Denoising: Subtle noise reduction and actually apply the denoised image
         if img.mode != "RGB":
             img = img.convert("RGB")
 
-        # Subtle noise reduction
         denoised_img = img.filter(ImageFilter.SMOOTH_MORE)
+        img = denoised_img
         meta["denoised"] = True
 
         meta["processed_width"], meta["processed_height"] = img.size

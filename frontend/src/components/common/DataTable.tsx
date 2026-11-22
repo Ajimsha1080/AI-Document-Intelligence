@@ -26,6 +26,8 @@ export function DataTable() {
     language,
     showToast,
     addAuditLog,
+    userRole,
+    currentUser,
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,11 +93,10 @@ export function DataTable() {
     downloadAnchor.remove();
 
     addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@alhilal-bank.ae",
-      actorRole: "Admin",
+      actorName: currentUser?.name || "User",
+      actorEmail: currentUser?.email || "",
+      actorRole: userRole.toUpperCase(),
       action: "DOCUMENT_EXPORTED",
-      ipAddress: "192.168.10.45",
       detailsEn: `Exported ${docsToExport.length} documents as JSON payload`,
       detailsAr: `تم تصوير وتصدير ${docsToExport.length} مستندات بصيغة JSON`,
     });
@@ -127,11 +128,10 @@ export function DataTable() {
     link.remove();
 
     addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@alhilal-bank.ae",
-      actorRole: "Admin",
+      actorName: currentUser?.name || "User",
+      actorEmail: currentUser?.email || "",
+      actorRole: userRole.toUpperCase(),
       action: "DOCUMENT_EXPORTED",
-      ipAddress: "192.168.10.45",
       detailsEn: `Exported ${docsToExport.length} documents as CSV spreadsheet`,
       detailsAr: `تم تصوير وتصدير ${docsToExport.length} مستندات بصيغة CSV`,
     });
@@ -241,27 +241,31 @@ export function DataTable() {
           </span>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                bulkApproveDocuments(selectedIds);
-                setSelectedIds([]);
-              }}
-              className="px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 text-xs transition"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{language === "ar" ? "اعتماد المحدد" : "Bulk Approve"}</span>
-            </button>
+            {userRole !== "viewer" && (
+              <button
+                onClick={() => {
+                  bulkApproveDocuments(selectedIds);
+                  setSelectedIds([]);
+                }}
+                className="px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 text-xs transition"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{language === "ar" ? "اعتماد المحدد" : "Bulk Approve"}</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => {
-                bulkDeleteDocuments(selectedIds);
-                setSelectedIds([]);
-              }}
-              className="px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold flex items-center gap-1.5 text-xs transition"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>{language === "ar" ? "حذف نهائي" : "Hard Delete"}</span>
-            </button>
+            {userRole === "admin" && (
+              <button
+                onClick={() => {
+                  bulkDeleteDocuments(selectedIds);
+                  setSelectedIds([]);
+                }}
+                className="px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold flex items-center gap-1.5 text-xs transition"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{language === "ar" ? "حذف نهائي" : "Hard Delete"}</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -346,13 +350,15 @@ export function DataTable() {
                             <span>{language === "ar" ? "معاينة" : "Review"}</span>
                           </button>
 
-                          <button
-                            onClick={() => deleteDocument(doc.id)}
-                            className="p-1 rounded-md text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                            title="Hard Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {userRole === "admin" && (
+                            <button
+                              onClick={() => deleteDocument(doc.id)}
+                              className="p-1 rounded-md text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                              title="Hard Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -3,15 +3,15 @@ services:
     image: pgvector/pgvector:pg16
     container_name: docsmvp_postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_secure_pass
-      POSTGRES_DB: uae_doc_intelligence
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-uae_doc_intelligence}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,8 +34,8 @@ services:
     container_name: docsmvp_minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -47,29 +47,53 @@ services:
       timeout: 5s
       retries: 5
 
+  minio-init:
+    image: minio/mc:latest
+    container_name: docsmvp_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set localminio http://minio:9000 $${S3_ACCESS_KEY:-minioadmin} $${S3_SECRET_KEY:-minioadmin};
+      /usr/bin/mc mb --ignore-existing localminio/$${S3_BUCKET_NAME:-uae-documents};
+      exit 0;
+      "
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: docsmvp_backend
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres_secure_pass@postgres:5432/uae_doc_intelligence
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_pass}@postgres:5432/${POSTGRES_DB:-uae_doc_intelligence}
       - REDIS_URL=redis://redis:6379/0
       - S3_ENDPOINT_URL=http://minio:9000
-      - S3_ACCESS_KEY=minioadmin
-      - S3_SECRET_KEY=minioadmin
-      - STRICT_LOCAL_ONLY=true
-      - SECRET_KEY=demo_dev_secret_key_uae_doc_intelligence_2026
-      - MODEL_PROVIDER_BACKEND=local
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-uae-documents}
+      - STRICT_LOCAL_ONLY=${STRICT_LOCAL_ONLY:-true}
+      - SECRET_KEY=${SECRET_KEY:-demo_dev_secret_key_uae_doc_intelligence_2026}
+      - PLATFORM_ADMIN_API_KEY=${PLATFORM_ADMIN_API_KEY:-}
+      - WEBHOOK_SIGNING_SECRET=${WEBHOOK_SIGNING_SECRET:-}
+      - SEED_DEFAULTS=${SEED_DEFAULTS:-true}
+      - MODEL_PROVIDER_BACKEND=${MODEL_PROVIDER_BACKEND:-local}
     ports:
-      - "8080:8080"
+      - "8000:8000"
+    volumes:
+      - shared_storage:/data/sovereign_storage
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -81,21 +105,41 @@ services:
     container_name: docsmvp_worker
     command: python -m app.worker.cli
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres_secure_pass@postgres:5432/uae_doc_intelligence
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_pass}@postgres:5432/${POSTGRES_DB:-uae_doc_intelligence}
       - REDIS_URL=redis://redis:6379/0
       - S3_ENDPOINT_URL=http://minio:9000
-      - S3_ACCESS_KEY=minioadmin
-      - S3_SECRET_KEY=minioadmin
-      - STRICT_LOCAL_ONLY=true
-      - SECRET_KEY=demo_dev_secret_key_uae_doc_intelligence_2026
-      - MODEL_PROVIDER_BACKEND=local
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-uae-documents}
+      - STRICT_LOCAL_ONLY=${STRICT_LOCAL_ONLY:-true}
+      - SECRET_KEY=${SECRET_KEY:-demo_dev_secret_key_uae_doc_intelligence_2026}
+      - MODEL_PROVIDER_BACKEND=${MODEL_PROVIDER_BACKEND:-local}
+    volumes:
+      - shared_storage:/data/sovereign_storage
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: docsmvp_frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+  shared_storage:

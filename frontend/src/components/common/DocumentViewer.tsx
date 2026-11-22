@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { cn } from "@/lib/utils";
 import { ZoomIn, ZoomOut, RotateCcw, FileText, ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { api } from "@/lib/api";
 
 export function DocumentViewer() {
   const {
@@ -15,7 +16,38 @@ export function DocumentViewer() {
     piiMasked,
     togglePiiMasked,
     language,
+    userRole,
   } = useApp();
+
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    let createdUrl: string | null = null;
+    if (selectedDocument?.id) {
+      api.documents
+        .getFileBlobUrl(selectedDocument.id)
+        .then((url) => {
+          if (active) {
+            createdUrl = url;
+            setBlobUrl(url);
+          } else {
+            URL.revokeObjectURL(url);
+          }
+        })
+        .catch(() => {
+          if (active) setBlobUrl(null);
+        });
+    } else {
+      setBlobUrl(null);
+    }
+    return () => {
+      active = false;
+      if (createdUrl) {
+        URL.revokeObjectURL(createdUrl);
+      }
+    };
+  }, [selectedDocument?.id]);
 
   if (!selectedDocument) {
     return (
@@ -72,14 +104,16 @@ export function DocumentViewer() {
         {/* Right: Zoom & PII Masking */}
         <div className="flex items-center gap-1.5">
           <button
-            onClick={togglePiiMasked}
+            onClick={userRole === "admin" ? togglePiiMasked : undefined}
+            disabled={userRole !== "admin"}
             className={cn(
               "flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold transition-all border",
+              userRole !== "admin" && "opacity-60 cursor-not-allowed",
               piiMasked
                 ? "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800"
                 : "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800"
             )}
-            title="Toggle PII Masking [M]"
+            title={userRole === "admin" ? "Toggle PII Masking [M]" : "Unmasking PII requires Administrator role"}
           >
             {piiMasked ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">{piiMasked ? "PII Masked" : "PII Unmasked"}</span>
@@ -124,18 +158,15 @@ export function DocumentViewer() {
             minHeight: selectedDocument.documentType === "emirates_id" ? "480px" : "880px",
           }}
         >
-          {/* Document Content Rendering */}
-          {selectedDocument.previewUrl && selectedDocument.previewUrl.startsWith("http") ? (
+          {/* Document Content Rendering via Blob URL */}
+          {blobUrl ? (
             <div className="relative w-full h-full flex flex-col items-center justify-center p-4 bg-slate-50 min-h-[480px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={selectedDocument.previewUrl}
+                src={blobUrl}
                 alt={selectedDocument.fileName}
                 className="w-full h-auto object-contain select-none pointer-events-none rounded"
-                onError={(e) => {
-                  // Fallback to synthetic view if image load fails
-                  (e.target as HTMLElement).style.display = "none";
-                }}
+                onError={() => setBlobUrl(null)}
               />
             </div>
           ) : selectedDocument.documentType === "emirates_id" ? (

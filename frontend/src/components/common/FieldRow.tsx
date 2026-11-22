@@ -18,6 +18,7 @@ export function FieldRow({ field, docId }: FieldRowProps) {
     piiMasked,
     language,
     t,
+    userRole,
   } = useApp();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -121,21 +122,25 @@ export function FieldRow({ field, docId }: FieldRowProps) {
         ) : (
           <div
             onClick={(e) => {
+              if (userRole === "viewer") return;
               e.stopPropagation();
               setIsEditing(true);
             }}
             className={cn(
               "flex-1 px-2.5 py-1.5 rounded font-mono font-medium truncate border transition-all flex items-center justify-between",
+              userRole === "viewer" ? "cursor-default" : "cursor-pointer",
               isMissing
                 ? "bg-amber-500/10 border-amber-400 text-amber-800 dark:text-amber-300 italic"
                 : "bg-secondary/50 hover:bg-secondary text-foreground border-transparent hover:border-border"
             )}
-            title={isMissing ? "Field unreadable or missing. Click to manually enter." : "Click to edit value"}
+            title={userRole === "viewer" ? "Read-only view" : (isMissing ? "Field unreadable or missing. Click to manually enter." : "Click to edit value")}
           >
             <span className="truncate">{displayVal}</span>
-            <span className="text-[10px] text-muted-foreground opacity-60 ms-2">
-              {isMissing ? "Enter" : "Edit"}
-            </span>
+            {userRole !== "viewer" && (
+              <span className="text-[10px] text-muted-foreground opacity-60 ms-2">
+                {isMissing ? "Enter" : "Edit"}
+              </span>
+            )}
           </div>
         )}
       </div>

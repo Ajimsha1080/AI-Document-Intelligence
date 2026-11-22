@@ -19,20 +19,24 @@ export function SettingsScreen() {
     users,
     addUser,
     updateUserRole,
+    deleteUser,
     apiKeys,
     generateApiKey,
     revokeApiKey,
     retentionDays,
-    setRetentionDays,
+    saveRetentionDays,
     hardDeleteDerived,
     setHardDeleteDerived,
     webhookUrl,
     setWebhookUrl,
+    testWebhook,
+    runRetentionSweep,
     piiMasked,
     togglePiiMasked,
     language,
     showToast,
     activeTenant,
+    userRole,
   } = useApp();
 
   // Invite user state
@@ -45,18 +49,20 @@ export function SettingsScreen() {
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!newUserName || !newUserEmail) return;
-    addUser(newUserName, newUserEmail, newUserRole);
+    await addUser(newUserName, newUserEmail, newUserRole);
     setNewUserName("");
     setNewUserEmail("");
   };
 
-  const handleCreateApiKey = () => {
+  const handleCreateApiKey = async () => {
     if (!newKeyName) return;
-    const rawKey = generateApiKey(newKeyName, "API Client");
-    setGeneratedKey(rawKey);
-    setNewKeyName("");
+    const rawKey = await generateApiKey(newKeyName, "reviewer");
+    if (rawKey) {
+      setGeneratedKey(rawKey);
+      setNewKeyName("");
+    }
   };
 
   const handleCopyKey = () => {
@@ -67,12 +73,8 @@ export function SettingsScreen() {
     }
   };
 
-  const handleTestWebhook = () => {
-    showToast(
-      "success",
-      "Test Webhook payload dispatched to sovereign endpoint (HTTP 200 OK)",
-      "تم اختبار وإرسال الويب هوك بنجاح إلى نقطة النهاية السيادية (HTTP 200 OK)"
-    );
+  const handleTestWebhook = async () => {
+    await testWebhook();
   };
 
   return (
@@ -133,49 +135,60 @@ export function SettingsScreen() {
                       <option value="reviewer">Reviewer</option>
                       <option value="viewer">Viewer</option>
                     </select>
+                    {userRole === "admin" && (
+                      <button
+                        onClick={() => deleteUser(u.id)}
+                        className="p-1 rounded text-muted-foreground hover:text-rose-600 transition"
+                        title="Delete User"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Invite Form */}
-            <div className="p-3 bg-secondary/30 rounded-xl border border-border space-y-2 pt-3">
-              <span className="font-bold text-foreground block text-[11px]">
-                {language === "ar" ? "إضافة مستخدم جديد" : "Provision New User"}
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  value={newUserName}
-                  onChange={(e) => setNewUserName(e.target.value)}
-                  className="px-2.5 py-1.5 rounded border border-border bg-card text-foreground text-xs"
-                />
-                <input
-                  type="email"
-                  placeholder="name@bank.ae"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  className="px-2.5 py-1.5 rounded border border-border bg-card text-foreground text-xs font-mono"
-                />
-                <select
-                  value={newUserRole}
-                  onChange={(e) => setNewUserRole(e.target.value as any)}
-                  className="px-2.5 py-1.5 rounded border border-border bg-card text-foreground text-xs font-semibold"
-                >
-                  <option value="admin">Admin</option>
-                  <option value="reviewer">Reviewer</option>
-                  <option value="viewer">Viewer</option>
-                </select>
-                <button
-                  onClick={handleAddUser}
-                  className="px-3 py-1.5 rounded bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs shadow-sm flex items-center justify-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add User</span>
-                </button>
+            {/* Invite Form - Admin Only */}
+            {userRole === "admin" && (
+              <div className="p-3 bg-secondary/30 rounded-xl border border-border space-y-2 pt-3">
+                <span className="font-bold text-foreground block text-[11px]">
+                  {language === "ar" ? "إضافة مستخدم جديد" : "Provision New User"}
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    className="px-2.5 py-1.5 rounded border border-border bg-card text-foreground text-xs"
+                  />
+                  <input
+                    type="email"
+                    placeholder="name@bank.ae"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    className="px-2.5 py-1.5 rounded border border-border bg-card text-foreground text-xs font-mono"
+                  />
+                  <select
+                    value={newUserRole}
+                    onChange={(e) => setNewUserRole(e.target.value as any)}
+                    className="px-2.5 py-1.5 rounded border border-border bg-card text-foreground text-xs font-semibold"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="reviewer">Reviewer</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                  <button
+                    onClick={handleAddUser}
+                    className="px-3 py-1.5 rounded bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs shadow-sm flex items-center justify-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add User</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* API Keys Card */}
@@ -271,12 +284,21 @@ export function SettingsScreen() {
                   max="365"
                   step="30"
                   value={retentionDays}
-                  onChange={(e) => setRetentionDays(Number(e.target.value))}
-                  className="w-full accent-emerald-600 cursor-pointer"
+                  onChange={(e) => saveRetentionDays(Number(e.target.value))}
+                  disabled={userRole !== "admin"}
+                  className="w-full accent-emerald-600 cursor-pointer disabled:opacity-50"
                 />
                 <p className="text-[11px] text-muted-foreground mt-1">
                   Documents older than {retentionDays} days are scheduled for hard deletion.
                 </p>
+                {userRole === "admin" && (
+                  <button
+                    onClick={runRetentionSweep}
+                    className="mt-2 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground font-semibold text-xs border border-border flex items-center gap-1.5 transition"
+                  >
+                    <span>{language === "ar" ? "تنفيذ مسح الاحتفاظ الآن" : "Trigger Retention Purge Now"}</span>
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/40 border border-border">

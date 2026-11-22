@@ -19,11 +19,14 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "UAE Document Intelligence Platform"
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "development"
+    SEED_DEFAULTS: bool = False
     
     # Security
     SECRET_KEY: str = DEFAULT_SECRET_KEY
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
+    PLATFORM_ADMIN_API_KEY: Optional[str] = None
+    WEBHOOK_SIGNING_SECRET: Optional[str] = None
     
     # CORS Configuration - Explicit origin list, strictly no wildcard '*' with credentials
     ALLOWED_ORIGINS: List[str] = [

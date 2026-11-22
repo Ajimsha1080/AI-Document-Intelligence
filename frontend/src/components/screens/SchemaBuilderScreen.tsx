@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 export function SchemaBuilderScreen() {
-  const { schemas, updateSchema, language, showToast } = useApp();
+  const { schemas, updateSchema, userRole, language, showToast } = useApp();
 
   const [selectedSchemaId, setSelectedSchemaId] = useState<string>(schemas[0]?.id || "");
   const activeSchema = schemas.find((s) => s.id === selectedSchemaId) || schemas[0] || null;
@@ -75,19 +75,18 @@ export function SchemaBuilderScreen() {
     setFields((prev) => prev.filter((f) => f.id !== id));
   };
 
-  const handleSaveSchema = () => {
+  const handleSaveSchema = async () => {
     if (!activeSchema) return;
+    if (userRole !== "admin") {
+      showToast("error", "Schema modification is restricted to Administrators", "تعديل المخططات محصور على المسؤولين");
+      return;
+    }
     const updatedSchema: DocumentTypeSchema = {
       ...activeSchema,
       fields,
       rules,
     };
-    updateSchema(updatedSchema);
-    showToast(
-      "success",
-      `Schema '${activeSchema.nameEn}' saved and deployed to local pipeline`,
-      `تم حفظ ونشر المخطط '${activeSchema.nameAr}' في نموذج الاستخراج المحلي`
-    );
+    await updateSchema(updatedSchema);
   };
 
   if (!activeSchema) {

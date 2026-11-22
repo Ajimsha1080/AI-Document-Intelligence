@@ -21,7 +21,8 @@ import app.models  # Ensure all models are registered on Base.metadata
 config = context.config
 
 # Set sqlalchemy.url from our settings if not set
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+if not config.get_main_option("sqlalchemy.url"):
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -57,7 +58,7 @@ def do_run_migrations(connection: Connection) -> None:
 async def run_async_migrations() -> None:
     """In this scenario we create an Engine and associate a connection with the context."""
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = settings.DATABASE_URL
+    configuration["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url") or settings.DATABASE_URL
     
     connectable = async_engine_from_config(
         configuration,

@@ -18,6 +18,42 @@ class PipelineEventBus:
         self._tenant_subscribers: Dict[str, Set[asyncio.Queue]] = {}
         self._doc_subscribers: Dict[str, Set[asyncio.Queue]] = {}
         self._lock = asyncio.Lock()
+        self._seen_event_ids: Set[str] = set()
+
+    async def feed_external_event(self, event: Dict[str, Any]):
+        """
+        Feeds an external event from Redis subscriber into active SSE subscribers.
+        Skips events previously seen/emitted locally to prevent duplication.
+        """
+        event_id = event.get("event_id")
+        if event_id and event_id in self._seen_event_ids:
+            return
+        if event_id:
+            self._seen_event_ids.add(event_id)
+            if len(self._seen_event_ids) > 5000:
+                self._seen_event_ids.clear()
+
+        tenant_id = event.get("tenant_id")
+        document_id = event.get("document_id")
+        if not tenant_id:
+            return
+
+        async with self._lock:
+            if tenant_id in self._tenant_subscribers:
+                for q in list(self._tenant_subscribers[tenant_id]):
+                    try:
+                        q.put_nowait(event)
+                    except asyncio.QueueFull:
+                        pass
+
+            if document_id:
+                doc_key = f"{tenant_id}:{document_id}"
+                if doc_key in self._doc_subscribers:
+                    for q in list(self._doc_subscribers[doc_key]):
+                        try:
+                            q.put_nowait(event)
+                        except asyncio.QueueFull:
+                            pass
 
     async def emit_event(
         self,
@@ -45,6 +81,7 @@ class PipelineEventBus:
             "details": details or {},
             "timestamp": now_utc
         }
+        self._seen_event_ids.add(event["event_id"])
 
         # 1. Publish to Redis Pub/Sub if available
         try:

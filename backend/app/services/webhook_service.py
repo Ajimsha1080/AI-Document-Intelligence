@@ -2,8 +2,11 @@ import hmac
 import hashlib
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
+
+from app.core.config import settings
 
 logger = logging.getLogger("webhook_service")
 
@@ -20,11 +23,11 @@ async def dispatch_document_approved_webhook(
 ) -> Dict[str, Any]:
     """
     Constructs and signs a 'document.approved' webhook event payload.
-    In compliance with UAE data residency, webhooks are delivered strictly
-    to customer in-country endpoints with cryptographic HMAC-SHA256 signatures.
+    In compliance with security rules, webhook never dispatches without active transport,
+    and returns dispatched=False with reason. No hardcoded secret is ever used.
     """
     now = datetime.now(timezone.utc).isoformat()
-    signing_secret = secret or "uae_sovereign_webhook_signing_secret_2026"
+    signing_secret = secret or os.environ.get("WEBHOOK_SIGNING_SECRET") or settings.WEBHOOK_SIGNING_SECRET or ""
 
     event_payload = {
         "event": "document.approved",
@@ -34,19 +37,23 @@ async def dispatch_document_approved_webhook(
         "data": document_data
     }
 
-    serialized = json.dumps(event_payload, sort_keys=True).encode("utf-8")
-    signature = generate_webhook_signature(serialized, signing_secret)
+    signature = None
+    if signing_secret:
+        serialized = json.dumps(event_payload, sort_keys=True).encode("utf-8")
+        signature = f"sha256={generate_webhook_signature(serialized, signing_secret)}"
 
     logger.info(
-        f"Webhook event prepared for document {document_id} (Tenant: {tenant_id}) | "
-        f"Signature: sha256={signature}"
+        f"Webhook evaluated for document {document_id} (Tenant: {tenant_id}) | "
+        f"Webhook URL: {webhook_url or 'None'} | Dispatched: False"
     )
 
+    reason = "no_webhook_endpoint_configured" if not webhook_url else "webhook_dispatch_offline"
     return {
-        "dispatched": True,
+        "dispatched": False,
+        "reason": reason,
         "event": "document.approved",
         "document_id": document_id,
-        "signature": f"sha256={signature}",
+        "signature": signature,
         "timestamp": now,
-        "payload": event_payload
+        "target_url": webhook_url
     }

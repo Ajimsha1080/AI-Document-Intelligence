@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+import asyncio
+import json
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -46,8 +48,60 @@ async def lifespan(app: FastAPI):
 
     if settings.STRICT_LOCAL_ONLY:
         logger.info("UAE Sovereign Guard ACTIVE: Egress to non-whitelisted cross-border endpoints is blocked.")
-        
+
+    # Run idempotent seed if enabled (never in production)
+    from app.core.seed import run_seed_if_enabled
+    try:
+        await run_seed_if_enabled()
+    except Exception as e:
+        logger.error(f"Startup seeding error: {e}")
+
+    # Start redis.asyncio subscriber on "tenant:*:events" feeding event_bus SSE queues
+    redis_listener_task = None
+    try:
+        import redis.asyncio as aioredis
+        from app.services.event_bus import event_bus
+
+        async def listen_redis_events():
+            r = None
+            try:
+                r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+                pubsub = r.pubsub()
+                await pubsub.psubscribe("tenant:*:events")
+                logger.info("Connected redis.asyncio subscriber to 'tenant:*:events'")
+                async for message in pubsub.listen():
+                    if message and message.get("type") in ("pmessage", "message"):
+                        raw_data = message.get("data")
+                        if isinstance(raw_data, str):
+                            try:
+                                event_payload = json.loads(raw_data)
+                                await event_bus.feed_external_event(event_payload)
+                            except Exception as pe:
+                                logger.debug(f"Failed to parse redis event json: {pe}")
+            except asyncio.CancelledError:
+                pass
+            except Exception as re:
+                logger.warning(f"Redis event subscriber encountered error: {re}")
+            finally:
+                if r:
+                    try:
+                        await r.aclose()
+                    except Exception:
+                        pass
+
+        redis_listener_task = asyncio.create_task(listen_redis_events())
+    except Exception as exc:
+        logger.warning(f"Could not initialize Redis event subscriber: {exc}")
+
     yield
+
+    if redis_listener_task and not redis_listener_task.done():
+        redis_listener_task.cancel()
+        try:
+            await redis_listener_task
+        except (asyncio.CancelledError, Exception):
+            pass
+
     logger.info("Shutting down UAE Sovereign Gateway safely.")
 
 app = FastAPI(
@@ -86,7 +140,7 @@ async def uae_compliance_headers_middleware(request: Request, call_next):
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/health", tags=["Health & Compliance"])
-async def health_check():
+async def health_check(response: Response):
     """
     Sovereign health check listing:
     - OCR engine & loaded languages
@@ -143,6 +197,37 @@ async def health_check():
         actual_backend = f"unavailable: {str(e)}"
         is_mock = False
 
+    if actual_backend == "local" and not ocr_available:
+        actual_backend = "mock-fallback"
+        is_mock = True
+
+    response.headers["x-model-provider-mode"] = actual_backend
+
+    # 5. Check actually loaded models
+    from app.services.rag.providers import (
+        FastEmbedMultilingualProvider,
+        check_ollama_reachable,
+        get_loaded_models
+    )
+    models_loaded = get_loaded_models()
+
+    if FastEmbedMultilingualProvider._singleton_model is not None:
+        rag_embedding_engine = f"fastembed/{FastEmbedMultilingualProvider._singleton_model_name}"
+    else:
+        rag_embedding_engine = "local_hashing/128dim"
+
+    ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+    ollama_model = os.environ.get("DOCS_LLM_MODEL", "qwen2.5:3b")
+    ollama_online = await check_ollama_reachable(ollama_host, timeout=0.5)
+    if ollama_online:
+        rag_generator = f"local_ollama/{ollama_model}"
+        models_loaded.append(rag_generator)
+    else:
+        rag_generator = "sovereign_local_generator"
+
+    if ocr_available and engine_name != "none":
+        models_loaded.append(f"ocr/{engine_name}")
+
     overall_healthy = (
         db_status == "healthy" and
         ("unhealthy" not in redis_status) and
@@ -163,6 +248,7 @@ async def health_check():
         "is_mock": is_mock,
         "ocr_engine": engine_name,
         "ocr_languages": loaded_langs,
-        "rag_embedding_engine": "fastembed/BAAI/bge-small-en-v1.5",
-        "rag_generator": "local_ollama/qwen2.5:3b",
+        "rag_embedding_engine": rag_embedding_engine,
+        "rag_generator": rag_generator,
+        "models_loaded": models_loaded,
     }

@@ -1,12 +1,15 @@
 import abc
 import hashlib
+import json
 import logging
 import math
 import os
 import re
-from typing import List, Dict, Any, Optional
+import urllib.parse
+from typing import List, Dict, Any, Optional, AsyncIterator
 import httpx
 
+from app.core.config import settings
 from app.services.rag.arabic_normalizer import normalize_arabic_text
 from app.services.rag.prompt_guard import sanitize_untrusted_text
 
@@ -111,6 +114,7 @@ class GeneratorProvider(abc.ABC):
     def generate(self, query: str, retrieved_chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
         pass
 
+
 class SovereignLocalGenerator(GeneratorProvider):
     """
     Strict in-country sovereign answer synthesizer.
@@ -130,7 +134,6 @@ class SovereignLocalGenerator(GeneratorProvider):
                 "citations": []
             }
 
-        # Check top evidence score
         top_chunk = retrieved_chunks[0]
         relevance = top_chunk.get("rerank_score", top_chunk.get("rrf_score", 0.0))
 
@@ -142,7 +145,6 @@ class SovereignLocalGenerator(GeneratorProvider):
                 "citations": []
             }
 
-        # Gather citations (strictly from retrieved set)
         valid_chunk_ids = {c["id"] for c in retrieved_chunks if "id" in c}
         citations = []
         snippets = []
@@ -162,7 +164,6 @@ class SovereignLocalGenerator(GeneratorProvider):
 
         combined_evidence = " ".join(snippets)
 
-        # Synthesize honest answer directly derived from verified evidence
         answer_en = f"Based on verified document records: {combined_evidence[:280]}..."
         answer_ar = f"بناءً على المستندات المعتمدة: {combined_evidence[:280]}..."
 
@@ -177,22 +178,52 @@ class SovereignLocalGenerator(GeneratorProvider):
 class FastEmbedMultilingualProvider(EmbeddingProvider):
     """
     In-Country, Sovereign ONNX Dense Semantic Embedding Provider.
-    Powered by FastEmbed (e.g. BAAI/bge-small-en-v1.5 or intfloat/multilingual-e5-large)
-    with zero external cloud egress and seamless fallback to LocalHashingSemanticEmbedding.
+    Loads ONLY from local FASTEMBED_CACHE_DIR (strictly no external downloads).
+    Created once via singleton pattern.
     """
+    _singleton_model = None
+    _singleton_model_name: Optional[str] = None
+    _initialized = False
+
     def __init__(self, model_name: Optional[str] = None):
         self.model_name = model_name or os.environ.get("DOCS_EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
         self._fallback = LocalHashingSemanticEmbedding(dim=128)
-        self._model = None
         self.dim = 384
+
+        cache_dir = os.environ.get("FASTEMBED_CACHE_DIR") or getattr(settings, "FASTEMBED_CACHE_DIR", None)
+
+        if FastEmbedMultilingualProvider._singleton_model is not None:
+            self._model = FastEmbedMultilingualProvider._singleton_model
+            self.model_name = FastEmbedMultilingualProvider._singleton_model_name or self.model_name
+            self.dim = 384 if "small" in self.model_name else 768
+            return
+
+        if FastEmbedMultilingualProvider._initialized:
+            self._model = None
+            self.dim = self._fallback.dim
+            return
+
+        FastEmbedMultilingualProvider._initialized = True
+        if not cache_dir or not os.path.exists(cache_dir):
+            logger.info("FASTEMBED_CACHE_DIR '%s' does not exist; skipping FastEmbed downloads and using fallback", cache_dir)
+            self._model = None
+            self.dim = self._fallback.dim
+            return
 
         try:
             from fastembed import TextEmbedding
-            self._model = TextEmbedding(model_name=self.model_name)
+            # local_files_only=True guarantees NO external downloads
+            self._model = TextEmbedding(
+                model_name=self.model_name,
+                cache_dir=cache_dir,
+                local_files_only=True
+            )
+            FastEmbedMultilingualProvider._singleton_model = self._model
+            FastEmbedMultilingualProvider._singleton_model_name = self.model_name
             self.dim = 384 if "small" in self.model_name else 768
-            logger.info("FastEmbed initialized successfully with model %s (dim=%d)", self.model_name, self.dim)
+            logger.info("FastEmbed loaded successfully from local cache %s (model=%s, dim=%d)", cache_dir, self.model_name, self.dim)
         except Exception as exc:
-            logger.warning("FastEmbed offline or unavailable (%s); using LocalHashingSemanticEmbedding", exc)
+            logger.warning("FastEmbed local cache load failed (%s); using LocalHashingSemanticEmbedding", exc)
             self._model = None
             self.dim = self._fallback.dim
 
@@ -216,13 +247,25 @@ class FastEmbedMultilingualProvider(EmbeddingProvider):
         return self._fallback.embed_query(query)
 
 
+def is_local_or_allowlisted_host(url: str, allowlist_extra: Optional[List[str]] = None) -> bool:
+    """Verifies that an endpoint URL belongs to local or sovereignly allowlisted network."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+        hostname = (parsed.hostname or "").lower()
+        allowed = {"localhost", "127.0.0.1", "::1", "0.0.0.0", "host.docker.internal", "ollama"}
+        if allowlist_extra:
+            allowed.update(h.lower() for h in allowlist_extra)
+        return hostname in allowed
+    except Exception:
+        return False
+
+
 class LocalOllamaGenerator(GeneratorProvider):
     """
     Sovereign In-Country Local LLM Generator.
-    Connects to local Ollama runtime (e.g. qwen2.5:3b / falcon3) on 127.0.0.1:11434.
-    Synthesizes grounded answers strictly from retrieved evidence chunks with zero cloud egress.
-    Automatically and gracefully falls back to deterministic SovereignLocalGenerator
-    when Ollama is offline, unreachable, or in test environments.
+    - OLLAMA_HOST must be local/allowlisted when STRICT_LOCAL_ONLY=true.
+    - Uses httpx.AsyncClient.
+    - Streams real Ollama tokens or reports fallback honestly.
     """
     def __init__(
         self,
@@ -231,23 +274,28 @@ class LocalOllamaGenerator(GeneratorProvider):
         timeout: float = 2.5,
         threshold: float = 0.12
     ):
-        self.base_url = (base_url or os.environ.get("OLLAMA_HOST") or "http://localhost:11434").rstrip("/")
+        raw_url = base_url or os.environ.get("OLLAMA_HOST") or "http://localhost:11434"
+        self.base_url = raw_url.rstrip("/")
         self.model = model or os.environ.get("DOCS_LLM_MODEL", "qwen2.5:3b")
         self.timeout = timeout
         self.threshold = threshold
         self.fallback = SovereignLocalGenerator(threshold=threshold)
 
-    def generate(self, query: str, retrieved_chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        if settings.STRICT_LOCAL_ONLY and not is_local_or_allowlisted_host(self.base_url):
+            raise ValueError(
+                f"Sovereignty violation: OLLAMA_HOST '{self.base_url}' is not a local or allowlisted address while STRICT_LOCAL_ONLY=true"
+            )
+
+    async def generate_async(self, query: str, retrieved_chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Asynchronous generation using httpx.AsyncClient."""
         if not retrieved_chunks:
             return self.fallback.generate(query, retrieved_chunks)
 
-        # Evidence validation: if weak relevance, immediately reject without burning LLM cycles
         top_chunk = retrieved_chunks[0]
         relevance = top_chunk.get("rerank_score", top_chunk.get("rrf_score", 0.0))
         if relevance < self.threshold:
             return self.fallback.generate(query, retrieved_chunks)
 
-        # Validate chunk IDs and collect evidence snippets
         valid_chunk_ids = {c["id"] for c in retrieved_chunks if "id" in c}
         citations = []
         snippets = []
@@ -268,7 +316,6 @@ class LocalOllamaGenerator(GeneratorProvider):
         if not snippets:
             return self.fallback.generate(query, retrieved_chunks)
 
-        # Format sovereign grounded prompt
         context_block = "\n".join([f"- {s}" for s in snippets])
         prompt = (
             f"You are a sovereign enterprise document intelligence assistant. Answer the question using ONLY the verified document excerpts below. "
@@ -279,8 +326,8 @@ class LocalOllamaGenerator(GeneratorProvider):
         )
 
         try:
-            with httpx.Client(timeout=self.timeout) as client:
-                resp = client.post(
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.post(
                     f"{self.base_url}/api/generate",
                     json={
                         "model": self.model,
@@ -306,15 +353,105 @@ class LocalOllamaGenerator(GeneratorProvider):
         except Exception as ex:
             logger.debug("Ollama inference skipped or unavailable (%s); executing sovereign local generator", ex)
 
-        # Fallback to deterministic sovereign generator
         return self.fallback.generate(query, retrieved_chunks)
 
+    def generate(self, query: str, retrieved_chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Synchronous wrapper falling back safely."""
+        return self.fallback.generate(query, retrieved_chunks)
+
+    async def stream_generate(self, query: str, retrieved_chunks: List[Dict[str, Any]]) -> AsyncIterator[Dict[str, Any]]:
+        """
+        Streams REAL Ollama tokens asynchronously using httpx.AsyncClient.
+        If Ollama is unavailable, yields the fallback result with real_time=False.
+        """
+        top_chunk = retrieved_chunks[0] if retrieved_chunks else {}
+        relevance = top_chunk.get("rerank_score", top_chunk.get("rrf_score", 0.0))
+        if relevance < self.threshold:
+            yield {"token": "Not found in your documents.", "done": True, "real_time": False}
+            return
+
+        valid_chunk_ids = {c["id"] for c in retrieved_chunks if "id" in c}
+        snippets = [
+            sanitize_untrusted_text(c.get("chunk_text", ""))
+            for c in retrieved_chunks[:3]
+            if c.get("id") in valid_chunk_ids
+        ]
+        if not snippets:
+            yield {"token": "Not found in your documents.", "done": True, "real_time": False}
+            return
+
+        context_block = "\n".join([f"- {s}" for s in snippets])
+        prompt = (
+            f"You are a sovereign enterprise document intelligence assistant. Answer the question using ONLY the verified document excerpts below. "
+            f"Keep your answer concise and factual. If the excerpts do not contain the answer, say 'Not found in your documents.'\n\n"
+            f"Verified Document Excerpts:\n{context_block}\n\n"
+            f"User Query: {query}\n"
+            f"Answer:"
+        )
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{self.base_url}/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": prompt,
+                        "stream": True,
+                        "options": {"temperature": 0.1, "num_predict": 100}
+                    }
+                ) as response:
+                    if response.status_code == 200:
+                        async for line in response.aiter_lines():
+                            if not line:
+                                continue
+                            try:
+                                chunk = json.loads(line)
+                                token = chunk.get("response", "")
+                                is_done = chunk.get("done", False)
+                                yield {"token": token, "done": is_done, "real_time": True}
+                                if is_done:
+                                    break
+                            except Exception:
+                                continue
+                        return
+        except Exception as ex:
+            logger.debug("Ollama real-time stream unavailable (%s); using fallback without claiming real-time", ex)
+
+        # Fallback honest delivery: not real-time token stream
+        fallback_res = self.fallback.generate(query, retrieved_chunks)
+        yield {"token": fallback_res["answer"], "done": True, "real_time": False}
+
+
+_embedding_provider_instance: Optional[EmbeddingProvider] = None
 
 def get_default_embedding_provider() -> EmbeddingProvider:
-    """Returns FastEmbed ONNX embedding provider with automatic fallback to subword hashing."""
-    return FastEmbedMultilingualProvider()
+    """Returns FastEmbed ONNX embedding provider created once (singleton)."""
+    global _embedding_provider_instance
+    if _embedding_provider_instance is None:
+        _embedding_provider_instance = FastEmbedMultilingualProvider()
+    return _embedding_provider_instance
 
 
 def get_default_generator_provider(threshold: float = 0.12) -> GeneratorProvider:
     """Returns sovereign local LLM generator (Ollama) with deterministic fallback."""
     return LocalOllamaGenerator(threshold=threshold)
+
+
+async def check_ollama_reachable(base_url: str, timeout: float = 1.0) -> bool:
+    """Checks if Ollama service is reachable."""
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.get(f"{base_url}/api/tags")
+            return resp.status_code == 200
+    except Exception:
+        return False
+
+
+def get_loaded_models() -> List[str]:
+    """Returns list of models actually loaded in memory."""
+    models = []
+    if FastEmbedMultilingualProvider._singleton_model is not None:
+        name = FastEmbedMultilingualProvider._singleton_model_name or "bge-small-en-v1.5"
+        models.append(f"fastembed/{name}")
+    return models

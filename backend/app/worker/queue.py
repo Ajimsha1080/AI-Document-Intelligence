@@ -5,6 +5,7 @@ from app.core.config import settings
 logger = logging.getLogger("worker_queue")
 
 _redis_conn = None
+_worker_redis_conn = None
 _rq_queue = None
 _redis_last_check = 0.0
 _redis_check_interval = 10.0  # seconds between reconnection attempts
@@ -29,6 +30,28 @@ def get_redis_client():
             _redis_conn = None
             logger.info(f"Redis queue unavailable ({e}). Running jobs in direct/sync mode.")
     return _redis_conn
+
+def get_worker_redis_client():
+    """
+    Dedicated worker Redis connection with NO socket timeout.
+    RQ workers block indefinitely on BLPOP; a short socket_timeout causes crashes.
+    """
+    global _worker_redis_conn
+    if _worker_redis_conn is None:
+        try:
+            import redis
+            conn = redis.from_url(
+                settings.REDIS_URL,
+                decode_responses=False,
+                socket_connect_timeout=5.0,
+                socket_timeout=None
+            )
+            conn.ping()
+            _worker_redis_conn = conn
+        except Exception as e:
+            logger.error(f"Worker Redis connection failed ({e})")
+            _worker_redis_conn = None
+    return _worker_redis_conn
 
 def get_job_queue():
     global _rq_queue

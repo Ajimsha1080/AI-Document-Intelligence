@@ -1,3 +1,4 @@
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,6 +15,8 @@ from app.api.deps import get_current_actor, AuthenticatedActor
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+DUMMY_BCRYPT_HASH = "$2b$12$e80yqVbV5.9yG6m.Ew17u.1oD7XlT7bFq5K6fDq6c8r6w9fG5d5qK"
+
 @router.post("/login", response_model=Token)
 async def login(
     payload: LoginRequest,
@@ -23,41 +26,47 @@ async def login(
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
 
-    # 1. Check brute-force rate limit & temporary lockout status
-    login_rate_limiter.check_lockout(client_ip, payload.email)
+    clean_email = payload.email.strip().lower()
 
-    stmt = select(User).where(User.email == payload.email, User.is_active == True)
+    # 1. Check brute-force rate limit & temporary lockout status
+    login_rate_limiter.check_lockout(client_ip, clean_email)
+
+    stmt = select(User).where(User.email == clean_email, User.is_active == True)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(payload.password, user.hashed_password):
+    # Always execute bcrypt to eliminate timing attack side-channels
+    if user:
+        is_valid = verify_password(payload.password, user.hashed_password)
+    else:
+        verify_password(payload.password, DUMMY_BCRYPT_HASH)
+        is_valid = False
+
+    if not user or not is_valid:
         # Record failed attempt in rate limiter
-        newly_locked = login_rate_limiter.record_failure(client_ip, payload.email)
+        newly_locked = login_rate_limiter.record_failure(client_ip, clean_email)
 
-        action = "AUTH_LOGIN_LOCKED_OUT" if newly_locked else "AUTH_LOGIN_FAILED"
-        tenant_id = user.tenant_id if user else settings.DEFAULT_TENANT_ID
-        actor_id = user.id if user else "unregistered_or_invalid"
-        actor_email = user.email if user else payload.email
-        actor_role = user.role if user else "anonymous"
-
-        await log_audit_event(
-            db=db,
-            tenant_id=tenant_id,
-            actor_id=actor_id,
-            actor_email=actor_email,
-            actor_role=actor_role,
-            action=action,
-            entity_type="user",
-            entity_id=actor_id,
-            ip_address=client_ip,
-            user_agent=user_agent,
-            details={
-                "reason": "invalid_credentials",
-                "locked_out": newly_locked,
-                "lockout_minutes": settings.LOGIN_LOCKOUT_MINUTES if newly_locked else 0
-            }
-        )
-        await db.commit()
+        # Do not leak or pollute another tenant's audit trail if user is unknown
+        if user:
+            action = "AUTH_LOGIN_LOCKED_OUT" if newly_locked else "AUTH_LOGIN_FAILED"
+            await log_audit_event(
+                db=db,
+                tenant_id=user.tenant_id,
+                actor_id=user.id,
+                actor_email=user.email,
+                actor_role=user.role,
+                action=action,
+                entity_type="user",
+                entity_id=user.id,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                details={
+                    "reason": "invalid_credentials",
+                    "locked_out": newly_locked,
+                    "lockout_minutes": settings.LOGIN_LOCKOUT_MINUTES if newly_locked else 0
+                }
+            )
+            await db.commit()
 
         if newly_locked:
             raise HTTPException(
@@ -81,7 +90,7 @@ async def login(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant account is disabled")
 
     # Success: clear failed attempts tracker
-    login_rate_limiter.record_success(client_ip, payload.email)
+    login_rate_limiter.record_success(client_ip, clean_email)
 
     # Generate token
     token = create_access_token(
@@ -114,6 +123,23 @@ async def login(
         role=user.role,
         full_name=user.full_name
     )
+
+@router.post("/stream-token")
+async def get_stream_token(
+    actor: AuthenticatedActor = Depends(get_current_actor)
+):
+    """
+    Issues a short-lived (60 seconds) single-purpose stream token for SSE connections.
+    Prevents passing primary access tokens in URL query strings.
+    """
+    token = create_access_token(
+        subject=actor.id,
+        tenant_id=actor.tenant_id,
+        role=actor.role,
+        expires_delta=timedelta(seconds=60),
+        scope="sse_stream"
+    )
+    return {"stream_token": token, "expires_in": 60}
 
 @router.get("/me")
 async def get_me(

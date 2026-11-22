@@ -4,7 +4,7 @@ import sys
 import time
 import json
 
-BASE = 'http://localhost:8085'
+BASE = 'http://localhost:8000'
 API = f'{BASE}/api/v1'
 
 def run():

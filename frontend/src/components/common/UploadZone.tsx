@@ -37,6 +37,7 @@ export function UploadZone() {
     language,
     dir,
     showToast,
+    userRole,
   } = useApp();
 
   const [isDragging, setIsDragging] = useState(false);
@@ -58,6 +59,10 @@ export function UploadZone() {
 
   const processFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    if (userRole === "viewer") {
+      showToast("error", "Viewer role does not have upload permissions", "ليس لديك صلاحية لرفع المستندات");
+      return;
+    }
 
     const fileList = Array.from(files);
     for (const f of fileList) {
@@ -75,10 +80,11 @@ export function UploadZone() {
       setQueue((prev) => [item, ...prev]);
 
       try {
-        const docTypeParam = selectedType === "auto" ? "emirates_id" : selectedType;
+        // Auto-detects type if auto is selected
+        const docTypeParam = selectedType === "auto" ? undefined : selectedType;
         const initialDoc = await api.documents.upload(f, docTypeParam, (p) => {
           setQueue((q) =>
-            q.map((x) => (x.id === fileId ? { ...x, progress: Math.min(p, 25) } : x))
+            q.map((x) => (x.id === fileId ? { ...x, progress: p } : x))
           );
         });
 
@@ -209,48 +215,58 @@ export function UploadZone() {
         </div>
 
         {/* Dropzone */}
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
-            isDragging
-              ? "border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20"
-              : "border-border hover:border-emerald-600/70 hover:bg-secondary/40"
-          }`}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".pdf,.png,.jpg,.jpeg,.tiff"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-
-          <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center shadow-inner">
-            <UploadCloud className="w-7 h-7" />
-          </div>
-
-          <div className="space-y-1">
-            <div className="text-sm font-bold text-foreground">
+        {userRole === "viewer" ? (
+          <div className="border border-border/80 rounded-xl p-8 text-center bg-secondary/20 flex flex-col items-center justify-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground">
               {language === "ar"
-                ? "اسحب الملفات وأفلتها هنا، أو اضغط للاختيار من جهازك"
-                : "Drag & drop files here, or browse your local files"}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              PDF, PNG, JPG, TIFF • {language === "ar" ? "حجم أقصى ٥٠ ميجابايت" : "Up to 50MB per file"}
-            </div>
+                ? "حسابك بصلاحية المشاهد (Viewer) فقط. صلاحيات رفع المستندات محصورة على المراجعين والمسؤولين."
+                : "You are logged in as Viewer (read-only). Document upload is restricted to Reviewer and Administrator roles."}
+            </span>
           </div>
-
-          <button
-            type="button"
-            className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 shadow-sm transition"
+        ) : (
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
+              isDragging
+                ? "border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20"
+                : "border-border hover:border-emerald-600/70 hover:bg-secondary/40"
+            }`}
           >
-            {language === "ar" ? "اختر الملفات" : "Select Documents"}
-          </button>
-        </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.png,.jpg,.jpeg,.tiff"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+              <UploadCloud className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-sm font-bold text-foreground">
+                {language === "ar"
+                  ? "اسحب الملفات وأفلتها هنا، أو اضغط للاختيار من جهازك"
+                  : "Drag & drop files here, or browse your local files"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                PDF, PNG, JPG, TIFF • {language === "ar" ? "حجم أقصى ٥٠ ميجابايت" : "Up to 50MB per file"}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 shadow-sm transition"
+            >
+              {language === "ar" ? "اختر الملفات" : "Select Documents"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Upload Processing Queue */}

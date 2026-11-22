@@ -1,4 +1,6 @@
 import io
+import os
+import re
 from typing import Optional, List
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request, Response
@@ -10,9 +12,17 @@ from sqlalchemy import select, func, and_, desc
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.file_validator import validate_magic_bytes, validate_file_size
-from app.api.deps import get_current_actor, require_role, AuthenticatedActor
+from app.core.rbac import Permission
+from app.api.deps import (
+    get_current_actor,
+    require_permission,
+    require_stream_permission,
+    require_role,
+    AuthenticatedActor
+)
 from app.models.document import Document, DocumentPage, ExtractedField, ValidationResult
 from app.models.document_type import DocumentType
+from app.models.tenant import Tenant
 from app.schemas.document import (
     DocumentResponse,
     DocumentDetailResponse,
@@ -32,7 +42,7 @@ async def upload_document(
     request: Request,
     file: UploadFile = File(...),
     document_type_code: Optional[str] = Form(None),
-    actor: AuthenticatedActor = Depends(get_current_actor),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_UPLOAD)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -40,15 +50,32 @@ async def upload_document(
     Validates file content by magic bytes (PDF, JPG, PNG, TIFF) and size ceiling.
     Enforces tenant isolation and records immutable audit event.
     """
-    # 1. Read and validate content
-    content = await file.read()
+    # 1. Read and validate content (check size while reading chunks)
+    chunk_size = 1024 * 1024  # 1MB
+    chunks = []
+    total_size = 0
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total_size += len(chunk)
+        if total_size > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Uploaded file exceeds maximum permissible size limit of {settings.MAX_UPLOAD_SIZE_MB}MB"
+            )
+        chunks.append(chunk)
+    content = b"".join(chunks)
+
     validate_file_size(len(content))
     verified_mime = validate_magic_bytes(content, file.filename)
 
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
 
-    # 2. Resolve document type if specified
+    # 2. Resolve document type if specified (400 if unknown)
+    KNOWN_SYSTEM_DOC_TYPES = {"emirates_id", "uae_trade_license", "commercial_invoice"}
     doc_type_id = None
     if document_type_code:
         stmt = select(DocumentType).where(
@@ -59,18 +86,35 @@ async def upload_document(
         )
         res = await db.execute(stmt)
         dt = res.scalar_one_or_none()
-        if dt:
-            doc_type_id = dt.id
+        if not dt:
+            if document_type_code not in KNOWN_SYSTEM_DOC_TYPES:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Unknown document_type_code '{document_type_code}' for this tenant"
+                )
+            dt = DocumentType(
+                tenant_id=actor.tenant_id,
+                code=document_type_code,
+                name_en=document_type_code.replace("_", " ").title(),
+                name_ar=document_type_code,
+                schema_definition={}
+            )
+            db.add(dt)
+            await db.flush()
+        doc_type_id = dt.id
 
     # 3. Create document record and upload to S3/local sovereign store
     from app.models.base import generate_uuid
     doc_id = generate_uuid()
-    safe_filename = file.filename or f"upload_{doc_id}"
+    raw_filename = file.filename or f"upload_{doc_id}"
+    cleaned_basename = os.path.basename(raw_filename.replace("\\", "/"))
+    if not cleaned_basename or cleaned_basename in [".", ".."]:
+        cleaned_basename = f"upload_{doc_id}"
 
     storage_path = storage_service.upload_document_file(
         tenant_id=actor.tenant_id,
         document_id=doc_id,
-        filename=safe_filename,
+        filename=cleaned_basename,
         content=content,
         mime_type=verified_mime
     )
@@ -79,7 +123,7 @@ async def upload_document(
         id=doc_id,
         tenant_id=actor.tenant_id,
         document_type_id=doc_type_id,
-        file_name=safe_filename,
+        file_name=cleaned_basename,
         file_size=len(content),
         mime_type=verified_mime,
         storage_path=storage_path,
@@ -102,7 +146,7 @@ async def upload_document(
         ip_address=client_ip,
         user_agent=user_agent,
         details={
-            "file_name": safe_filename,
+            "file_name": cleaned_basename,
             "file_size": len(content),
             "mime_type": verified_mime,
             "document_type_code": document_type_code,
@@ -124,7 +168,7 @@ async def upload_document(
         stage="queued",
         status="queued",
         progress_pct=5,
-        details={"file_name": safe_filename, "file_size": len(content)}
+        details={"file_name": cleaned_basename, "file_size": len(content)}
     )
 
     return DocumentResponse(
@@ -151,7 +195,7 @@ async def list_documents(
     to_date: Optional[datetime] = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    actor: AuthenticatedActor = Depends(get_current_actor),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Lists documents with query-level tenant isolation and filtering."""
@@ -179,16 +223,17 @@ async def list_documents(
     total_res = await db.execute(count_stmt)
     total = total_res.scalar() or 0
 
-    # Query page
+    # Query page with document_type_code
     stmt = (
-        select(Document)
+        select(Document, DocumentType.code)
+        .outerjoin(DocumentType, Document.document_type_id == DocumentType.id)
         .where(and_(*conditions))
         .order_by(desc(Document.created_at))
         .limit(limit)
         .offset(offset)
     )
     res = await db.execute(stmt)
-    docs = res.scalars().all()
+    rows = res.all()
 
     return DocumentListResponse(
         total=total,
@@ -197,6 +242,7 @@ async def list_documents(
                 id=d.id,
                 tenant_id=d.tenant_id,
                 document_type_id=d.document_type_id,
+                document_type_code=code,
                 file_name=d.file_name,
                 file_size=d.file_size,
                 mime_type=d.mime_type,
@@ -206,15 +252,50 @@ async def list_documents(
                 created_at=d.created_at,
                 updated_at=d.updated_at
             )
-            for d in docs
+            for d, code in rows
         ]
+    )
+
+# Place /events routes BEFORE /{id} routes to prevent router shadowing
+@router.get("/events/stream")
+@router.get("/events")
+async def stream_tenant_events(
+    request: Request,
+    actor: AuthenticatedActor = Depends(require_stream_permission(Permission.DOCUMENT_VIEW)),
+):
+    """
+    Server-Sent Events (SSE) stream for all pipeline events belonging to the current tenant.
+    Enforces strict tenant isolation: users never receive another tenant's events.
+    """
+    import asyncio
+    from app.services.event_bus import event_bus
+
+    async def event_generator():
+        yield ": connected\n\n"
+        try:
+            async for evt in event_bus.subscribe_tenant(actor.tenant_id):
+                if await request.is_disconnected():
+                    break
+                data = json.dumps(evt, ensure_ascii=False)
+                yield f"data: {data}\n\n"
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
     )
 
 @router.get("/{id}", response_model=DocumentDetailResponse)
 async def get_document(
     id: str,
     request: Request,
-    actor: AuthenticatedActor = Depends(get_current_actor),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Retrieves document details, extracted fields, pages, and validation errors."""
@@ -257,10 +338,17 @@ async def get_document(
     )
     await db.commit()
 
+    # Resolve document_type_code
+    doc_type_code = None
+    if doc.document_type_id:
+        dt_res = await db.execute(select(DocumentType.code).where(DocumentType.id == doc.document_type_id))
+        doc_type_code = dt_res.scalar_one_or_none()
+
     return DocumentDetailResponse(
         id=doc.id,
         tenant_id=doc.tenant_id,
         document_type_id=doc.document_type_id,
+        document_type_code=doc_type_code,
         file_name=doc.file_name,
         file_size=doc.file_size,
         mime_type=doc.mime_type,
@@ -278,7 +366,7 @@ async def get_document(
 async def get_document_file(
     id: str,
     request: Request,
-    actor: AuthenticatedActor = Depends(get_current_actor),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """Streams original document binary with tamper-proof audit logging."""
@@ -308,17 +396,22 @@ async def get_document_file(
     )
     await db.commit()
 
+    import urllib.parse
+    ascii_filename = re.sub(r"[^\x20-\x7E]", "_", doc.file_name)
+    encoded_filename = urllib.parse.quote(doc.file_name, encoding="utf-8")
+    content_disposition = f'inline; filename="{ascii_filename}"; filename*=UTF-8\'\'{encoded_filename}'
+
     return Response(
         content=content,
         media_type=doc.mime_type,
-        headers={"Content-Disposition": f'inline; filename="{doc.file_name}"'}
+        headers={"Content-Disposition": content_disposition}
     )
 
 @router.delete("/{id}")
 async def delete_document(
     id: str,
     request: Request,
-    actor: AuthenticatedActor = Depends(require_role("admin")),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_DELETE)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -379,11 +472,11 @@ async def delete_document(
 
 @router.post("/retention/sweep")
 async def trigger_retention_sweep(
-    actor: AuthenticatedActor = Depends(require_role("admin")),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.RETENTION_MANAGE)),
     db: AsyncSession = Depends(get_db)
 ):
-    """Manually triggers the tenant retention policy sweep (Admin only)."""
-    result = await run_retention_policy_sweep(db)
+    """Manually triggers the tenant retention policy sweep (purging caller's tenant only)."""
+    result = await run_retention_policy_sweep(db, tenant_id=actor.tenant_id)
     return result
 
 @router.patch("/{id}/fields/{field_name}", response_model=ExtractedFieldResponse)
@@ -392,14 +485,26 @@ async def correct_document_field(
     field_name: str,
     payload: FieldCorrectionRequest,
     request: Request,
-    actor: AuthenticatedActor = Depends(require_role("admin", "reviewer")),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_REVIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Reviewer field correction endpoint.
-    Preserves original OCR value alongside corrected value and writes an immutable audit record.
-    Re-runs validation rules to reflect updated field state.
+    Status rule: correct only from needs_review; else 409.
+    Correction uses the document's real type and recalculates confidence.
     """
+    doc_stmt = select(Document).where(and_(Document.id == id, Document.tenant_id == actor.tenant_id))
+    doc_res = await db.execute(doc_stmt)
+    doc = doc_res.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    if doc.status != "needs_review":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot correct field: document status is '{doc.status}'. Corrections are only permitted from 'needs_review'."
+        )
+
     stmt = select(ExtractedField).where(
         and_(
             ExtractedField.document_id == id,
@@ -421,6 +526,7 @@ async def correct_document_field(
     field.value = payload.corrected_value
     field.corrected_by = actor.id
     field.corrected_at = datetime.now(timezone.utc)
+    field.confidence = 1.0  # Human reviewer verified
 
     # Re-evaluate validation rules for this document
     all_fields_res = await db.execute(
@@ -443,12 +549,10 @@ async def correct_document_field(
         for f in all_fields
     ]
 
-    doc_stmt = select(Document).where(and_(Document.id == id, Document.tenant_id == actor.tenant_id))
-    doc_res = await db.execute(doc_stmt)
-    doc = doc_res.scalar_one_or_none()
+    # Resolve document's real type
     doc_type_code = "emirates_id"
     schema_def = {}
-    if doc and doc.document_type_id:
+    if doc.document_type_id:
         dt_res = await db.execute(select(DocumentType).where(DocumentType.id == doc.document_type_id))
         dt = dt_res.scalar_one_or_none()
         if dt:
@@ -456,13 +560,11 @@ async def correct_document_field(
             schema_def = dt.schema_definition or {}
 
     val_outcomes = run_validation_rules(doc_type_code, field_data_list, schema_def)
-    
-    # Refresh validation results table
-    await db.execute(
-        select(ValidationResult).where(
-            and_(ValidationResult.document_id == id, ValidationResult.tenant_id == actor.tenant_id)
-        )
-    )
+
+    # Recalculate document overall confidence
+    all_found = [f for f in all_fields if f.value is not None]
+    doc.confidence_score = round(sum(f.confidence for f in all_found) / len(all_found), 2) if all_found else 0.0
+
     # Delete old and insert new validations
     from sqlalchemy import delete
     await db.execute(
@@ -499,7 +601,8 @@ async def correct_document_field(
             "field_name": field_name,
             "original_value": original_val,
             "corrected_value": payload.corrected_value,
-            "reason": payload.reason
+            "reason": payload.reason,
+            "recalculated_confidence": doc.confidence_score
         }
     )
     await db.commit()
@@ -511,12 +614,14 @@ async def correct_document_field(
 async def approve_document(
     id: str,
     request: Request,
-    actor: AuthenticatedActor = Depends(require_role("admin", "reviewer")),
+    force: bool = Query(False),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_APPROVE)),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Approves document and triggers a cryptographic HMAC-SHA256 signed webhook.
-    Enforces reviewer/admin RBAC.
+    Approves document.
+    Status rules: approve only from needs_review/approved and not with failed error validations
+    (unless admin force=true, audited); else 409.
     """
     stmt = select(Document).where(and_(Document.id == id, Document.tenant_id == actor.tenant_id))
     res = await db.execute(stmt)
@@ -524,6 +629,29 @@ async def approve_document(
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
+    if doc.status not in ("needs_review", "approved"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot approve document with status '{doc.status}'. Approvals only permitted from 'needs_review' or 'approved'."
+        )
+
+    # Check for failed error validations
+    val_stmt = select(ValidationResult).where(
+        and_(
+            ValidationResult.document_id == id,
+            ValidationResult.tenant_id == actor.tenant_id,
+            ValidationResult.passed == False,
+            ValidationResult.severity == "error"
+        )
+    )
+    failed_errors = (await db.execute(val_stmt)).scalars().all()
+    if failed_errors and not (force and actor.role == "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot approve document with {len(failed_errors)} failed error validations without admin force=true."
+        )
+
+    is_forced = bool(failed_errors and force and actor.role == "admin")
     doc.status = "approved"
 
     # Fetch extracted fields for webhook payload
@@ -557,13 +685,15 @@ async def approve_document(
         actor_id=actor.id,
         actor_email=actor.email,
         actor_role=actor.role,
-        action="DOCUMENT_APPROVE",
+        action="DOCUMENT_APPROVE_FORCED" if is_forced else "DOCUMENT_APPROVE",
         entity_type="document",
         entity_id=id,
         ip_address=client_ip,
         user_agent=user_agent,
         details={
             "file_name": doc.file_name,
+            "force_override": is_forced,
+            "failed_validations_count": len(failed_errors),
             "webhook_dispatched": webhook_meta.get("dispatched"),
             "webhook_signature": webhook_meta.get("signature")
         }
@@ -573,7 +703,13 @@ async def approve_document(
     return {
         "status": "approved",
         "document_id": id,
-        "webhook": webhook_meta
+        "force_override": is_forced,
+        "webhook": {
+            "dispatched": webhook_meta.get("dispatched", False),
+            "reason": webhook_meta.get("reason", "no_webhook_endpoint_configured"),
+            "signature": webhook_meta.get("signature"),
+            "timestamp": webhook_meta.get("timestamp")
+        }
     }
 
 @router.post("/{id}/reject")
@@ -581,17 +717,52 @@ async def reject_document(
     id: str,
     payload: RejectDocumentRequest,
     request: Request,
-    actor: AuthenticatedActor = Depends(require_role("admin", "reviewer")),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_APPROVE)),
     db: AsyncSession = Depends(get_db)
 ):
-    """Rejects document with reason and immutable audit log."""
+    """
+    Rejects document with reason and immutable audit log.
+    Status rule: reject from needs_review/approved; else 409.
+    """
     stmt = select(Document).where(and_(Document.id == id, Document.tenant_id == actor.tenant_id))
     res = await db.execute(stmt)
     doc = res.scalar_one_or_none()
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
+    if doc.status not in ("needs_review", "approved"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot reject document with status '{doc.status}'. Rejections only permitted from 'needs_review' or 'approved'."
+        )
+
     doc.status = "rejected"
+
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    await log_audit_event(
+        db=db,
+        tenant_id=actor.tenant_id,
+        actor_id=actor.id,
+        actor_email=actor.email,
+        actor_role=actor.role,
+        action="DOCUMENT_REJECT",
+        entity_type="document",
+        entity_id=id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={
+            "file_name": doc.file_name,
+            "rejection_reason": payload.rejection_reason
+        }
+    )
+    await db.commit()
+
+    return {
+        "status": "rejected",
+        "document_id": id,
+        "rejection_reason": payload.rejection_reason
+    }
 
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
@@ -625,7 +796,7 @@ async def export_document_data(
     request: Request,
     format: str = Query("json", pattern="^(json|csv)$"),
     mask_pii: Optional[bool] = Query(None),
-    actor: AuthenticatedActor = Depends(get_current_actor),
+    actor: AuthenticatedActor = Depends(require_permission(Permission.DOCUMENT_EXPORT)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -645,8 +816,25 @@ async def export_document_data(
     )
     fields = fields_res.scalars().all()
 
-    # Determine PII masking
-    should_mask = mask_pii if mask_pii is not None else True
+    # Determine PII masking: default to tenant pii_masking_default, only admin may unmask
+    stmt_tenant = select(Tenant).where(Tenant.id == actor.tenant_id)
+    res_tenant = await db.execute(stmt_tenant)
+    tenant = res_tenant.scalar_one_or_none()
+    default_mask = tenant.pii_masking_default if tenant is not None else True
+
+    if mask_pii is None:
+        should_mask = default_mask
+    else:
+        if mask_pii is False:
+            if actor.role != "admin":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: Only administrators may unmask PII during export"
+                )
+            should_mask = False
+        else:
+            should_mask = True
+
     from app.core.security import mask_pii_value
 
     export_data = {}
@@ -660,9 +848,26 @@ async def export_document_data(
             "page_number": f.page_number
         }
 
-    # Log audit event
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
+
+    # If unmasked, audit PII_UNMASKED
+    if not should_mask:
+        await log_audit_event(
+            db=db,
+            tenant_id=actor.tenant_id,
+            actor_id=actor.id,
+            actor_email=actor.email,
+            actor_role=actor.role,
+            action="PII_UNMASKED",
+            entity_type="document",
+            entity_id=id,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            details={"format": format, "reason": "unmasked export"}
+        )
+
+    # Log export audit event
     await log_audit_event(
         db=db,
         tenant_id=actor.tenant_id,
@@ -706,44 +911,11 @@ async def export_document_data(
     )
 
 
-@router.get("/events/stream")
-@router.get("/events")
-async def stream_tenant_events(
-    request: Request,
-    actor: AuthenticatedActor = Depends(get_current_actor),
-):
-    """
-    Server-Sent Events (SSE) stream for all pipeline events belonging to the current tenant.
-    Enforces strict tenant isolation: users never receive another tenant's events.
-    """
-    import asyncio
-    from app.services.event_bus import event_bus
-
-    async def event_generator():
-        try:
-            async for evt in event_bus.subscribe_tenant(actor.tenant_id):
-                if await request.is_disconnected():
-                    break
-                data = json.dumps(evt, ensure_ascii=False)
-                yield f"data: {data}\n\n"
-        except asyncio.CancelledError:
-            pass
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        }
-    )
-
 @router.get("/{id}/events")
 async def stream_document_events(
     id: str,
     request: Request,
-    actor: AuthenticatedActor = Depends(get_current_actor),
+    actor: AuthenticatedActor = Depends(require_stream_permission(Permission.DOCUMENT_VIEW)),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -760,6 +932,7 @@ async def stream_document_events(
     from app.services.event_bus import event_bus
 
     async def event_generator():
+        yield ": connected\n\n"
         try:
             async for evt in event_bus.subscribe_document(actor.tenant_id, id):
                 if await request.is_disconnected():

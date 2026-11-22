@@ -37,6 +37,8 @@ def get_model_provider() -> BaseModelProvider:
 
     # 3. Non-production / test execution paths
     if backend == "mock":
+        if settings.ENVIRONMENT.lower() != "test":
+            raise ValueError("Mock model adapter is only permitted when ENVIRONMENT=test")
         from tests.mock_adapter import MockModelAdapter
         return MockModelAdapter(is_fallback=False)
 
@@ -45,14 +47,15 @@ def get_model_provider() -> BaseModelProvider:
         if LocalOCRAdapter.is_available():
             return LocalOCRAdapter()
 
-        # In dev/test: report mock-fallback honestly and log explicit warning
+        # Only in ENVIRONMENT=test can we fall back to mock adapter
+        if settings.ENVIRONMENT.lower() == "test":
+            from tests.mock_adapter import MockModelAdapter
+            return MockModelAdapter(is_fallback=True)
+
         logger.warning(
-            "HONESTY/COMPLIANCE ALERT: MODEL_PROVIDER_BACKEND is configured as 'local', "
-            "but real local OCR engine (Tesseract ara+eng) is not installed on the dev host. "
-            "Reporting 'mock-fallback' via test adapter. Never silently falling back."
+            "Tesseract is not available on this host. LocalOCRAdapter will extract empty fields with confidence 0.0."
         )
-        from tests.mock_adapter import MockModelAdapter
-        return MockModelAdapter(is_fallback=True)
+        return LocalOCRAdapter()
 
     else:
         raise NotImplementedError(f"Model backend '{backend}' is not supported or compliant.")

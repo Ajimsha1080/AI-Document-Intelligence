@@ -74,21 +74,33 @@ def validate_emirates_id_number(id_str: str) -> Tuple[bool, Optional[str], Optio
     return is_valid, formatted_id, expected_check
 
 def parse_date_string(date_str: str) -> Optional[str]:
-    """Parses various date formats (DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY) into YYYY-MM-DD."""
+    """
+    Parses various date formats into standard ISO YYYY-MM-DD:
+    Supports D/M/YYYY, DD-MM-YYYY, DD.MM.YYYY, YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD,
+    and Eastern Arabic-Indic digits (٠-٩).
+    """
     if not date_str:
         return None
-    cleaned = normalize_arabic_digits(date_str).strip()
-    patterns = [
-        (r"(\d{2})[/\-\.](\d{2})[/\-\.](\d{4})", "%d/%m/%Y"),
-        (r"(\d{4})[/\-\.](\d{2})[/\-\.](\d{2})", "%Y-%m-%d"),
-    ]
-    for pattern, fmt in patterns:
-        m = re.search(pattern, cleaned)
-        if m:
-            try:
-                date_part = m.group(0).replace("-", "/").replace(".", "/")
-                parsed = datetime.strptime(date_part, "%d/%m/%Y")
-                return parsed.strftime("%Y-%m-%d")
-            except ValueError:
-                pass
+    cleaned = normalize_arabic_digits(str(date_str)).strip()
+
+    # Match YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+    m_year_first = re.search(r"\b(\d{4})[/\-\.](\d{1,2})[/\-\.](\d{1,2})\b", cleaned)
+    if m_year_first:
+        try:
+            year, month, day = int(m_year_first.group(1)), int(m_year_first.group(2)), int(m_year_first.group(3))
+            dt = datetime(year=year, month=month, day=day)
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Match D/M/YYYY, DD-MM-YYYY, DD.MM.YYYY
+    m_day_first = re.search(r"\b(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{4})\b", cleaned)
+    if m_day_first:
+        try:
+            day, month, year = int(m_day_first.group(1)), int(m_day_first.group(2)), int(m_day_first.group(3))
+            dt = datetime(year=year, month=month, day=day)
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
     return None

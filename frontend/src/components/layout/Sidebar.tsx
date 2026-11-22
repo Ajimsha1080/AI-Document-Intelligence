@@ -18,6 +18,13 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 
+interface NavItem {
+  id: ScreenId;
+  labelKey: TranslationKey;
+  icon: any;
+  badge?: string | number;
+}
+
 export function Sidebar() {
   const {
     t,
@@ -27,19 +34,19 @@ export function Sidebar() {
     toggleSidebar,
     language,
     activeTenant,
+    userRole,
+    documents,
   } = useApp();
 
-  const navSections: {
-    titleEn: string;
-    titleAr: string;
-    items: { id: ScreenId; labelKey: TranslationKey; icon: React.ElementType; badge?: string }[];
-  }[] = [
+  const needsReviewCount = documents.filter((d) => d.status === "needs_review").length;
+
+  const navSections: { titleEn: string; titleAr: string; items: NavItem[] }[] = [
     {
       titleEn: "Overview",
       titleAr: "نظرة عامة",
       items: [
         { id: "dashboard", labelKey: "navDashboard", icon: LayoutDashboard },
-        { id: "upload", labelKey: "navUpload", icon: UploadCloud },
+        ...(userRole !== "viewer" ? [{ id: "upload" as ScreenId, labelKey: "navUpload" as TranslationKey, icon: UploadCloud }] : []),
       ],
     },
     {
@@ -47,17 +54,17 @@ export function Sidebar() {
       titleAr: "المعالجة والتدقيق",
       items: [
         { id: "documents", labelKey: "navDocuments", icon: FileText },
-        { id: "review", labelKey: "navReview", icon: CheckSquare, badge: "12" },
+        { id: "review", labelKey: "navReview", icon: CheckSquare, badge: needsReviewCount > 0 ? needsReviewCount : undefined },
       ],
     },
     {
       titleEn: "Governance & Schemas",
       titleAr: "الحوكمة والمخططات",
       items: [
-        { id: "builder", labelKey: "navBuilder", icon: FileCode2 },
+        ...(userRole === "admin" ? [{ id: "builder" as ScreenId, labelKey: "navBuilder" as TranslationKey, icon: FileCode2 }] : []),
         { id: "audit", labelKey: "navAudit", icon: History },
-        { id: "team", labelKey: "navTeam", icon: Users },
-        { id: "settings", labelKey: "navSettings", icon: Settings },
+        ...(userRole === "admin" ? [{ id: "team" as ScreenId, labelKey: "navTeam" as TranslationKey, icon: Users }] : []),
+        ...(userRole === "admin" ? [{ id: "settings" as ScreenId, labelKey: "navSettings" as TranslationKey, icon: Settings }] : []),
       ],
     },
   ];

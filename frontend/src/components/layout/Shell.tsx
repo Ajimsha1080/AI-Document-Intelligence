@@ -17,8 +17,17 @@ import { SovereignChatbot } from "@/components/common/SovereignChatbot";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 
 export function Shell() {
-  const { currentScreen, toasts, dismissToast, language } = useApp();
+  const { currentScreen, toasts, dismissToast, language, isAuthenticated } = useApp();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Logged-out users see only login
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen w-screen bg-slate-950 items-center justify-center p-4">
+        <LoginModal isOpen={true} onClose={() => {}} />
+      </div>
+    );
+  }
 
   // Screen Router
   const renderCurrentScreen = () => {

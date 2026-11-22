@@ -84,8 +84,10 @@ interface AppContextType {
 
   // Schemas State
   schemas: DocumentTypeSchema[];
-  addSchema: (schema: DocumentTypeSchema) => void;
-  updateSchema: (schema: DocumentTypeSchema) => void;
+  refreshSchemas: () => Promise<void>;
+  addSchema: (schema: DocumentTypeSchema) => Promise<void>;
+  updateSchema: (schema: DocumentTypeSchema) => Promise<void>;
+  deleteSchema: (id: string) => Promise<void>;
 
   // Audit State
   auditLogs: AuditLogEntry[];
@@ -93,18 +95,29 @@ interface AppContextType {
   addAuditLog: (entry: Omit<AuditLogEntry, "id" | "timestamp">) => void;
 
   // Users & Settings State
+  isAuthenticated: boolean;
+  setIsAuthenticated: (val: boolean) => void;
+  currentUser: SystemUser | null;
+  userRole: "admin" | "reviewer" | "viewer";
+  logout: () => void;
   users: SystemUser[];
+  refreshUsers: () => Promise<void>;
   apiKeys: ApiKeyItem[];
+  refreshApiKeys: () => Promise<void>;
   retentionDays: number;
   hardDeleteDerived: boolean;
   webhookUrl: string;
   setRetentionDays: (days: number) => void;
+  saveRetentionDays: (days: number) => Promise<void>;
   setHardDeleteDerived: (val: boolean) => void;
   setWebhookUrl: (url: string) => void;
-  addUser: (name: string, email: string, role: SystemUser["role"]) => void;
-  updateUserRole: (id: string, role: SystemUser["role"]) => void;
-  generateApiKey: (name: string, role: string) => string;
-  revokeApiKey: (id: string) => void;
+  testWebhook: () => Promise<any>;
+  runRetentionSweep: () => Promise<void>;
+  addUser: (name: string, email: string, role: SystemUser["role"]) => Promise<void>;
+  updateUserRole: (id: string, role: SystemUser["role"]) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  generateApiKey: (name: string, role: string) => Promise<string>;
+  revokeApiKey: (id: string) => Promise<void>;
 
   // Notifications
   toasts: ToastNotification[];
@@ -126,25 +139,6 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 let toastSeq = 1;
 
-const defaultSystemUsers: SystemUser[] = [
-  {
-    id: "usr-1",
-    name: "Ajim Sha",
-    email: "ajimshaptm16@gmail.com",
-    role: "admin",
-    status: "active",
-    lastLogin: "16 Nov 2026",
-  },
-  {
-    id: "usr-2",
-    name: "Mariam Al Nuaimi",
-    email: "mariam.nuaimi@alhilal.ae",
-    role: "reviewer",
-    status: "active",
-    lastLogin: "15 Nov 2026",
-  },
-];
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>("en");
   const [theme, setTheme] = useState<Theme>("light");
@@ -153,7 +147,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [activeTenant] = useState<TenantInfo>(defaultTenant);
 
-  // Core Data Collections from live backend
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<SystemUser | null>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>("");
   const [activeFieldKey, setActiveFieldKey] = useState<string | null>("date_of_birth");
@@ -164,7 +159,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Config Collections
   const [schemas, setSchemas] = useState<DocumentTypeSchema[]>(DEFAULT_STANDARD_SCHEMAS);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [users, setUsers] = useState<SystemUser[]>(defaultSystemUsers);
+  const [users, setUsers] = useState<SystemUser[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
   const [retentionDays, setRetentionDays] = useState<number>(365);
   const [hardDeleteDerived, setHardDeleteDerived] = useState<boolean>(true);
@@ -172,6 +167,145 @@ export function AppProvider({ children }: { children: ReactNode }) {
     "https://api.alhilal-bank.ae/webhooks/doc-intelligence-approved"
   );
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
+
+  const userRole: "admin" | "reviewer" | "viewer" = (currentUser?.role as any) || "admin";
+
+  const showToast = useCallback((type: "success" | "error" | "info", messageEn: string, messageAr: string) => {
+    const newToast: ToastNotification = {
+      id: `toast-${Date.now()}-${toastSeq++}`,
+      type,
+      messageEn,
+      messageAr,
+    };
+    setToasts((prev) => [newToast, ...prev.slice(0, 4)]);
+  }, []);
+
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const addAuditLog = (entry: Omit<AuditLogEntry, "id" | "timestamp">) => {
+    const newEntry: AuditLogEntry = {
+      ...entry,
+      id: `aud-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newEntry, ...prev]);
+  };
+
+  const refreshDocuments = useCallback(async () => {
+    try {
+      if (!api.auth.getToken()) return;
+      const docs = await api.documents.list();
+      setDocuments(docs || []);
+      if (docs && docs.length > 0) {
+        setSelectedDocumentId((prev) => {
+          if (docs.some((d) => d.id === prev)) return prev;
+          return docs[0].id;
+        });
+      }
+    } catch {}
+  }, []);
+
+  const refreshAuditLogs = useCallback(async () => {
+    try {
+      if (!api.auth.getToken()) return;
+      const logs = await api.audit.list();
+      setAuditLogs(logs || []);
+    } catch {}
+  }, []);
+
+  const refreshSchemas = useCallback(async () => {
+    try {
+      if (!api.auth.getToken()) return;
+      const liveSchemas = await api.schemas.list();
+      if (liveSchemas && liveSchemas.length > 0) {
+        setSchemas(liveSchemas);
+      }
+    } catch {}
+  }, []);
+
+  const refreshUsers = useCallback(async () => {
+    try {
+      if (!api.auth.getToken()) return;
+      const liveUsers = await api.users.list();
+      setUsers(liveUsers || []);
+    } catch {}
+  }, []);
+
+  const refreshApiKeys = useCallback(async () => {
+    try {
+      if (!api.auth.getToken()) return;
+      const liveKeys = await api.apiKeys.list();
+      setApiKeys(liveKeys || []);
+    } catch {}
+  }, []);
+
+  const refreshTenantSettings = useCallback(async () => {
+    try {
+      if (!api.auth.getToken()) return;
+      const tenant = await api.tenants.getMe();
+      if (tenant?.retention_days) {
+        setRetentionDays(tenant.retention_days);
+      }
+      if (tenant?.pii_masking_default !== undefined) {
+        setPiiMasked(tenant.pii_masking_default);
+      }
+    } catch {}
+  }, []);
+
+  const loadUserProfile = useCallback(async () => {
+    try {
+      if (!api.auth.getToken()) return;
+      const me = await api.auth.getMe();
+      if (me) {
+        setCurrentUser({
+          id: me.id,
+          name: me.name || me.email?.split("@")[0] || "User",
+          email: me.email,
+          role: me.role || "admin",
+          status: "active",
+          lastLogin: "Active now",
+        });
+      }
+    } catch {}
+  }, []);
+
+  // Check authentication status on mount & listen for 401 unauthorized
+  useEffect(() => {
+    const token = api.auth.getToken();
+    setIsAuthenticated(!!token);
+    if (token) {
+      loadUserProfile();
+      refreshDocuments();
+      refreshAuditLogs();
+      refreshSchemas();
+      refreshUsers();
+      refreshApiKeys();
+      refreshTenantSettings();
+    }
+
+    const handleUnauthorized = () => {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setDocuments([]);
+      setAuditLogs([]);
+      setUsers([]);
+      setApiKeys([]);
+    };
+    window.addEventListener("sanad:unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("sanad:unauthorized", handleUnauthorized);
+  }, [loadUserProfile, refreshDocuments, refreshAuditLogs, refreshSchemas, refreshUsers, refreshApiKeys, refreshTenantSettings]);
+
+  const logout = useCallback(() => {
+    api.auth.logout();
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setDocuments([]);
+    setAuditLogs([]);
+    setUsers([]);
+    setApiKeys([]);
+  }, []);
 
   // Sync document dir and lang attributes
   useEffect(() => {
@@ -205,77 +339,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSidebarCollapsed((prev) => !prev);
   };
 
-  const showToast = (type: "success" | "error" | "info", messageEn: string, messageAr: string) => {
-    const newToast: ToastNotification = {
-      id: `toast-${Date.now()}-${toastSeq++}`,
-      type,
-      messageEn,
-      messageAr,
-    };
-    setToasts((prev) => [newToast, ...prev.slice(0, 4)]);
-  };
-
-  const dismissToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const addAuditLog = (entry: Omit<AuditLogEntry, "id" | "timestamp">) => {
-    const newEntry: AuditLogEntry = {
-      ...entry,
-      id: `aud-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-    };
-    setAuditLogs((prev) => [newEntry, ...prev]);
-  };
-
-  const refreshDocuments = useCallback(async () => {
-    try {
-      if (!api.auth.getToken()) {
-        try {
-          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
-        } catch {
-          return;
-        }
-      }
-      const docs = await api.documents.list();
-      setDocuments(docs || []);
-      if (docs && docs.length > 0) {
-        setSelectedDocumentId((prev) => {
-          if (docs.some((d) => d.id === prev)) return prev;
-          return docs[0].id;
-        });
-      }
-    } catch {
-      // Live server offline or network failure
-    }
-  }, []);
-
-  const refreshAuditLogs = useCallback(async () => {
-    try {
-      const logs = await api.audit.list();
-      setAuditLogs(logs || []);
-    } catch {
-      // Ignore
-    }
-  }, []);
-
-  const refreshSchemas = useCallback(async () => {
-    try {
-      const liveSchemas = await api.schemas.list();
-      if (liveSchemas && liveSchemas.length > 0) {
-        setSchemas(liveSchemas);
-      }
-    } catch {
-      // Keep DEFAULT_STANDARD_SCHEMAS
-    }
-  }, []);
-
-  // Fetch initial live data and subscribe to real-time events on mount
+  // Subscribe to real-time events on mount
   useEffect(() => {
-    refreshDocuments();
-    refreshAuditLogs();
-    refreshSchemas();
-
+    if (!isAuthenticated) return;
     const unsubscribe = api.documents.subscribeTenantEvents(() => {
       refreshDocuments();
       refreshAuditLogs();
@@ -284,37 +350,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       unsubscribe();
     };
-  }, [refreshDocuments, refreshAuditLogs, refreshSchemas]);
+  }, [isAuthenticated, refreshDocuments, refreshAuditLogs]);
 
-  const togglePiiMasked = () => {
-    setPiiMasked((prev) => !prev);
-    addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@adcb.ae",
-      actorRole: "Admin",
-      action: "PII_UNMASKED",
-      documentId: selectedDocumentId,
-      documentRef: selectedDocument?.referenceNumber,
-      ipAddress: "192.168.10.45",
-      detailsEn: piiMasked ? "Admin unmasked PII view" : "Admin masked PII view",
-      detailsAr: piiMasked ? "قام المشرف بإظهار البيانات الحساسة" : "قام المشرف بحجب البيانات الحساسة",
-    });
+  const togglePiiMasked = async () => {
+    const nextVal = !piiMasked;
+    setPiiMasked(nextVal);
+    try {
+      await api.tenants.updateSettings({ pii_masking_default: nextVal });
+      refreshAuditLogs();
+    } catch {}
   };
 
   const addDocument = (doc: DocumentItem) => {
     setDocuments((prev) => [doc, ...prev.filter((d) => d.id !== doc.id)]);
     setSelectedDocumentId(doc.id);
-    addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@adcb.ae",
-      actorRole: "Admin",
-      action: "DOCUMENT_UPLOAD",
-      documentId: doc.id,
-      documentRef: doc.referenceNumber,
-      ipAddress: "192.168.10.45",
-      detailsEn: `Uploaded document '${doc.fileName}' (${doc.documentTypeNameEn})`,
-      detailsAr: `تم رفع المستند '${doc.fileName}' (${doc.documentTypeNameAr})`,
-    });
+    refreshAuditLogs();
   };
 
   const updateDocumentField = async (docId: string, fieldKey: string, newValue: string) => {
@@ -341,28 +391,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       await api.documents.correctField(docId, fieldKey, newValue);
+      await refreshDocuments();
+      await refreshAuditLogs();
+      showToast("info", `Field '${fieldKey}' updated and saved!`, `تم تحديث وحفظ الحقل '${fieldKey}'!`);
     } catch (err: any) {
-      showToast("error", `Failed to save correction to server: ${err.message}`, "فشل حفظ التعديل على الخادم");
+      showToast("error", `Failed to save correction: ${err.message}`, "فشل حفظ التعديل على الخادم");
     }
-
-    addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@adcb.ae",
-      actorRole: "Admin",
-      action: "FIELD_CORRECTED",
-      documentId: docId,
-      documentRef: selectedDocument?.referenceNumber,
-      ipAddress: "192.168.10.45",
-      detailsEn: `Corrected field '${fieldKey}' to '${newValue}'`,
-      detailsAr: `تم تعديل وتصحيح الحقل '${fieldKey}' إلى '${newValue}'`,
-      diff: {
-        field: fieldKey,
-        oldValue: selectedDocument?.fields.find((f) => f.key === fieldKey)?.value || "",
-        newValue,
-      },
-    });
-
-    showToast("info", `Field '${fieldKey}' updated and saved!`, `تم تحديث وحفظ الحقل '${fieldKey}'!`);
   };
 
   const updateTableRow = (docId: string, rowId: string, field: keyof TableRowItem, value: any) => {
@@ -405,193 +439,182 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const approveDocument = async (docId: string) => {
-    setDocuments((prev) =>
-      prev.map((doc) => {
-        if (doc.id !== docId) return doc;
-        return {
-          ...doc,
-          status: "approved",
-          reviewedBy: "Ahmed Al Mansoori",
-          validationErrors: [],
-        };
-      })
-    );
-
     try {
       await api.documents.approve(docId);
+      await refreshDocuments();
+      await refreshAuditLogs();
+      showToast(
+        "success",
+        `Document approved successfully!`,
+        `تم اعتماد المستند بنجاح!`
+      );
     } catch (err: any) {
       showToast("error", `Failed to approve document: ${err.message}`, "فشل اعتماد المستند");
     }
-
-    addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@adcb.ae",
-      actorRole: "Admin",
-      action: "DOCUMENT_APPROVED",
-      documentId: docId,
-      documentRef: selectedDocument?.referenceNumber,
-      ipAddress: "192.168.10.45",
-      detailsEn: `Approved document ${selectedDocument?.referenceNumber}. Webhook dispatched.`,
-      detailsAr: `تم اعتماد المستند ${selectedDocument?.referenceNumber}. تم إطلاق الويب هوك.`,
-    });
-
-    showToast(
-      "success",
-      `Document ${selectedDocument?.referenceNumber} approved successfully!`,
-      `تم اعتماد المستند ${selectedDocument?.referenceNumber} بنجاح!`
-    );
   };
 
   const rejectDocument = async (docId: string) => {
-    setDocuments((prev) =>
-      prev.map((doc) => {
-        if (doc.id !== docId) return doc;
-        return {
-          ...doc,
-          status: "failed",
-          reviewedBy: "Ahmed Al Mansoori",
-        };
-      })
-    );
-
     try {
       await api.documents.reject(docId, "Rejected during human review");
+      await refreshDocuments();
+      await refreshAuditLogs();
+      showToast(
+        "error",
+        `Document marked as rejected.`,
+        `تم رفض المستند.`
+      );
     } catch (err: any) {
       showToast("error", `Failed to reject document: ${err.message}`, "فشل رفض المستند");
     }
-
-    addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@adcb.ae",
-      actorRole: "Admin",
-      action: "DOCUMENT_REJECTED",
-      documentId: docId,
-      documentRef: selectedDocument?.referenceNumber,
-      ipAddress: "192.168.10.45",
-      detailsEn: `Rejected document ${selectedDocument?.referenceNumber} due to compliance check failure.`,
-      detailsAr: `تم رفض المستند ${selectedDocument?.referenceNumber} لعدم اجتياز الفحص الرقابي.`,
-    });
-
-    showToast(
-      "error",
-      `Document ${selectedDocument?.referenceNumber} marked as rejected.`,
-      `تم رفض المستند ${selectedDocument?.referenceNumber}.`
-    );
   };
 
   const deleteDocument = async (docId: string) => {
-    const docToDelete = documents.find((d) => d.id === docId);
-    setDocuments((prev) => prev.filter((doc) => doc.id !== docId));
-
     try {
       await api.documents.delete(docId);
+      setDocuments((prev) => prev.filter((doc) => doc.id !== docId));
+      await refreshAuditLogs();
+      showToast("info", "Document permanently deleted.", "تم حذف المستند نهائياً.");
     } catch (err: any) {
       showToast("error", `Failed to delete document: ${err.message}`, "فشل حذف المستند");
     }
-
-    addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@adcb.ae",
-      actorRole: "Admin",
-      action: "DOCUMENT_DELETED",
-      documentId: docId,
-      documentRef: docToDelete?.referenceNumber,
-      ipAddress: "192.168.10.45",
-      detailsEn: `Hard deleted document and purged all derived embeddings & OCR text per UAE retention policy.`,
-      detailsAr: `تم الحذف النهائي للمستند وتطهير كافة البيانات والنصوص المستخرجة طبقاً لسياسة الاحتفاظ.`,
-    });
-
-    showToast("info", "Document permanently deleted.", "تم حذف المستند نهائياً.");
   };
 
   const bulkApproveDocuments = (docIds: string[]) => {
-    setDocuments((prev) =>
-      prev.map((doc) => (docIds.includes(doc.id) ? { ...doc, status: "approved" } : doc))
-    );
     docIds.forEach((id) => approveDocument(id));
-    showToast(
-      "success",
-      `Bulk approved ${docIds.length} documents!`,
-      `تم اعتماد ${docIds.length} مستندات بنجاح!`
-    );
   };
 
   const bulkDeleteDocuments = (docIds: string[]) => {
-    setDocuments((prev) => prev.filter((doc) => !docIds.includes(doc.id)));
     docIds.forEach((id) => deleteDocument(id));
-    showToast(
-      "info",
-      `Hard deleted ${docIds.length} documents.`,
-      `تم الحذف النهائي لعدد ${docIds.length} مستندات.`
-    );
   };
 
-  const addSchema = (schema: DocumentTypeSchema) => {
-    setSchemas((prev) => [...prev, schema]);
-    addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@adcb.ae",
-      actorRole: "Admin",
-      action: "SCHEMA_MODIFIED",
-      detailsEn: `Created custom schema '${schema.nameEn}' (${schema.code})`,
-      detailsAr: `تم إنشاء قالب مخصص '${schema.nameAr}' (${schema.code})`,
-      ipAddress: "192.168.10.45",
-    });
-    showToast("success", `Schema '${schema.nameEn}' created!`, `تم إنشاء القالب '${schema.nameAr}'!`);
+  const addSchema = async (schema: DocumentTypeSchema) => {
+    try {
+      const saved = await api.schemas.save(schema);
+      await refreshSchemas();
+      await refreshAuditLogs();
+      showToast("success", `Schema '${saved.nameEn}' created!`, `تم إنشاء القالب '${saved.nameAr}'!`);
+    } catch (err: any) {
+      showToast("error", `Failed to save schema: ${err.message}`, "فشل حفظ القالب");
+    }
   };
 
-  const updateSchema = (schema: DocumentTypeSchema) => {
-    setSchemas((prev) => prev.map((s) => (s.id === schema.id ? schema : s)));
-    addAuditLog({
-      actorName: "Ahmed Al Mansoori",
-      actorEmail: "admin@adcb.ae",
-      actorRole: "Admin",
-      action: "SCHEMA_MODIFIED",
-      detailsEn: `Updated schema definition '${schema.nameEn}'`,
-      detailsAr: `تم تحديث بنية القالب '${schema.nameAr}'`,
-      ipAddress: "192.168.10.45",
-    });
-    showToast("info", `Schema '${schema.nameEn}' updated.`, `تم تحديث القالب '${schema.nameAr}'.`);
+  const updateSchema = async (schema: DocumentTypeSchema) => {
+    try {
+      const saved = await api.schemas.save(schema);
+      await refreshSchemas();
+      await refreshAuditLogs();
+      showToast("info", `Schema '${saved.nameEn}' updated.`, `تم تحديث القالب '${saved.nameAr}'.`);
+    } catch (err: any) {
+      showToast("error", `Failed to update schema: ${err.message}`, "فشل تحديث القالب");
+    }
   };
 
-  const addUser = (name: string, email: string, role: SystemUser["role"]) => {
-    const newUser: SystemUser = {
-      id: `usr-${Date.now()}`,
-      name,
-      email,
-      role,
-      status: "active",
-      lastLogin: new Date().toISOString(),
-    };
-    setUsers((prev) => [...prev, newUser]);
-    showToast("success", `User ${name} added successfully!`, `تمت إضافة المستخدم ${name} بنجاح!`);
+  const deleteSchema = async (id: string) => {
+    try {
+      await api.schemas.delete(id);
+      await refreshSchemas();
+      await refreshAuditLogs();
+      showToast("info", "Schema deleted.", "تم حذف القالب.");
+    } catch (err: any) {
+      showToast("error", `Failed to delete schema: ${err.message}`, "فشل حذف القالب");
+    }
   };
 
-  const updateUserRole = (id: string, role: SystemUser["role"]) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role } : u)));
-    showToast("info", "User permissions updated.", "تم تحديث صلاحيات المستخدم.");
+  const addUser = async (name: string, email: string, role: SystemUser["role"]) => {
+    try {
+      const created = await api.users.create(name, email, role);
+      await refreshUsers();
+      await refreshAuditLogs();
+      showToast("success", `User ${created.email} added!`, `تمت إضافة المستخدم ${created.email} بنجاح!`);
+    } catch (err: any) {
+      showToast("error", `Failed to add user: ${err.message}`, "فشل إضافة المستخدم");
+    }
   };
 
-  const generateApiKey = (name: string, role: string) => {
-    const prefix = `sn_${name.toLowerCase().replace(/\s+/g, "_").slice(0, 4)}`;
-    const secret = `sec_${Date.now()}_prod`;
-    const newKey: ApiKeyItem = {
-      id: `key-${Date.now()}`,
-      name,
-      prefix,
-      role,
-      createdDate: new Date().toISOString().split("T")[0],
-      expiresInDays: 90,
-      status: "active",
-    };
-    setApiKeys((prev) => [newKey, ...prev]);
-    showToast("success", `API key '${name}' created!`, `تم إصدار المفتاح البرمجي '${name}'!`);
-    return `${prefix}_${secret}`;
+  const updateUserRole = async (id: string, role: SystemUser["role"]) => {
+    try {
+      await api.users.updateRole(id, role);
+      await refreshUsers();
+      await refreshAuditLogs();
+      showToast("info", "User permissions updated.", "تم تحديث صلاحيات المستخدم.");
+    } catch (err: any) {
+      showToast("error", `Failed to update user role: ${err.message}`, "فشل تحديث صلاحيات المستخدم");
+    }
   };
 
-  const revokeApiKey = (id: string) => {
-    setApiKeys((prev) => prev.map((k) => (k.id === id ? { ...k, status: "revoked" } : k)));
-    showToast("info", "API key revoked.", "تم إلغاء تفعيل المفتاح البرمجي.");
+  const deleteUser = async (id: string) => {
+    try {
+      await api.users.delete(id);
+      await refreshUsers();
+      await refreshAuditLogs();
+      showToast("info", "User deleted.", "تم حذف المستخدم.");
+    } catch (err: any) {
+      showToast("error", `Failed to delete user: ${err.message}`, "فشل حذف المستخدم");
+    }
+  };
+
+  const generateApiKey = async (name: string, role: string): Promise<string> => {
+    try {
+      const res = await api.apiKeys.create(name, role);
+      await refreshApiKeys();
+      await refreshAuditLogs();
+      showToast("success", `API key '${name}' created!`, `تم إصدار المفتاح البرمجي '${name}'!`);
+      return res.api_key;
+    } catch (err: any) {
+      showToast("error", `Failed to generate API key: ${err.message}`, "فشل إصدار المفتاح البرمجي");
+      return "";
+    }
+  };
+
+  const revokeApiKey = async (id: string) => {
+    try {
+      await api.apiKeys.revoke(id);
+      await refreshApiKeys();
+      await refreshAuditLogs();
+      showToast("info", "API key revoked.", "تم إلغاء تفعيل المفتاح البرمجي.");
+    } catch (err: any) {
+      showToast("error", `Failed to revoke key: ${err.message}`, "فشل إلغاء المفتاح");
+    }
+  };
+
+  const saveRetentionDays = async (days: number) => {
+    setRetentionDays(days);
+    try {
+      await api.tenants.updateSettings({ retention_days: days });
+      await refreshAuditLogs();
+      showToast("success", `Retention set to ${days} days`, `تم تعيين مدة الاحتفاظ إلى ${days} يوماً`);
+    } catch (err: any) {
+      showToast("error", `Failed to update retention: ${err.message}`, "فشل تحديث سياسة الاحتفاظ");
+    }
+  };
+
+  const runRetentionSweep = async () => {
+    try {
+      const res = await api.tenants.runRetentionSweep();
+      await refreshDocuments();
+      await refreshAuditLogs();
+      showToast(
+        "success",
+        `Retention sweep executed: ${res.purged_count || 0} expired documents purged.`,
+        `تم تنفيذ مسح الاحتفاظ: تم حذف ${res.purged_count || 0} مستندات منتهية الصلاحية.`
+      );
+    } catch (err: any) {
+      showToast("error", `Retention sweep failed: ${err.message}`, "فشل تنفيذ مسح الاحتفاظ");
+    }
+  };
+
+  const testWebhook = async () => {
+    try {
+      const res = await api.tenants.testWebhook(webhookUrl);
+      showToast(
+        res.dispatched ? "success" : "info",
+        `Webhook evaluated: dispatched=${res.dispatched} (${res.reason})`,
+        `تم تقييم الويب هوك: تم الإرسال=${res.dispatched}`
+      );
+      return res;
+    } catch (err: any) {
+      showToast("error", `Webhook test error: ${err.message}`, "خطأ أثناء اختبار الويب هوك");
+    }
   };
 
   const selectedDocument = documents.find((d) => d.id === selectedDocumentId) || documents[0];
@@ -642,23 +665,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
         bulkDeleteDocuments,
 
         schemas,
+        refreshSchemas,
         addSchema,
         updateSchema,
+        deleteSchema,
 
         auditLogs,
         refreshAuditLogs,
         addAuditLog,
 
+        isAuthenticated,
+        setIsAuthenticated,
+        currentUser,
+        userRole,
+        logout,
         users,
+        refreshUsers,
         apiKeys,
+        refreshApiKeys,
         retentionDays,
         hardDeleteDerived,
         webhookUrl,
         setRetentionDays,
+        saveRetentionDays,
         setHardDeleteDerived,
         setWebhookUrl,
+        testWebhook,
+        runRetentionSweep,
         addUser,
         updateUserRole,
+        deleteUser,
         generateApiKey,
         revokeApiKey,
 

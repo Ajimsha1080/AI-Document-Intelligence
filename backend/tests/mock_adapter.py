@@ -107,6 +107,14 @@ class MockModelAdapter(BaseModelProvider):
                     page_number=1,
                     bounding_box=BoundingBox(x=0.60, y=0.60, width=0.22, height=0.05)
                 ),
+                ExtractedFieldData(
+                    field_name="sex",
+                    value="M",
+                    raw_value="M",
+                    confidence=0.95,
+                    page_number=1,
+                    bounding_box=BoundingBox(x=0.25, y=0.65, width=0.10, height=0.05)
+                ),
             ]
         elif document_type_code == "uae_trade_license":
             fields = [

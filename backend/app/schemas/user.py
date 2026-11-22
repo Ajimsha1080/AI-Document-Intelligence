@@ -31,6 +31,7 @@ class ApiKeyCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
     role: UserRole = UserRole.API_CLIENT
     expires_in_days: Optional[int] = Field(default=90, ge=1, le=365)
+    expires_at: Optional[datetime] = None
 
 class ApiKeyResponse(BaseModel):
     id: str
@@ -39,6 +40,7 @@ class ApiKeyResponse(BaseModel):
     prefix: str
     role: str
     is_active: bool
+    expires_at: Optional[datetime] = None
     created_at: datetime
     raw_key: Optional[str] = None # Returned only once upon creation
 

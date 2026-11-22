@@ -104,20 +104,11 @@ export interface AuditLogEntry {
   timestamp: string;
   actorName: string;
   actorEmail: string;
-  actorRole: "Admin" | "Reviewer" | "Viewer" | "API Client";
-  action:
-    | "DOCUMENT_UPLOAD"
-    | "FIELD_CORRECTED"
-    | "DOCUMENT_APPROVED"
-    | "DOCUMENT_REJECTED"
-    | "DOCUMENT_EXPORTED"
-    | "DOCUMENT_DELETED"
-    | "PII_UNMASKED"
-    | "SCHEMA_MODIFIED"
-    | "API_KEY_GENERATED";
+  actorRole: "Admin" | "Reviewer" | "Viewer" | "API Client" | string;
+  action: string;
   documentId?: string;
   documentRef?: string;
-  ipAddress: string;
+  ipAddress?: string;
   detailsEn: string;
   detailsAr: string;
   diff?: {

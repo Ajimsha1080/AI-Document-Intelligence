@@ -9,6 +9,10 @@ backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
+os.environ["ENVIRONMENT"] = "test"
+from app.core.config import settings
+settings.ENVIRONMENT = "test"
+
 from app.core.database import Base, get_db
 import app.models  # Ensure all ORM models are registered
 from app.main import app as fastapi_app

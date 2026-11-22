@@ -1,8 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+import hmac
+import os
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.rbac import Permission
 from app.core.security import hash_password
 from app.models.tenant import Tenant
@@ -19,17 +23,26 @@ async def onboard_tenant(
     payload: TenantCreate,
     admin_user: UserCreate,
     request: Request,
+    x_platform_admin_key: Optional[str] = Header(None, alias="X-Platform-Admin-Key"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Initial tenant setup endpoint creating the tenant and primary administrator."""
+    """Initial tenant setup endpoint creating the tenant and primary administrator. Requires platform admin key."""
+    expected_key = os.environ.get("PLATFORM_ADMIN_API_KEY") or settings.PLATFORM_ADMIN_API_KEY
+    if not expected_key or not x_platform_admin_key or not hmac.compare_digest(x_platform_admin_key, expected_key):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Invalid or missing X-Platform-Admin-Key header"
+        )
+
     # Check if slug exists
     stmt = select(Tenant).where(Tenant.slug == payload.slug)
     res = await db.execute(stmt)
     if res.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Tenant with this slug already exists")
 
-    # Check if admin email exists
-    stmt_user = select(User).where(User.email == admin_user.email)
+    # Check if admin email exists (normalized lowercase)
+    clean_admin_email = admin_user.email.strip().lower()
+    stmt_user = select(User).where(User.email == clean_admin_email)
     res_user = await db.execute(stmt_user)
     if res_user.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="User with this email already exists")
@@ -46,7 +59,7 @@ async def onboard_tenant(
 
     user = User(
         tenant_id=tenant.id,
-        email=admin_user.email,
+        email=clean_admin_email,
         hashed_password=hash_password(admin_user.password),
         full_name=admin_user.full_name,
         role="admin",
@@ -131,3 +144,30 @@ async def update_current_tenant_settings(
     await db.commit()
     await db.refresh(tenant)
     return tenant
+
+
+@router.post("/test-webhook")
+async def test_webhook_dispatch(
+    payload: Optional[dict] = None,
+    actor: AuthenticatedActor = Depends(require_permission(Permission.TENANT_MANAGE)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Evaluates webhook dispatch configuration with sovereign signing."""
+    url = (payload or {}).get("url")
+    secret = (payload or {}).get("secret")
+    from app.services.webhook_service import dispatch_document_approved_webhook
+    meta = await dispatch_document_approved_webhook(
+        tenant_id=actor.tenant_id,
+        document_id="00000000-test-webhook-check",
+        document_data={"test": True, "event": "test.ping"},
+        webhook_url=url,
+        secret=secret
+    )
+    return {
+        "status": "evaluated",
+        "dispatched": meta.get("dispatched", False),
+        "reason": meta.get("reason", "no_webhook_endpoint_configured"),
+        "signature": meta.get("signature"),
+        "timestamp": meta.get("timestamp"),
+        "target_url": meta.get("target_url")
+    }

@@ -6,7 +6,7 @@ class TenantBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=255)
     slug: str = Field(..., min_length=2, max_length=100)
     tier: str = Field(default="standard")
-    retention_days: int = Field(default=365, ge=1)
+    retention_days: int = Field(default=365, ge=1, le=3650)
     pii_masking_default: bool = True
 
 class TenantCreate(TenantBase):
@@ -15,7 +15,7 @@ class TenantCreate(TenantBase):
 class TenantUpdate(BaseModel):
     name: Optional[str] = None
     tier: Optional[str] = None
-    retention_days: Optional[int] = None
+    retention_days: Optional[int] = Field(None, ge=1, le=3650)
     pii_masking_default: Optional[bool] = None
     is_active: Optional[bool] = None
 

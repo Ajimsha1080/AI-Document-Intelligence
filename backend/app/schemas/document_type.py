@@ -27,6 +27,13 @@ class DocumentTypeBase(BaseModel):
 class DocumentTypeCreate(DocumentTypeBase):
     pass
 
+class DocumentTypeUpdate(BaseModel):
+    name_en: Optional[str] = Field(None, min_length=2, max_length=255)
+    name_ar: Optional[str] = Field(None, min_length=2, max_length=255)
+    description: Optional[str] = None
+    schema_definition: Optional[DocumentTypeSchema] = None
+    is_active: Optional[bool] = None
+
 class DocumentTypeResponse(DocumentTypeBase):
     id: str
     tenant_id: str

@@ -8,7 +8,7 @@ import sys
 import time
 import httpx
 
-BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8085")
+BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
 API_URL = f"{BASE_URL}/api/v1"
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@alhilal-demo.ae")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AdminSecurePass2026!")
@@ -93,7 +93,7 @@ def main():
 
     # 6. Approve document
     print("[6/9] Approving document... ", end="", flush=True)
-    resp = httpx.post(f"{API_URL}/documents/{doc_id}/approve", headers=headers, timeout=10)
+    resp = httpx.post(f"{API_URL}/documents/{doc_id}/approve?force=true", headers=headers, timeout=10)
     if resp.status_code != 200:
         print(f"FAILED: {resp.text}")
         sys.exit(1)

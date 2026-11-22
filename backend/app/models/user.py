@@ -8,7 +8,7 @@ class User(Base, TenantAwareMixin, TimestampMixin):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     tenant_id = Column(String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
-    email = Column(String(255), nullable=False, index=True)
+    email = Column(String(255), nullable=False, unique=True, index=True)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     role = Column(String(50), nullable=False, default="reviewer")
@@ -18,6 +18,7 @@ class User(Base, TenantAwareMixin, TimestampMixin):
 
     __table_args__ = (
         Index("idx_tenant_user_email", "tenant_id", "email", unique=True),
+        Index("ix_users_email_unique", "email", unique=True),
     )
 
 class ApiKey(Base, TenantAwareMixin):

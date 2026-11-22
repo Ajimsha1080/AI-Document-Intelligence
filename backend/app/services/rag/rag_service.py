@@ -29,8 +29,20 @@ class SovereignRAGService:
         3. Retrieves hybrid vectors + full-text RRF with tenant boundary.
         4. Synthesizes answers and strictly verifies citations.
         """
-        # 1. Guard against prompt injection
+        # 1. Guard against prompt injection - refuse immediately if flagged
         is_suspicious, reason = check_prompt_injection(query)
+        if is_suspicious:
+            logger.warning(f"Sovereign Prompt Guard refused query: {reason}")
+            return {
+                "query": query,
+                "answer": "Request refused: Detected prompt injection pattern or policy violation.",
+                "answer_ar": "تم رفض الطلب: تم اكتشاف محاولة حقن أو انتهاك لسياسة الأمان.",
+                "mode": "refusal",
+                "confidence": 0.0,
+                "citations": [],
+                "prompt_guard_flagged": True
+            }
+
         clean_query = sanitize_untrusted_text(query)
 
         # 2. Check structured field router first
@@ -61,6 +73,15 @@ class SovereignRAGService:
             top_k=top_k
         )
 
+        # Drop retrieved chunks containing injection text
+        clean_retrieved = []
+        for c in retrieved_chunks:
+            c_text = c.get("chunk_text") or c.get("snippet") or ""
+            c_inj, _ = check_prompt_injection(c_text)
+            if not c_inj:
+                clean_retrieved.append(c)
+        retrieved_chunks = clean_retrieved
+
         if not retrieved_chunks:
             return {
                 "query": query,
@@ -69,11 +90,14 @@ class SovereignRAGService:
                 "mode": "hybrid_rag",
                 "confidence": 0.0,
                 "citations": [],
-                "prompt_guard_flagged": is_suspicious
+                "prompt_guard_flagged": False
             }
 
         # 4. Generate grounded answer
-        gen_res = self.generator.generate(clean_query, retrieved_chunks)
+        if hasattr(self.generator, "generate_async"):
+            gen_res = await self.generator.generate_async(clean_query, retrieved_chunks)
+        else:
+            gen_res = self.generator.generate(clean_query, retrieved_chunks)
 
         # 5. Strict citation verification: every citation must exist in retrieved chunks
         valid_chunk_ids = {c["id"] for c in retrieved_chunks}

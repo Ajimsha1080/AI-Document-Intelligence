@@ -25,6 +25,8 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
     currentScreen,
     language,
     showToast,
+    currentUser,
+    userRole,
   } = useApp();
 
   const screenTitles: Record<string, { en: string; ar: string }> = {
@@ -140,17 +142,17 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
           <button
             onClick={onOpenLoginModal}
             className="flex items-center gap-2 ps-1.5 border-s border-border/80 hover:opacity-85 transition text-start"
-            title="Click to switch user or view Sovereign SSO gateway"
+            title="Click to view user profile or logout"
           >
             <div className="w-7 h-7 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center font-bold text-xs shadow-xs">
-              AJ
+              {(currentUser?.name || "U").slice(0, 2).toUpperCase()}
             </div>
             <div className="hidden lg:block text-start leading-tight">
               <div className="text-xs font-semibold text-foreground">
-                Ajim Sha
+                {currentUser?.name || (language === "ar" ? "المستخدم" : "User")}
               </div>
-              <div className="text-[10px] text-muted-foreground">
-                Administrator
+              <div className="text-[10px] text-muted-foreground capitalize">
+                {userRole}
               </div>
             </div>
           </button>

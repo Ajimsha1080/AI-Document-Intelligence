@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-BASE_URL="${API_BASE_URL:-http://localhost:8080}"
+BASE_URL="${API_BASE_URL:-http://localhost:8000}"
 API_URL="${BASE_URL}/api/v1"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@alhilal-demo.ae}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-AdminSecurePass2026!}"
@@ -126,7 +126,7 @@ echo "OK (Value: '${CORRECTED_VAL}')"
 # STEP 6: Document Approval
 # ------------------------------------------------------------------------------
 echo -n "[6/9] Approving document... "
-APPROVE_RESP=$(curl -s -f -X POST "${API_URL}/documents/${DOC_ID}/approve" \
+APPROVE_RESP=$(curl -s -f -X POST "${API_URL}/documents/${DOC_ID}/approve?force=true" \
   -H "${AUTH_HEADER}")
 
 DOC_DETAIL=$(curl -s -f -H "${AUTH_HEADER}" "${API_URL}/documents/${DOC_ID}")

@@ -29,6 +29,7 @@ export function ReviewScreen() {
     language,
     dir,
     t,
+    userRole,
   } = useApp();
 
   const Arrow = dir === "rtl" ? ArrowLeft : ArrowRight;
@@ -224,21 +225,29 @@ export function ReviewScreen() {
           {/* Action Footer Bar */}
           <div className="p-3 border-t border-border/80 bg-secondary/30 space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <button
-                onClick={() => approveDocument(selectedDocument.id)}
-                className="flex-1 py-2 px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold text-xs flex items-center justify-center gap-1.5 shadow-xs hover:bg-zinc-800 dark:hover:bg-white/90 transition active:scale-[0.98]"
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
-                <span>{t("actionApprove")} (Enter)</span>
-              </button>
+              {userRole !== "viewer" ? (
+                <>
+                  <button
+                    onClick={() => approveDocument(selectedDocument.id)}
+                    className="flex-1 py-2 px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold text-xs flex items-center justify-center gap-1.5 shadow-xs hover:bg-zinc-800 dark:hover:bg-white/90 transition active:scale-[0.98]"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
+                    <span>{t("actionApprove")} (Enter)</span>
+                  </button>
 
-              <button
-                onClick={() => rejectDocument(selectedDocument.id)}
-                className="py-2 px-3 rounded-lg border border-border/80 bg-secondary/40 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-xs flex items-center justify-center gap-1 transition"
-              >
-                <XCircle className="w-4 h-4" />
-                <span>{t("actionReject")}</span>
-              </button>
+                  <button
+                    onClick={() => rejectDocument(selectedDocument.id)}
+                    className="py-2 px-3 rounded-lg border border-border/80 bg-secondary/40 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-xs flex items-center justify-center gap-1 transition"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    <span>{t("actionReject")}</span>
+                  </button>
+                </>
+              ) : (
+                <div className="flex-1 text-center py-2 text-xs text-muted-foreground italic font-medium">
+                  {language === "ar" ? "وضع العرض فقط (لا توجد صلاحيات للاعتماد أو الرفض)" : "View-only mode (Approval & rejection disabled for Viewer)"}
+                </div>
+              )}
 
               <button
                 onClick={() => {

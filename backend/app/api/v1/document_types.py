@@ -8,6 +8,7 @@ from app.core.rbac import Permission
 from app.models.document_type import DocumentType
 from app.schemas.document_type import (
     DocumentTypeCreate,
+    DocumentTypeUpdate,
     DocumentTypeResponse,
     DEFAULT_EMIRATES_ID_SCHEMA,
     DEFAULT_TRADE_LICENSE_SCHEMA
@@ -155,3 +156,89 @@ async def seed_standard_uae_document_types(
     )
     all_res = await db.execute(stmt)
     return all_res.scalars().all()
+
+@router.put("/{id}", response_model=DocumentTypeResponse)
+async def update_document_type(
+    id: str,
+    payload: DocumentTypeUpdate,
+    request: Request,
+    actor: AuthenticatedActor = Depends(require_permission(Permission.SCHEMA_MANAGE)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Updates a tenant document type schema."""
+    stmt = select(DocumentType).where(
+        DocumentType.id == id,
+        DocumentType.tenant_id == actor.tenant_id
+    )
+    res = await db.execute(stmt)
+    dt = res.scalar_one_or_none()
+    if not dt:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document type not found")
+
+    if payload.name_en is not None:
+        dt.name_en = payload.name_en
+    if payload.name_ar is not None:
+        dt.name_ar = payload.name_ar
+    if payload.description is not None:
+        dt.description = payload.description
+    if payload.schema_definition is not None:
+        dt.schema_definition = payload.schema_definition.model_dump()
+    if payload.is_active is not None:
+        dt.is_active = payload.is_active
+
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+
+    await log_audit_event(
+        db=db,
+        tenant_id=actor.tenant_id,
+        actor_id=actor.id,
+        actor_email=actor.email,
+        actor_role=actor.role,
+        action="DOCUMENT_TYPE_UPDATED",
+        entity_type="document_type",
+        entity_id=dt.id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={"code": dt.code, "name_en": dt.name_en}
+    )
+    await db.commit()
+    await db.refresh(dt)
+    return dt
+
+@router.delete("/{id}")
+async def delete_document_type(
+    id: str,
+    request: Request,
+    actor: AuthenticatedActor = Depends(require_permission(Permission.SCHEMA_MANAGE)),
+    db: AsyncSession = Depends(get_db)
+):
+    """Deletes a document type schema for the caller's tenant."""
+    stmt = select(DocumentType).where(
+        DocumentType.id == id,
+        DocumentType.tenant_id == actor.tenant_id
+    )
+    res = await db.execute(stmt)
+    dt = res.scalar_one_or_none()
+    if not dt:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document type not found")
+
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+
+    await log_audit_event(
+        db=db,
+        tenant_id=actor.tenant_id,
+        actor_id=actor.id,
+        actor_email=actor.email,
+        actor_role=actor.role,
+        action="DOCUMENT_TYPE_DELETED",
+        entity_type="document_type",
+        entity_id=dt.id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={"code": dt.code, "name_en": dt.name_en}
+    )
+    await db.delete(dt)
+    await db.commit()
+    return {"detail": "Document type deleted successfully", "id": id}

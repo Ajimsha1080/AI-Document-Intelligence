@@ -6,6 +6,28 @@ from app.core.config import settings
 
 logger = logging.getLogger("storage_service")
 
+MIME_EXTENSION_MAP = {
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/tiff": ".tiff",
+    "application/pdf": ".pdf",
+}
+
+def get_extension_for_mime(mime_type: str, fallback_filename: str = "") -> str:
+    clean_mime = (mime_type or "").lower().split(";")[0].strip()
+    if clean_mime in MIME_EXTENSION_MAP:
+        return MIME_EXTENSION_MAP[clean_mime]
+    import mimetypes
+    guessed = mimetypes.guess_extension(clean_mime)
+    if guessed:
+        return guessed
+    _, ext = os.path.splitext(fallback_filename)
+    if ext and len(ext) <= 10 and ext.replace(".", "").isalnum():
+        return ext.lower()
+    return ".bin"
+
 class StorageService:
     """
     Sovereign S3-compatible Object Storage Service with air-gapped local fallback.
@@ -48,9 +70,11 @@ class StorageService:
         mime_type: str
     ) -> str:
         """
-        Stores document content under tenant-isolated prefix: {tenant_id}/{document_id}/{filename}
+        Stores document content strictly under tenant-isolated path: {tenant_id}/{document_id}/original{ext}
+        Prevents directory traversal regardless of client-supplied filename.
         """
-        storage_key = f"{tenant_id}/{document_id}/{filename}"
+        ext = get_extension_for_mime(mime_type, filename)
+        storage_key = f"{tenant_id}/{document_id}/original{ext}"
 
         if self._s3_available and self._s3_client:
             try:
@@ -65,9 +89,10 @@ class StorageService:
             except Exception as e:
                 logger.warning(f"S3 upload failed ({e}); falling back to local sovereign storage.")
 
-        # Local storage fallback
-        local_path = os.path.join(settings.LOCAL_STORAGE_DIR, tenant_id, document_id, filename)
-        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        # Local storage fallback: {LOCAL_STORAGE_DIR}/{tenant_id}/{document_id}/original{ext}
+        local_dir = os.path.join(settings.LOCAL_STORAGE_DIR, tenant_id, document_id)
+        os.makedirs(local_dir, exist_ok=True)
+        local_path = os.path.join(local_dir, f"original{ext}")
         with open(local_path, "wb") as f:
             f.write(content)
         return local_path

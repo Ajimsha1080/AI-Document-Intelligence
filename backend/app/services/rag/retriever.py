@@ -5,6 +5,7 @@ from sqlalchemy import select, or_
 
 from app.models.document_chunk import DocumentChunk
 from app.services.rag.arabic_normalizer import normalize_arabic_text
+from app.services.rag.prompt_guard import check_prompt_injection
 from app.services.rag.providers import (
     EmbeddingProvider,
     RerankerProvider,
@@ -53,6 +54,17 @@ class HybridRetriever:
 
         result = await db.execute(stmt)
         chunks = result.scalars().all()
+
+        if not chunks:
+            return []
+
+        # Drop retrieved chunks containing adversarial prompt injection text
+        clean_chunks = []
+        for ch in chunks:
+            is_inj, _ = check_prompt_injection(ch.chunk_text or "")
+            if not is_inj:
+                clean_chunks.append(ch)
+        chunks = clean_chunks
 
         if not chunks:
             return []

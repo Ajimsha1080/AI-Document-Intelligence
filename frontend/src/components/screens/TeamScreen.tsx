@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { SystemUser } from "@/types";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Trash2 } from "lucide-react";
 
 export function TeamScreen() {
-  const { users, addUser, language, showToast } = useApp();
+  const { users, addUser, deleteUser, userRole, language, showToast } = useApp();
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<SystemUser["role"]>("reviewer");
@@ -92,16 +92,26 @@ export function TeamScreen() {
                     {getRoleLabel(user.role)}
                   </span>
                   <span className="text-xs text-muted-foreground font-mono">
-                    {user.lastLogin || "16 Nov 2026"}
+                    {user.lastLogin || "Active"}
                   </span>
+                  {userRole === "admin" && (
+                    <button
+                      onClick={() => deleteUser(user.id)}
+                      className="p-1 rounded text-muted-foreground hover:text-rose-600 transition"
+                      title="Remove Member"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right Column: Invite a Colleague Card (5 cols) */}
-        <div className="lg:col-span-5 bg-card border border-border/80 rounded-2xl p-6 shadow-xs space-y-4">
+        {/* Right Column: Invite a Colleague Card (5 cols - Admin only) */}
+        {userRole === "admin" && (
+          <div className="lg:col-span-5 bg-card border border-border/80 rounded-2xl p-6 shadow-xs space-y-4">
           <div className="space-y-1">
             <h2 className="text-sm font-bold text-foreground">
               {language === "ar" ? "دعوة زميل عمل" : "Invite a colleague"}
@@ -147,6 +157,7 @@ export function TeamScreen() {
             </button>
           </form>
         </div>
+        )}
       </div>
     </div>
   );

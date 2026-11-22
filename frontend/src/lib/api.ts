@@ -5,6 +5,8 @@ import {
   ExtractedField,
   AuditLogEntry,
   DocumentTypeSchema,
+  SystemUser,
+  ApiKeyItem,
 } from "@/types";
 
 export interface PipelineStageEvent {
@@ -19,15 +21,31 @@ export interface PipelineStageEvent {
   timestamp: string;
 }
 
-const STORAGE_KEY_TOKEN = "sanad_access_token";
+export const STORAGE_KEY_TOKEN = "sanad_access_token";
 
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8085";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-function getAuthHeader(): Record<string, string> {
+export function getAuthHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
   const token = localStorage.getItem(STORAGE_KEY_TOKEN);
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TOKEN) : null;
+  const headers = new Headers(options.headers || {});
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(STORAGE_KEY_TOKEN);
+      window.dispatchEvent(new CustomEvent("sanad:unauthorized"));
+    }
+  }
+  return res;
 }
 
 // Map backend field names to localized UI names
@@ -39,18 +57,26 @@ function formatFieldNameEn(name: string): string {
     name_ar: "Full Name (Arabic)",
     name_en: "Full Name (English)",
     nationality: "Nationality",
+    nationality_en: "Nationality (English)",
+    nationality_ar: "Nationality (Arabic)",
     date_of_birth: "Date of Birth",
     expiry_date: "Expiry Date",
     issue_date: "Issue Date",
     sex: "Sex",
+    gender: "Sex / Gender",
     trade_name: "Trade Name",
+    company_name_en: "Company Name (English)",
+    company_name_ar: "Company Name (Arabic)",
     license_number: "License Number",
     trn: "Tax Registration Number (TRN)",
     total_amount: "Total Amount (AED)",
     vat_amount: "VAT Amount",
+    subtotal: "Subtotal",
     invoice_number: "Invoice Number",
     invoice_date: "Invoice Date",
-    supplier_name: "Supplier Name",
+    supplier_name: "Supplier / Vendor Name",
+    vendor_name: "Vendor Name",
+    customer_name: "Customer Name",
   };
   return map[name] || name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -63,33 +89,42 @@ function formatFieldNameAr(name: string): string {
     name_ar: "الاسم الكامل (بالعربية)",
     name_en: "الاسم الكامل (بالإنجليزية)",
     nationality: "الجنسية",
+    nationality_en: "الجنسية (بالإنجليزية)",
+    nationality_ar: "الجنسية (بالعربية)",
     date_of_birth: "تاريخ الميلاد",
     expiry_date: "تاريخ الانتهاء",
     issue_date: "تاريخ الإصدار",
     sex: "الجنس",
+    gender: "الجنس",
     trade_name: "الاسم التجاري",
+    company_name_en: "اسم الشركة (بالإنجليزية)",
+    company_name_ar: "اسم الشركة (بالعربية)",
     license_number: "رقم الرخصة",
     trn: "رقم التسجيل الضريبي",
     total_amount: "المبلغ الإجمالي (درهم)",
     vat_amount: "مبلغ ضريبة القيمة المضافة",
+    subtotal: "المبلغ الفرعي",
     invoice_number: "رقم الفاتورة",
     invoice_date: "تاريخ الفاتورة",
     supplier_name: "اسم المورد",
+    vendor_name: "اسم المورد",
+    customer_name: "اسم العميل",
   };
   return map[name] || name;
 }
 
 function getFieldSection(name: string): "identity" | "company" | "dates" | "financials" | "general" {
-  if (["id_number", "name_ar", "name_en", "full_name_ar", "full_name_en", "nationality", "sex"].includes(name)) return "identity";
+  if (["id_number", "name_ar", "name_en", "full_name_ar", "full_name_en", "nationality", "nationality_en", "nationality_ar", "sex", "gender"].includes(name)) return "identity";
   if (["date_of_birth", "expiry_date", "issue_date", "invoice_date"].includes(name)) return "dates";
-  if (["trade_name", "license_number", "entity_name", "supplier_name"].includes(name)) return "company";
-  if (["total_amount", "trn", "vat_amount", "invoice_number"].includes(name)) return "financials";
+  if (["trade_name", "license_number", "entity_name", "company_name_en", "company_name_ar", "supplier_name", "vendor_name", "customer_name"].includes(name)) return "company";
+  if (["total_amount", "trn", "vat_amount", "subtotal", "invoice_number"].includes(name)) return "financials";
   return "general";
 }
 
 // Convert Backend Document JSON to frontend DocumentItem
 export function mapBackendDocumentToItem(doc: any): DocumentItem {
-  const typeCode = (doc.document_type_code || "emirates_id") as DocumentTypeCode;
+  // Use document_type_code from API
+  const typeCode = (doc.document_type_code || doc.document_type?.code || "emirates_id") as DocumentTypeCode;
   const isEid = typeCode === "emirates_id";
   const isLicense = typeCode === "uae_trade_license";
   const isInvoice = typeCode === "commercial_invoice";
@@ -105,6 +140,9 @@ export function mapBackendDocumentToItem(doc: any): DocumentItem {
   } else if (isInvoice) {
     typeNameEn = "Commercial Tax Invoice";
     typeNameAr = "فاتورة ضريبية تجارية";
+  } else if (doc.document_type?.name_en) {
+    typeNameEn = doc.document_type.name_en;
+    typeNameAr = doc.document_type.name_ar || doc.document_type.name_en;
   }
 
   const fields: ExtractedField[] = (doc.extracted_fields || []).map((f: any) => {
@@ -144,10 +182,7 @@ export function mapBackendDocumentToItem(doc: any): DocumentItem {
       isResolved: false,
     }));
 
-  const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TOKEN) : "";
-  const previewUrl = token
-    ? `${API_BASE}/api/v1/documents/${doc.id}/file?token=${encodeURIComponent(token)}`
-    : `${API_BASE}/api/v1/documents/${doc.id}/file`;
+  const previewUrl = `${API_BASE}/api/v1/documents/${doc.id}/file`;
 
   return {
     id: doc.id,
@@ -171,22 +206,31 @@ export function mapBackendDocumentToItem(doc: any): DocumentItem {
 
 // Convert Backend Audit Log JSON to frontend AuditLogEntry
 export function mapBackendAuditToEntry(log: any): AuditLogEntry {
-  const actionMap: Record<string, AuditLogEntry["action"]> = {
+  const actionMap: Record<string, string> = {
     DOCUMENT_UPLOAD: "DOCUMENT_UPLOAD",
     FIELD_CORRECT: "FIELD_CORRECTED",
+    FIELD_CORRECTED: "FIELD_CORRECTED",
     DOCUMENT_APPROVE: "DOCUMENT_APPROVED",
+    DOCUMENT_APPROVED: "DOCUMENT_APPROVED",
     DOCUMENT_REJECT: "DOCUMENT_REJECTED",
+    DOCUMENT_REJECTED: "DOCUMENT_REJECTED",
     DOCUMENT_DELETE: "DOCUMENT_DELETED",
+    DOCUMENT_DELETED: "DOCUMENT_DELETED",
     DOCUMENT_EXPORT: "DOCUMENT_EXPORTED",
+    DOCUMENT_EXPORTED: "DOCUMENT_EXPORTED",
     PII_UNMASK: "PII_UNMASKED",
+    PII_UNMASKED: "PII_UNMASKED",
   };
 
-  const action = actionMap[log.action] || "DOCUMENT_UPLOAD";
-  const diff = log.details && log.details.field_name
+  // Show unknown actions as-is
+  const action = actionMap[log.action] || log.action || "UNKNOWN_ACTION";
+
+  // Audit diff uses original_value / corrected_value
+  const diff = log.details && (log.details.field_name || log.details.field)
     ? {
-        field: log.details.field_name,
-        oldValue: log.details.old_value || "",
-        newValue: log.details.new_value || "",
+        field: log.details.field_name || log.details.field,
+        oldValue: String(log.details.original_value ?? log.details.old_value ?? ""),
+        newValue: String(log.details.corrected_value ?? log.details.new_value ?? ""),
       }
     : undefined;
 
@@ -210,12 +254,14 @@ export interface ApiAdapter {
   auth: {
     login: (email: string, password: string) => Promise<{ access_token: string; user: any }>;
     getMe: () => Promise<any>;
+    getStreamToken: () => Promise<string>;
     logout: () => void;
     getToken: () => string | null;
   };
   documents: {
     list: (params?: { status?: string; limit?: number; offset?: number }) => Promise<DocumentItem[]>;
     get: (id: string) => Promise<DocumentItem>;
+    getFileBlobUrl: (id: string) => Promise<string>;
     upload: (file: File, docType?: string, onProgress?: (p: number) => void) => Promise<DocumentItem>;
     correctField: (id: string, fieldName: string, correctedValue: string, reason?: string) => Promise<ExtractedField>;
     approve: (id: string) => Promise<{ status: string; webhook?: any }>;
@@ -230,6 +276,25 @@ export interface ApiAdapter {
   };
   schemas: {
     list: () => Promise<DocumentTypeSchema[]>;
+    save: (schema: DocumentTypeSchema) => Promise<DocumentTypeSchema>;
+    delete: (id: string) => Promise<void>;
+  };
+  users: {
+    list: () => Promise<SystemUser[]>;
+    create: (name: string, email: string, role: string, password?: string) => Promise<SystemUser>;
+    updateRole: (id: string, role: string) => Promise<SystemUser>;
+    delete: (id: string) => Promise<void>;
+  };
+  apiKeys: {
+    list: () => Promise<ApiKeyItem[]>;
+    create: (name: string, role?: string, expiresInDays?: number) => Promise<{ api_key: string; key: ApiKeyItem }>;
+    revoke: (id: string) => Promise<void>;
+  };
+  tenants: {
+    getMe: () => Promise<any>;
+    updateSettings: (data: { retention_days?: number; pii_masking_default?: boolean }) => Promise<any>;
+    testWebhook: (url: string) => Promise<any>;
+    runRetentionSweep: () => Promise<any>;
   };
   rag: {
     query: (query: string, documentId?: string, topK?: number) => Promise<RAGResponse>;
@@ -263,7 +328,7 @@ export const api: ApiAdapter = {
       const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "Login failed" }));
@@ -276,15 +341,24 @@ export const api: ApiAdapter = {
       return { access_token: data.access_token, user: data };
     },
     async getMe() {
-      const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
-        headers: { ...getAuthHeader() },
-      });
+      const res = await authFetch(`${API_BASE}/api/v1/auth/me`);
       if (!res.ok) throw new Error("Failed to fetch user profile");
       return await res.json();
+    },
+    async getStreamToken(): Promise<string> {
+      const res = await authFetch(`${API_BASE}/api/v1/auth/stream-token`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        throw new Error("Failed to obtain secure stream token");
+      }
+      const data = await res.json();
+      return data.stream_token;
     },
     logout() {
       if (typeof window !== "undefined") {
         localStorage.removeItem(STORAGE_KEY_TOKEN);
+        window.dispatchEvent(new CustomEvent("sanad:unauthorized"));
       }
     },
     getToken() {
@@ -295,75 +369,89 @@ export const api: ApiAdapter = {
 
   documents: {
     async list(params) {
-      if (!api.auth.getToken()) {
-        try {
-          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
-        } catch {}
-      }
       const q = new URLSearchParams();
       if (params?.status) q.append("status", params.status);
       if (params?.limit) q.append("limit", params.limit.toString());
       if (params?.offset) q.append("offset", params.offset.toString());
 
-      const res = await fetch(`${API_BASE}/api/v1/documents/?${q.toString()}`, {
-        headers: { ...getAuthHeader() },
-      });
+      const res = await authFetch(`${API_BASE}/api/v1/documents/?${q.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch documents");
       const data = await res.json();
       return (data.documents || []).map(mapBackendDocumentToItem);
     },
 
     async get(id) {
-      if (!api.auth.getToken()) {
-        try {
-          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
-        } catch {}
-      }
-      const res = await fetch(`${API_BASE}/api/v1/documents/${id}`, {
-        headers: { ...getAuthHeader() },
-      });
+      const res = await authFetch(`${API_BASE}/api/v1/documents/${id}`);
       if (!res.ok) throw new Error(`Document ${id} not found`);
       const data = await res.json();
       return mapBackendDocumentToItem(data);
     },
 
-    async upload(file, docType = "emirates_id", onProgress) {
-      if (!api.auth.getToken()) {
-        try {
-          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
-        } catch {}
-      }
-      const formData = new FormData();
-      formData.append("file", file);
-      if (docType && docType !== "auto") {
-        formData.append("document_type_code", docType);
-      }
+    async getFileBlobUrl(id: string): Promise<string> {
+      const res = await authFetch(`${API_BASE}/api/v1/documents/${id}/file`);
+      if (!res.ok) throw new Error(`Failed to load preview for document ${id}`);
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    },
 
-      if (onProgress) onProgress(20);
+    // Real upload progress via XMLHttpRequest; auto-detects type unless user picks one
+    upload(file: File, docType?: string, onProgress?: (p: number) => void): Promise<DocumentItem> {
+      return new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        // Only append if user explicitly chose a type (auto-detects if omitted)
+        if (docType && docType !== "auto") {
+          formData.append("document_type_code", docType);
+        }
 
-      const res = await fetch(`${API_BASE}/api/v1/documents/upload`, {
-        method: "POST",
-        headers: { ...getAuthHeader() },
-        body: formData,
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${API_BASE}/api/v1/documents/upload`);
+
+        const token = api.auth.getToken();
+        if (token) {
+          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        }
+
+        if (xhr.upload && onProgress) {
+          xhr.upload.onprogress = (evt) => {
+            if (evt.lengthComputable) {
+              const pct = Math.round((evt.loaded / evt.total) * 100);
+              onProgress(pct);
+            }
+          };
+        }
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              resolve(mapBackendDocumentToItem(data));
+            } catch (err) {
+              reject(err);
+            }
+          } else if (xhr.status === 401) {
+            api.auth.logout();
+            reject(new Error("Unauthorized"));
+          } else {
+            try {
+              const err = JSON.parse(xhr.responseText);
+              reject(new Error(err.detail || "Document upload failed"));
+            } catch {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error during document upload"));
+        xhr.send(formData);
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "Upload failed" }));
-        throw new Error(err.detail || "Document upload failed");
-      }
-
-      if (onProgress) onProgress(100);
-      const data = await res.json();
-      return mapBackendDocumentToItem(data);
     },
 
     async correctField(id, fieldName, correctedValue, reason = "User correction") {
-      const res = await fetch(`${API_BASE}/api/v1/documents/${id}/fields/${fieldName}`, {
+      // encodeURIComponent on field name
+      const res = await authFetch(`${API_BASE}/api/v1/documents/${id}/fields/${encodeURIComponent(fieldName)}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeader(),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ corrected_value: correctedValue, reason }),
       });
       if (!res.ok) throw new Error("Failed to correct field");
@@ -383,21 +471,17 @@ export const api: ApiAdapter = {
     },
 
     async approve(id) {
-      const res = await fetch(`${API_BASE}/api/v1/documents/${id}/approve`, {
+      const res = await authFetch(`${API_BASE}/api/v1/documents/${id}/approve`, {
         method: "POST",
-        headers: { ...getAuthHeader() },
       });
       if (!res.ok) throw new Error("Failed to approve document");
       return await res.json();
     },
 
     async reject(id, reason = "Rejected during human review") {
-      const res = await fetch(`${API_BASE}/api/v1/documents/${id}/reject`, {
+      const res = await authFetch(`${API_BASE}/api/v1/documents/${id}/reject`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeader(),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rejection_reason: reason }),
       });
       if (!res.ok) throw new Error("Failed to reject document");
@@ -405,17 +489,15 @@ export const api: ApiAdapter = {
     },
 
     async delete(id) {
-      const res = await fetch(`${API_BASE}/api/v1/documents/${id}`, {
+      const res = await authFetch(`${API_BASE}/api/v1/documents/${id}`, {
         method: "DELETE",
-        headers: { ...getAuthHeader() },
       });
       if (!res.ok) throw new Error("Failed to delete document");
     },
 
     async export(id, format = "json", maskPii = true) {
-      const res = await fetch(
-        `${API_BASE}/api/v1/documents/${id}/export?format=${format}&mask_pii=${maskPii}`,
-        { headers: { ...getAuthHeader() } }
+      const res = await authFetch(
+        `${API_BASE}/api/v1/documents/${id}/export?format=${format}&mask_pii=${maskPii}`
       );
       if (!res.ok) throw new Error("Failed to export document");
       if (format === "csv") return await res.text();
@@ -424,30 +506,48 @@ export const api: ApiAdapter = {
 
     subscribeDocumentEvents(id: string, onEvent: (evt: PipelineStageEvent) => void): () => void {
       if (typeof window === "undefined") return () => {};
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN);
-      const url = `${API_BASE}/api/v1/documents/${id}/events${token ? `?token=${encodeURIComponent(token)}` : ""}`;
-      const es = new EventSource(url);
-      es.onmessage = (e) => {
-        try {
-          const parsed = JSON.parse(e.data);
-          onEvent(parsed);
-        } catch {}
+      let closed = false;
+      let es: EventSource | null = null;
+
+      api.auth.getStreamToken().then((streamToken) => {
+        if (closed) return;
+        const url = `${API_BASE}/api/v1/documents/${id}/events?token=${encodeURIComponent(streamToken)}`;
+        es = new EventSource(url);
+        es.onmessage = (e) => {
+          try {
+            const parsed = JSON.parse(e.data);
+            onEvent(parsed);
+          } catch {}
+        };
+      }).catch(() => {});
+
+      return () => {
+        closed = true;
+        if (es) es.close();
       };
-      return () => es.close();
     },
 
     subscribeTenantEvents(onEvent: (evt: PipelineStageEvent) => void): () => void {
       if (typeof window === "undefined") return () => {};
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN);
-      const url = `${API_BASE}/api/v1/events${token ? `?token=${encodeURIComponent(token)}` : ""}`;
-      const es = new EventSource(url);
-      es.onmessage = (e) => {
-        try {
-          const parsed = JSON.parse(e.data);
-          onEvent(parsed);
-        } catch {}
+      let closed = false;
+      let es: EventSource | null = null;
+
+      api.auth.getStreamToken().then((streamToken) => {
+        if (closed) return;
+        const url = `${API_BASE}/api/v1/documents/events?token=${encodeURIComponent(streamToken)}`;
+        es = new EventSource(url);
+        es.onmessage = (e) => {
+          try {
+            const parsed = JSON.parse(e.data);
+            onEvent(parsed);
+          } catch {}
+        };
+      }).catch(() => {});
+
+      return () => {
+        closed = true;
+        if (es) es.close();
       };
-      return () => es.close();
     },
   },
 
@@ -457,9 +557,7 @@ export const api: ApiAdapter = {
       if (params?.action) q.append("action", params.action);
       if (params?.limit) q.append("limit", params.limit.toString());
 
-      const res = await fetch(`${API_BASE}/api/v1/audit/?${q.toString()}`, {
-        headers: { ...getAuthHeader() },
-      });
+      const res = await authFetch(`${API_BASE}/api/v1/audit/?${q.toString()}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.map(mapBackendAuditToEntry);
@@ -468,22 +566,7 @@ export const api: ApiAdapter = {
 
   schemas: {
     async list() {
-      if (!api.auth.getToken()) {
-        try {
-          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
-        } catch {}
-      }
-      let res = await fetch(`${API_BASE}/api/v1/document-types/`, {
-        headers: { ...getAuthHeader() },
-      });
-      if (res.status === 401) {
-        try {
-          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
-          res = await fetch(`${API_BASE}/api/v1/document-types/`, {
-            headers: { ...getAuthHeader() },
-          });
-        } catch {}
-      }
+      const res = await authFetch(`${API_BASE}/api/v1/document-types/`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.map((d: any) => ({
@@ -491,40 +574,261 @@ export const api: ApiAdapter = {
         code: d.code,
         nameEn: d.name_en,
         nameAr: d.name_ar,
+        descriptionEn: d.description || "",
+        descriptionAr: d.description || "",
         fields: d.schema_definition?.fields || [],
-        rules: d.schema_definition?.validation_rules || [],
+        rules: d.schema_definition?.rules || d.schema_definition?.validation_rules || d.validation_rules || [],
+        isStandard: ["emirates_id", "uae_trade_license", "commercial_invoice"].includes(d.code),
       }));
+    },
+
+    async save(schema: DocumentTypeSchema) {
+      const isExistingUuid = schema.id && schema.id.length === 36 && schema.id.includes("-");
+      if (isExistingUuid) {
+        const res = await authFetch(`${API_BASE}/api/v1/document-types/${schema.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name_en: schema.nameEn,
+            name_ar: schema.nameAr,
+            description: schema.descriptionEn,
+            schema_definition: {
+              fields: schema.fields,
+              rules: schema.rules,
+            },
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: "Failed to update schema" }));
+          throw new Error(err.detail || "Failed to update schema");
+        }
+        const d = await res.json();
+        return {
+          id: d.id,
+          code: d.code,
+          nameEn: d.name_en,
+          nameAr: d.name_ar,
+          descriptionEn: d.description || "",
+          descriptionAr: d.description || "",
+          fields: d.schema_definition?.fields || [],
+          rules: d.schema_definition?.rules || d.schema_definition?.validation_rules || [],
+          isStandard: ["emirates_id", "uae_trade_license", "commercial_invoice"].includes(d.code),
+        };
+      } else {
+        const res = await authFetch(`${API_BASE}/api/v1/document-types/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: schema.code,
+            name_en: schema.nameEn,
+            name_ar: schema.nameAr,
+            description: schema.descriptionEn,
+            schema_definition: {
+              fields: schema.fields,
+              rules: schema.rules,
+            },
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: "Failed to create schema" }));
+          throw new Error(err.detail || "Failed to create schema");
+        }
+        const d = await res.json();
+        return {
+          id: d.id,
+          code: d.code,
+          nameEn: d.name_en,
+          nameAr: d.name_ar,
+          descriptionEn: d.description || "",
+          descriptionAr: d.description || "",
+          fields: d.schema_definition?.fields || [],
+          rules: d.schema_definition?.rules || d.schema_definition?.validation_rules || [],
+          isStandard: ["emirates_id", "uae_trade_license", "commercial_invoice"].includes(d.code),
+        };
+      }
+    },
+
+    async delete(id: string) {
+      const res = await authFetch(`${API_BASE}/api/v1/document-types/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete schema");
+    },
+  },
+
+  users: {
+    async list(): Promise<SystemUser[]> {
+      const res = await authFetch(`${API_BASE}/api/v1/users/`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map((u: any) => ({
+        id: u.id,
+        name: u.email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        email: u.email,
+        role: u.role,
+        status: u.is_active ? "active" : "deactivated",
+        lastLogin: u.updated_at ? u.updated_at.split("T")[0] : "Active",
+      }));
+    },
+
+    async create(name: string, email: string, role: string, password = "SecureUser2026!"): Promise<SystemUser> {
+      const res = await authFetch(`${API_BASE}/api/v1/users/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), role, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to create user" }));
+        throw new Error(err.detail || "Failed to create user");
+      }
+      const u = await res.json();
+      return {
+        id: u.id,
+        name: name || u.email.split("@")[0],
+        email: u.email,
+        role: u.role,
+        status: "active",
+        lastLogin: "Just now",
+      };
+    },
+
+    async updateRole(id: string, role: string): Promise<SystemUser> {
+      const res = await authFetch(`${API_BASE}/api/v1/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to update role" }));
+        throw new Error(err.detail || "Failed to update role");
+      }
+      const u = await res.json();
+      return {
+        id: u.id,
+        name: u.email.split("@")[0],
+        email: u.email,
+        role: u.role,
+        status: u.is_active ? "active" : "deactivated",
+        lastLogin: "Active",
+      };
+    },
+
+    async delete(id: string): Promise<void> {
+      const res = await authFetch(`${API_BASE}/api/v1/users/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to delete user" }));
+        throw new Error(err.detail || "Failed to delete user");
+      }
+    },
+  },
+
+  apiKeys: {
+    async list(): Promise<ApiKeyItem[]> {
+      const res = await authFetch(`${API_BASE}/api/v1/users/api-keys`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map((k: any) => ({
+        id: k.id,
+        name: k.name,
+        prefix: k.prefix,
+        role: k.role,
+        createdDate: k.created_at ? k.created_at.split("T")[0] : "",
+        expiresInDays: k.expires_at ? Math.max(0, Math.ceil((new Date(k.expires_at).getTime() - Date.now()) / (1000 * 86400))) : 90,
+        status: k.is_active ? "active" : "revoked",
+      }));
+    },
+
+    async create(name: string, role = "reviewer", expiresInDays = 90): Promise<{ api_key: string; key: ApiKeyItem }> {
+      const targetRole = role === "admin" ? "reviewer" : role;
+      const res = await authFetch(`${API_BASE}/api/v1/users/api-keys`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, role: targetRole, expires_in_days: expiresInDays }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to create API key" }));
+        throw new Error(err.detail || "Failed to create API key");
+      }
+      const data = await res.json();
+      return {
+        api_key: data.api_key,
+        key: {
+          id: data.id,
+          name: data.name,
+          prefix: data.prefix,
+          role: data.role,
+          createdDate: new Date().toISOString().split("T")[0],
+          expiresInDays,
+          status: "active",
+        },
+      };
+    },
+
+    async revoke(id: string): Promise<void> {
+      const res = await authFetch(`${API_BASE}/api/v1/users/api-keys/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to revoke API key" }));
+        throw new Error(err.detail || "Failed to revoke API key");
+      }
+    },
+  },
+
+  tenants: {
+    async getMe(): Promise<any> {
+      const res = await authFetch(`${API_BASE}/api/v1/tenants/me`);
+      if (!res.ok) throw new Error("Failed to load tenant info");
+      return await res.json();
+    },
+
+    async updateSettings(data: { retention_days?: number; pii_masking_default?: boolean }): Promise<any> {
+      const res = await authFetch(`${API_BASE}/api/v1/tenants/me`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to update tenant settings" }));
+        throw new Error(err.detail || "Failed to update tenant settings");
+      }
+      return await res.json();
+    },
+
+    async testWebhook(url: string): Promise<any> {
+      const res = await authFetch(`${API_BASE}/api/v1/tenants/test-webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Webhook test failed" }));
+        throw new Error(err.detail || "Webhook test failed");
+      }
+      return await res.json();
+    },
+
+    async runRetentionSweep(): Promise<any> {
+      const res = await authFetch(`${API_BASE}/api/v1/documents/retention/sweep`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to run retention sweep" }));
+        throw new Error(err.detail || "Failed to run retention sweep");
+      }
+      return await res.json();
     },
   },
 
   rag: {
     async query(query: string, documentId?: string, topK: number = 5): Promise<RAGResponse> {
-      if (!api.auth.getToken()) {
-        try {
-          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
-        } catch {}
-      }
-      let res = await fetch(`${API_BASE}/api/v1/rag/query`, {
+      const res = await authFetch(`${API_BASE}/api/v1/rag/query`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeader(),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query, document_id: documentId, top_k: topK }),
       });
-      if (res.status === 401) {
-        try {
-          await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
-          res = await fetch(`${API_BASE}/api/v1/rag/query`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...getAuthHeader(),
-            },
-            body: JSON.stringify({ query, document_id: documentId, top_k: topK }),
-          });
-        } catch {}
-      }
       if (!res.ok) throw new Error("RAG query failed");
       return await res.json();
     },
