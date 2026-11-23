@@ -86,7 +86,7 @@ interface AppContextType {
   refreshDocuments: () => Promise<void>;
   updateDocumentField: (docId: string, fieldKey: string, newValue: string) => Promise<void>;
   updateTableRow: (docId: string, rowId: string, field: keyof TableRowItem, value: any) => void;
-  approveDocument: (docId: string) => Promise<void>;
+  approveDocument: (docId: string, force?: boolean) => Promise<void>;
   rejectDocument: (docId: string) => Promise<void>;
   deleteDocument: (docId: string) => Promise<void>;
   bulkApproveDocuments: (docIds: string[]) => void;
@@ -121,9 +121,9 @@ interface AppContextType {
   saveRetentionDays: (days: number) => Promise<void>;
   setHardDeleteDerived: (val: boolean) => void;
   setWebhookUrl: (url: string) => void;
-  testWebhook: () => Promise<any>;
+  testWebhook: (targetUrl?: string) => Promise<any>;
   runRetentionSweep: () => Promise<void>;
-  addUser: (name: string, email: string, role: SystemUser["role"]) => Promise<void>;
+  addUser: (name: string, email: string, role: SystemUser["role"], password?: string) => Promise<void>;
   updateUserRole: (id: string, role: SystemUser["role"]) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
   generateApiKey: (name: string, role: string) => Promise<string>;
@@ -137,11 +137,11 @@ interface AppContextType {
 
 const defaultTenant: TenantInfo = {
   id: "00000000-0000-0000-0000-000000000001",
-  nameEn: "Al Hilal Islamic Bank UAE",
-  nameAr: "مصرف الهلال الإسلامي - دولة الإمارات",
-  slug: "alhilal-uae",
+  nameEn: "Organization Workspace",
+  nameAr: "مساحة عمل المؤسسة",
+  slug: "tenant",
   tier: "Enterprise Tier 1",
-  region: "UAE North (Abu Dhabi Sovereign Zone)",
+  region: "UAE Sovereign Zone",
   sovereigntyNotice: "100% In-Country UAE Data Boundary Active",
 };
 
@@ -157,7 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
-  const [activeTenant] = useState<TenantInfo>(defaultTenant);
+  const [activeTenant, setActiveTenant] = useState<TenantInfo>(defaultTenant);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<SystemUser | null>(null);
@@ -175,12 +175,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
   const [retentionDays, setRetentionDays] = useState<number>(365);
   const [hardDeleteDerived, setHardDeleteDerived] = useState<boolean>(true);
-  const [webhookUrl, setWebhookUrl] = useState<string>(
-    "https://api.alhilal-bank.ae/webhooks/doc-intelligence-approved"
-  );
+  const [webhookUrl, setWebhookUrl] = useState<string>("");
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
 
-  const userRole: "admin" | "reviewer" | "viewer" = (currentUser?.role as any) || "admin";
+  const userRole: "admin" | "reviewer" | "viewer" = (currentUser?.role as any) || "viewer";
 
   const showToast = useCallback((type: "success" | "error" | "info", messageEn: string, messageAr: string) => {
     const newToast: ToastNotification = {
@@ -257,11 +255,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       if (!api.auth.getToken()) return;
       const tenant = await api.tenants.getMe();
-      if (tenant?.retention_days) {
-        setRetentionDays(tenant.retention_days);
-      }
-      if (tenant?.pii_masking_default !== undefined) {
-        setPiiMasked(tenant.pii_masking_default);
+      if (tenant) {
+        if (tenant.name) {
+          setActiveTenant((prev) => ({
+            ...prev,
+            id: tenant.id || prev.id,
+            nameEn: tenant.name,
+            nameAr: tenant.name_ar || tenant.name,
+          }));
+        }
+        if (tenant.webhook_url !== undefined && tenant.webhook_url !== null) {
+          setWebhookUrl(tenant.webhook_url);
+        }
+        if (tenant.retention_days) {
+          setRetentionDays(tenant.retention_days);
+        }
+        if (tenant.pii_masking_default !== undefined) {
+          setPiiMasked(tenant.pii_masking_default);
+        }
       }
     } catch {}
   }, []);
@@ -275,7 +286,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           id: me.id,
           name: me.name || me.email?.split("@")[0] || "User",
           email: me.email,
-          role: me.role || "admin",
+          role: me.role || "viewer",
           status: "active",
           lastLogin: "Active now",
         });
@@ -310,9 +321,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [loadUserProfile, refreshDocuments, refreshAuditLogs, refreshSchemas, refreshUsers, refreshApiKeys, refreshTenantSettings]);
 
   const logout = useCallback(() => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("sanad_auto_login");
-    }
     api.auth.logout();
     setIsAuthenticated(false);
     setCurrentUser(null);
@@ -453,9 +461,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     showToast("success", "Table row updated and total rebalanced!", "تم تحديث بند الجدول وإعادة موازنة المجموع!");
   };
 
-  const approveDocument = async (docId: string) => {
+  const approveDocument = async (docId: string, force = false) => {
     try {
-      await api.documents.approve(docId);
+      await api.documents.approve(docId, force);
       await refreshDocuments();
       await refreshAuditLogs();
       showToast(
@@ -465,6 +473,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
     } catch (err: any) {
       showToast("error", `Failed to approve document: ${err.message}`, "فشل اعتماد المستند");
+      throw err;
     }
   };
 
@@ -535,14 +544,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addUser = async (name: string, email: string, role: SystemUser["role"]) => {
+  const addUser = async (name: string, email: string, role: SystemUser["role"], password?: string) => {
     try {
-      const created = await api.users.create(name, email, role);
+      const created = await api.users.create(name, email, role, password);
       await refreshUsers();
       await refreshAuditLogs();
       showToast("success", `User ${created.email} added!`, `تمت إضافة المستخدم ${created.email} بنجاح!`);
     } catch (err: any) {
       showToast("error", `Failed to add user: ${err.message}`, "فشل إضافة المستخدم");
+      throw err;
     }
   };
 
@@ -608,19 +618,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const res = await api.tenants.runRetentionSweep();
       await refreshDocuments();
       await refreshAuditLogs();
+      const count = res.total_purged !== undefined ? res.total_purged : (res.purged_count || 0);
       showToast(
         "success",
-        `Retention sweep executed: ${res.purged_count || 0} expired documents purged.`,
-        `تم تنفيذ مسح الاحتفاظ: تم حذف ${res.purged_count || 0} مستندات منتهية الصلاحية.`
+        `Retention sweep executed: ${count} expired documents purged.`,
+        `تم تنفيذ مسح الاحتفاظ: تم حذف ${count} مستندات منتهية الصلاحية.`
       );
     } catch (err: any) {
       showToast("error", `Retention sweep failed: ${err.message}`, "فشل تنفيذ مسح الاحتفاظ");
     }
   };
 
-  const testWebhook = async () => {
+  const testWebhook = async (targetUrl?: string) => {
     try {
-      const res = await api.tenants.testWebhook(webhookUrl);
+      const urlToTest = targetUrl || webhookUrl;
+      const res = await api.tenants.testWebhook(urlToTest);
       showToast(
         res.dispatched ? "success" : "info",
         `Webhook evaluated: dispatched=${res.dispatched} (${res.reason})`,

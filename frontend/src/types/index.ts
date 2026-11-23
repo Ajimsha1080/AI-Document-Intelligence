@@ -44,6 +44,14 @@ export interface ValidationErrorItem {
   isResolved?: boolean;
 }
 
+export interface DocumentValidationResult {
+  id: string;
+  ruleName: string;
+  passed: boolean;
+  severity: "error" | "warning";
+  message: string;
+}
+
 export interface DocumentItem {
   id: string;
   referenceNumber: string;
@@ -61,6 +69,7 @@ export interface DocumentItem {
   fields: ExtractedField[];
   tableData?: TableRowItem[];
   validationErrors: ValidationErrorItem[];
+  validationResults?: DocumentValidationResult[];
   previewUrl: string; // SVG or simulated document
   extractedLanguage: "ara" | "eng" | "mixed";
 }

@@ -12,7 +12,7 @@ logger = logging.getLogger("rag_service")
 class SovereignRAGService:
     def __init__(self):
         self.retriever = HybridRetriever()
-        self.generator = get_default_generator_provider(threshold=0.12)
+        self.generator = get_default_generator_provider(threshold=0.20)
 
     async def answer_question(
         self,

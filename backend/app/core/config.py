@@ -69,7 +69,7 @@ class Settings(BaseSettings):
 
     # Default Seed Tenant & Admin for Local & Staging Environment
     DEFAULT_TENANT_ID: str = "00000000-0000-0000-0000-000000000001"
-    DEFAULT_TENANT_NAME: str = "Al Hilal Banking & Capital"
+    DEFAULT_TENANT_NAME: str = "Demo Bank (Sample)"
     DEFAULT_ADMIN_EMAIL: str = "admin@alhilal-demo.ae"
     DEFAULT_ADMIN_PASSWORD: str = DEFAULT_ADMIN_PASSWORD
     

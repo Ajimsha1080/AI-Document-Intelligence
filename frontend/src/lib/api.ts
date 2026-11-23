@@ -182,6 +182,14 @@ export function mapBackendDocumentToItem(doc: any): DocumentItem {
       isResolved: false,
     }));
 
+  const validationResults = (doc.validation_results || []).map((v: any) => ({
+    id: v.id || String(Math.random()),
+    ruleName: v.rule_name || "Rule",
+    passed: Boolean(v.passed),
+    severity: (v.severity as "error" | "warning") || "error",
+    message: v.message || "",
+  }));
+
   const previewUrl = `${API_BASE}/api/v1/documents/${doc.id}/file`;
 
   return {
@@ -200,6 +208,7 @@ export function mapBackendDocumentToItem(doc: any): DocumentItem {
     extractedLanguage: (doc.language_detected as any) || "mixed",
     previewUrl,
     validationErrors,
+    validationResults,
     fields,
   };
 }
@@ -264,7 +273,7 @@ export interface ApiAdapter {
     getFileBlobUrl: (id: string) => Promise<string>;
     upload: (file: File, docType?: string, onProgress?: (p: number) => void) => Promise<DocumentItem>;
     correctField: (id: string, fieldName: string, correctedValue: string, reason?: string) => Promise<ExtractedField>;
-    approve: (id: string) => Promise<{ status: string; webhook?: any }>;
+    approve: (id: string, force?: boolean) => Promise<{ status: string; webhook?: any }>;
     reject: (id: string, reason?: string) => Promise<{ status: string }>;
     delete: (id: string) => Promise<void>;
     export: (id: string, format: "json" | "csv", maskPii: boolean) => Promise<any>;
@@ -292,7 +301,7 @@ export interface ApiAdapter {
   };
   tenants: {
     getMe: () => Promise<any>;
-    updateSettings: (data: { retention_days?: number; pii_masking_default?: boolean }) => Promise<any>;
+    updateSettings: (data: { retention_days?: number; pii_masking_default?: boolean; webhook_url?: string }) => Promise<any>;
     testWebhook: (url: string) => Promise<any>;
     runRetentionSweep: () => Promise<any>;
   };
@@ -470,11 +479,21 @@ export const api: ApiAdapter = {
       };
     },
 
-    async approve(id) {
-      const res = await authFetch(`${API_BASE}/api/v1/documents/${id}/approve`, {
+    async approve(id, force = false) {
+      const url = force ? `${API_BASE}/api/v1/documents/${id}/approve?force=true` : `${API_BASE}/api/v1/documents/${id}/approve`;
+      const res = await authFetch(url, {
         method: "POST",
       });
-      if (!res.ok) throw new Error("Failed to approve document");
+      if (!res.ok) {
+        let errDetail = "Failed to approve document";
+        try {
+          const errData = await res.json();
+          if (errData.detail) {
+            errDetail = typeof errData.detail === "string" ? errData.detail : (Array.isArray(errData.detail) ? errData.detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ") : JSON.stringify(errData.detail));
+          }
+        } catch {}
+        throw new Error(errDetail);
+      }
       return await res.json();
     },
 
@@ -671,20 +690,36 @@ export const api: ApiAdapter = {
       }));
     },
 
-    async create(name: string, email: string, role: string, password = "SecureUser2026!"): Promise<SystemUser> {
+    async create(name: string, email: string, role: string, password?: string): Promise<SystemUser> {
+      const payload: Record<string, any> = {
+        full_name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role,
+      };
+      if (password) {
+        payload.password = password;
+      }
       const res = await authFetch(`${API_BASE}/api/v1/users/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), role, password }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "Failed to create user" }));
-        throw new Error(err.detail || "Failed to create user");
+        let msg = "Failed to create user";
+        if (Array.isArray(err.detail)) {
+          msg = err.detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ");
+        } else if (typeof err.detail === "string") {
+          msg = err.detail;
+        } else if (err.detail) {
+          msg = JSON.stringify(err.detail);
+        }
+        throw new Error(msg);
       }
       const u = await res.json();
       return {
         id: u.id,
-        name: name || u.email.split("@")[0],
+        name: u.full_name || name || u.email.split("@")[0],
         email: u.email,
         role: u.role,
         status: "active",
@@ -784,7 +819,7 @@ export const api: ApiAdapter = {
       return await res.json();
     },
 
-    async updateSettings(data: { retention_days?: number; pii_masking_default?: boolean }): Promise<any> {
+    async updateSettings(data: { retention_days?: number; pii_masking_default?: boolean; webhook_url?: string }): Promise<any> {
       const res = await authFetch(`${API_BASE}/api/v1/tenants/me`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

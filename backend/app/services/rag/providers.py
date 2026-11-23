@@ -67,6 +67,20 @@ class LocalHashingSemanticEmbedding(EmbeddingProvider):
         return self._embed_single(query)
 
 
+RAG_EN_STOPWORDS = {
+    "what", "is", "the", "on", "this", "a", "an", "in", "of", "for", "to", "and", "or",
+    "are", "was", "were", "it", "at", "by", "from", "with", "about", "how", "much",
+    "many", "show", "tell", "me", "find", "get", "which", "do", "does", "did", "can",
+    "could", "would", "should", "please", "there", "their", "then", "that", "these", "those"
+}
+RAG_AR_STOPWORDS = {
+    "ما", "ماذا", "هو", "هي", "في", "على", "من", "إلى", "عن", "هذا", "هذه", "كم",
+    "هل", "أين", "كيف", "مع", "أو", "و", "كان", "كانت", "التي", "الذي", "أن", "ان",
+    "ذلك", "تلك", "هؤلاء", "هنا", "هناك", "له", "لها", "بها", "به", "عنه", "عنها"
+}
+RAG_STOPWORDS = RAG_EN_STOPWORDS | RAG_AR_STOPWORDS
+
+
 class RerankerProvider(abc.ABC):
     @abc.abstractmethod
     def rerank(self, query: str, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -74,7 +88,7 @@ class RerankerProvider(abc.ABC):
 
 class LocalCrossEncoderReranker(RerankerProvider):
     """
-    Multilingual Cross-Encoder Reranker using Arabic-English bi-gram matching,
+    Multilingual Cross-Encoder Reranker using Arabic-English query-token coverage,
     exact phrase alignment, and token overlap scoring.
     """
     def rerank(self, query: str, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -82,7 +96,12 @@ class LocalCrossEncoderReranker(RerankerProvider):
             return candidates
 
         norm_query = normalize_arabic_text(query)
-        q_tokens = set(norm_query.split())
+        all_q_words = norm_query.split()
+        clean_q_tokens = [w for w in all_q_words if w not in RAG_STOPWORDS and len(w) > 1]
+        if not clean_q_tokens:
+            clean_q_tokens = all_q_words
+        q_tokens = set(clean_q_tokens)
+        num_q_tokens = max(1, len(q_tokens))
 
         scored = []
         for cand in candidates:
@@ -90,17 +109,18 @@ class LocalCrossEncoderReranker(RerankerProvider):
             norm_text = cand.get("chunk_text_normalized") or normalize_arabic_text(text)
             c_tokens = set(norm_text.split())
 
-            # 1. Token Jaccard overlap
+            # 1. Query-token coverage (overlap / number of query tokens after removing stopwords)
             overlap = len(q_tokens.intersection(c_tokens))
-            jaccard = overlap / max(1, len(q_tokens.union(c_tokens)))
+            coverage = overlap / num_q_tokens
 
             # 2. Substring exact match bonus
-            exact_bonus = 0.5 if norm_query in norm_text else 0.0
+            exact_bonus = 0.3 if norm_query in norm_text else 0.0
 
-            # 3. Base retrieval score combination
+            # 3. Base retrieval score combination (normalized to [0, 1])
             base_score = cand.get("rrf_score", cand.get("score", 0.0))
+            norm_base = min(1.0, max(0.0, base_score * 30.0)) if base_score < 0.1 else min(1.0, base_score)
 
-            rerank_score = (0.5 * jaccard) + (0.3 * exact_bonus) + (0.2 * base_score)
+            rerank_score = min(1.0, max(0.0, (0.7 * coverage) + exact_bonus + (0.1 * norm_base)))
             item = dict(cand)
             item["rerank_score"] = round(rerank_score, 4)
             scored.append(item)
@@ -253,8 +273,11 @@ def is_local_or_allowlisted_host(url: str, allowlist_extra: Optional[List[str]] 
         parsed = urllib.parse.urlparse(url)
         hostname = (parsed.hostname or "").lower()
         allowed = {"localhost", "127.0.0.1", "::1", "0.0.0.0", "host.docker.internal", "ollama"}
+        env_allowed = os.environ.get("OLLAMA_ALLOWED_HOSTS", "")
+        if env_allowed:
+            allowed.update(h.strip().lower() for h in env_allowed.split(",") if h.strip())
         if allowlist_extra:
-            allowed.update(h.lower() for h in allowlist_extra)
+            allowed.update(h.strip().lower() for h in allowlist_extra if h.strip())
         return hostname in allowed
     except Exception:
         return False
@@ -272,7 +295,7 @@ class LocalOllamaGenerator(GeneratorProvider):
         base_url: Optional[str] = None,
         model: Optional[str] = None,
         timeout: float = 2.5,
-        threshold: float = 0.12
+        threshold: float = 0.20
     ):
         raw_url = base_url or os.environ.get("OLLAMA_HOST") or "http://localhost:11434"
         self.base_url = raw_url.rstrip("/")
@@ -280,15 +303,20 @@ class LocalOllamaGenerator(GeneratorProvider):
         self.timeout = timeout
         self.threshold = threshold
         self.fallback = SovereignLocalGenerator(threshold=threshold)
+        self._disabled = False
 
-        if settings.STRICT_LOCAL_ONLY and not is_local_or_allowlisted_host(self.base_url):
-            raise ValueError(
-                f"Sovereignty violation: OLLAMA_HOST '{self.base_url}' is not a local or allowlisted address while STRICT_LOCAL_ONLY=true"
+        allowed_env = os.environ.get("OLLAMA_ALLOWED_HOSTS", "")
+        extra_allowlist = [h.strip() for h in allowed_env.split(",") if h.strip()]
+
+        if settings.STRICT_LOCAL_ONLY and not is_local_or_allowlisted_host(self.base_url, allowlist_extra=extra_allowlist):
+            logger.warning(
+                f"Sovereignty warning: OLLAMA_HOST '{self.base_url}' is not a local or allowlisted address. Falling back to sovereign deterministic generator."
             )
+            self._disabled = True
 
     async def generate_async(self, query: str, retrieved_chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Asynchronous generation using httpx.AsyncClient."""
-        if not retrieved_chunks:
+        if self._disabled or not retrieved_chunks:
             return self.fallback.generate(query, retrieved_chunks)
 
         top_chunk = retrieved_chunks[0]
@@ -433,7 +461,7 @@ def get_default_embedding_provider() -> EmbeddingProvider:
     return _embedding_provider_instance
 
 
-def get_default_generator_provider(threshold: float = 0.12) -> GeneratorProvider:
+def get_default_generator_provider(threshold: float = 0.20) -> GeneratorProvider:
     """Returns sovereign local LLM generator (Ollama) with deterministic fallback."""
     return LocalOllamaGenerator(threshold=threshold)
 

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { ExtractedField } from "@/types";
-import { ArrowLeft, CheckCircle2, AlertTriangle, RotateCw, Check, X, Sparkles } from "lucide-react";
+import { api } from "@/lib/api";
+import { ArrowLeft, CheckCircle2, AlertTriangle, RotateCw, Check, X } from "lucide-react";
 
 export function ReviewWorkspaceScreen() {
   const {
@@ -27,6 +28,41 @@ export function ReviewWorkspaceScreen() {
   const [rotation, setRotation] = useState<number>(0);
   const [isApproving, setIsApproving] = useState<boolean>(false);
   const [isRejecting, setIsRejecting] = useState<boolean>(false);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [isLoadingFile, setIsLoadingFile] = useState<boolean>(false);
+
+  const isPdf = doc?.fileName?.toLowerCase().endsWith(".pdf") || false;
+
+  useEffect(() => {
+    if (!doc?.id) return;
+    let activeUrl: string | null = null;
+    let isMounted = true;
+    setIsLoadingFile(true);
+
+    api.documents.getFileBlobUrl(doc.id)
+      .then((url) => {
+        if (!isMounted) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        activeUrl = url;
+        setBlobUrl(url);
+      })
+      .catch((err) => {
+        console.warn("Could not load preview blob:", err);
+        if (isMounted) setBlobUrl(null);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingFile(false);
+      });
+
+    return () => {
+      isMounted = false;
+      if (activeUrl) {
+        URL.revokeObjectURL(activeUrl);
+      }
+    };
+  }, [doc?.id]);
 
   if (!doc) {
     return (
@@ -73,20 +109,30 @@ export function ReviewWorkspaceScreen() {
     }
   };
 
-  const handleAcceptOneClickFix = async () => {
-    // If ID checksum failed (last digit), fix to 1
-    const idField = doc.fields?.find((f) => f.key === "id_number");
-    if (idField && idField.value) {
-      const fixedValue = idField.value.slice(0, -1) + "1";
-      await updateDocumentField(doc.id, "id_number", fixedValue);
-      showToast("success", "Accepted checksum check digit fix (…-1)", "تم تصحيح رقم الهوية");
-    }
-  };
+  const hasFailedErrors = (doc.validationErrors || []).some((e) => e.severity === "error" && !e.isResolved);
+  const isApproved = doc.status === "approved";
+  const canApprove = (userRole === "admin" || !hasFailedErrors) && !isApproved;
 
   const handleApprove = async () => {
     setIsApproving(true);
     try {
-      await approveDocument(doc.id);
+      let force = false;
+      if (hasFailedErrors) {
+        if (userRole !== "admin") {
+          showToast("error", "Cannot approve document with unresolved errors.", "لا يمكن اعتماد المستند مع وجود أخطاء");
+          return;
+        }
+        const reason = window.prompt("Admin Force Approval: Enter reason for audit trail:");
+        if (reason === null) {
+          return; // user cancelled prompt
+        }
+        if (!reason.trim()) {
+          showToast("error", "Reason is required to force-approve.", "السبب مطلوب للاعتماد الاستثنائي");
+          return;
+        }
+        force = true;
+      }
+      await approveDocument(doc.id, force);
       showToast("success", "Document approved successfully", "تم اعتماد المستند بنجاح");
       // Go to next review doc if available
       if (currentIndex < needsReviewList.length - 1) {
@@ -114,18 +160,15 @@ export function ReviewWorkspaceScreen() {
     }
   };
 
-  const hasFailedErrors = (doc.validationErrors || []).some((e) => e.severity === "error" && !e.isResolved);
-  const isApproved = doc.status === "approved";
-  const canApprove = (userRole === "admin" || !hasFailedErrors) && !isApproved;
-
-  // Mock standard checks
-  const checks = [
-    { name: "Format & check digit validity", passed: !hasFailedErrors },
-    { name: "Document not expired", passed: true },
-    { name: "Date of birth in the past", passed: true },
-    { name: "Sanctions list match", passed: true },
-  ];
-  const passedChecksCount = checks.filter((c) => c.passed).length;
+  // Real validation results from API
+  const validationResults = doc.validationResults || (doc.validationErrors || []).map((e) => ({
+    id: e.id,
+    ruleName: e.fieldKey || "Validation Check",
+    passed: false,
+    severity: e.severity,
+    message: e.messageEn,
+  }));
+  const passedChecksCount = validationResults.filter((c) => c.passed).length;
 
   return (
     <div className="flex flex-col gap-4 -mt-2">
@@ -206,70 +249,62 @@ export function ReviewWorkspaceScreen() {
             </div>
           </div>
 
-          {/* Canvas Area with Interactive Bounding Boxes */}
-          <div className="flex-1 p-6 flex items-center justify-center overflow-auto min-h-[420px]">
-            <div
-              style={{ transform: `rotate(${rotation}deg)` }}
-              className="relative w-full max-w-lg aspect-[1.586] bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-2xl shadow-xl overflow-hidden p-6 select-none transition-transform duration-200"
-            >
-              {/* Card Header Strip */}
-              <div className="absolute inset-x-0 top-0 h-10 bg-zinc-200 dark:bg-zinc-800 flex items-center justify-between px-5 font-bold text-xs text-zinc-700 dark:text-zinc-300">
-                <span>UNITED ARAB EMIRATES · IDENTITY CARD</span>
-                <span className="font-arabic font-semibold">دولة الإمارات العربية المتحدة</span>
-              </div>
-
-              {/* Photo Box */}
-              <div className="absolute left-[6%] top-[28%] w-[22%] h-[56%] bg-zinc-200 dark:bg-zinc-800 rounded-lg flex items-center justify-center text-xs text-zinc-400 font-medium">
-                Photo
-              </div>
-
-              {/* ID Number Box */}
-              <div
-                onClick={() => setActiveFieldKey("id_number")}
-                className={`absolute left-[32%] top-[28%] w-[62%] p-1.5 rounded cursor-pointer transition ${
-                  activeFieldKey === "id_number"
-                    ? "border-2 border-zinc-900 dark:border-white bg-zinc-900/5 dark:bg-white/10 ring-2 ring-zinc-900/10"
-                    : hasFailedErrors
-                    ? "border-2 border-dashed border-amber-500 bg-amber-500/10"
-                    : "border border-zinc-300 dark:border-zinc-700"
-                }`}
+          {/* Canvas Area with Real Document & Bounding Boxes */}
+          <div className="flex-1 p-6 flex items-center justify-center overflow-auto min-h-[440px] bg-zinc-50/50 dark:bg-zinc-950/40">
+            {isLoadingFile ? (
+              <div className="text-xs text-zinc-400 animate-pulse">Loading sovereign document...</div>
+            ) : isPdf && blobUrl ? (
+              <object
+                data={blobUrl}
+                type="application/pdf"
+                className="w-full h-full min-h-[500px] rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm"
               >
-                <div className="text-[10px] text-zinc-400">ID Number / رقم الهوية</div>
-                <div className="font-mono font-bold text-sm text-zinc-900 dark:text-zinc-100">
-                  {doc.fields?.find((f) => f.key === "id_number")?.value || "784-1990-1234567-1"}
-                </div>
-              </div>
-
-              {/* Name Box */}
+                <iframe
+                  src={blobUrl}
+                  title={doc.fileName}
+                  className="w-full h-full min-h-[500px] rounded-lg border-0"
+                />
+              </object>
+            ) : blobUrl ? (
               <div
-                onClick={() => setActiveFieldKey("full_name_en")}
-                className={`absolute left-[32%] top-[48%] w-[62%] p-1.5 rounded cursor-pointer transition ${
-                  activeFieldKey === "full_name_en"
-                    ? "border-2 border-zinc-900 dark:border-white bg-zinc-900/5 dark:bg-white/10 ring-2 ring-zinc-900/10"
-                    : "border border-zinc-300 dark:border-zinc-700"
-                }`}
+                style={{ transform: `rotate(${rotation}deg)` }}
+                className="relative inline-block max-w-full rounded-xl shadow-xl overflow-hidden transition-transform duration-200 select-none border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
               >
-                <div className="text-[10px] text-zinc-400">Name / الاسم</div>
-                <div className="font-bold text-xs text-zinc-900 dark:text-zinc-100 truncate">
-                  {doc.fields?.find((f) => f.key === "full_name_en")?.value || "Sara Ahmed Example"}
-                </div>
+                <img
+                  src={blobUrl}
+                  alt={doc.fileName}
+                  className="max-w-full max-h-[600px] object-contain block"
+                />
+                {/* Real field bounding box overlays */}
+                {(doc.fields || []).map((field) => {
+                  if (!field.bbox) return null;
+                  const isSelected = activeFieldKey === field.key;
+                  return (
+                    <div
+                      key={field.id}
+                      onClick={() => setActiveFieldKey(field.key)}
+                      style={{
+                        position: "absolute",
+                        left: `${field.bbox.x}%`,
+                        top: `${field.bbox.y}%`,
+                        width: `${field.bbox.width}%`,
+                        height: `${field.bbox.height}%`,
+                      }}
+                      className={`cursor-pointer transition border rounded-xs ${
+                        isSelected
+                          ? "border-2 border-emerald-500 bg-emerald-500/25 ring-2 ring-emerald-500/30 z-20"
+                          : "border border-blue-500/80 bg-blue-500/10 hover:bg-blue-500/25 z-10"
+                      }`}
+                      title={`${field.nameEn}: ${field.value || "Not found"}`}
+                    />
+                  );
+                })}
               </div>
-
-              {/* Dates Box */}
-              <div
-                onClick={() => setActiveFieldKey("expiry_date")}
-                className={`absolute left-[32%] top-[68%] w-[62%] p-1.5 rounded cursor-pointer transition ${
-                  activeFieldKey === "expiry_date"
-                    ? "border-2 border-zinc-900 dark:border-white bg-zinc-900/5 dark:bg-white/10"
-                    : "border border-zinc-300 dark:border-zinc-700"
-                }`}
-              >
-                <div className="flex justify-between text-[10px] text-zinc-400">
-                  <span>DOB: 14/05/1990</span>
-                  <span>EXP: {doc.fields?.find((f) => f.key === "expiry_date")?.value || "2031-02-03"}</span>
-                </div>
+            ) : (
+              <div className="text-xs text-zinc-400 p-8 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl text-center">
+                <span>Preview unavailable for this document.</span>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Canvas Legend */}
@@ -298,32 +333,30 @@ export function ReviewWorkspaceScreen() {
                 <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                 <div className="flex flex-col">
                   <span className="font-bold text-xs text-amber-900 dark:text-amber-200">
-                    ID check digit doesn&apos;t match checksum
+                    Validation Checks Require Attention
                   </span>
-                  <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5 leading-relaxed">
-                    OCR read the last digit as <strong>3</strong>. The official ISO/UAE Luhn check digit indicates <strong>1</strong>.
-                  </p>
+                  <div className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5 space-y-1">
+                    {(doc.validationErrors || []).map((err, i) => (
+                      <p key={i} className="leading-relaxed">
+                        • {err.messageEn || err.fieldKey}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={handleAcceptOneClickFix}
-                  className="px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold hover:opacity-90 transition flex items-center gap-1"
-                >
-                  <Sparkles className="w-3 h-3 text-emerald-400" />
-                  Accept fix → …-1
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const idF = doc.fields?.find((f) => f.key === "id_number");
-                    if (idF) startEdit(idF);
-                  }}
-                  className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Edit manually
-                </button>
+                {doc.fields?.find((f) => f.key === "id_number") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const idF = doc.fields?.find((f) => f.key === "id_number");
+                      if (idF) startEdit(idF);
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Edit field
+                  </button>
+                )}
               </div>
             </div>
           ) : isApproved ? (
@@ -397,7 +430,7 @@ export function ReviewWorkspaceScreen() {
                   ) : (
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 font-mono truncate">
-                        {field.value || "null"}
+                        {field.value || <span className="text-zinc-400 italic font-sans text-xs">Not found</span>}
                       </span>
                       <button
                         type="button"
@@ -419,22 +452,35 @@ export function ReviewWorkspaceScreen() {
           {/* Validation Checks Summary */}
           <div className="p-4 bg-zinc-50 dark:bg-zinc-950/60 border-t border-zinc-200 dark:border-zinc-800 flex flex-col gap-2 text-xs">
             <div className="flex items-center justify-between font-bold text-zinc-700 dark:text-zinc-300">
-              <span>Compliance Checks</span>
-              <span className="font-mono text-zinc-400">{passedChecksCount} / {checks.length} Passed</span>
+              <span>Validation Results</span>
+              <span className="font-mono text-zinc-400">
+                {passedChecksCount} / {validationResults.length} Passed
+              </span>
             </div>
-            <div className="space-y-1.5">
-              {checks.map((chk, i) => (
-                <div key={i} className="flex items-center justify-between text-[11px]">
-                  <span className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${chk.passed ? "bg-emerald-500" : "bg-rose-500"}`} />
-                    {chk.name}
-                  </span>
-                  <span className={chk.passed ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
-                    {chk.passed ? "Passed" : "Needs Review"}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {validationResults.length === 0 ? (
+              <span className="text-zinc-400 text-[11px]">No validation checks run.</span>
+            ) : (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {validationResults.map((chk, i) => (
+                  <div key={chk.id || i} className="flex flex-col gap-0.5 text-[11px] p-1.5 rounded-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-700 dark:text-zinc-300 font-medium flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${chk.passed ? "bg-emerald-500" : chk.severity === "warning" ? "bg-amber-500" : "bg-rose-500"}`} />
+                        {chk.ruleName}
+                      </span>
+                      <span className={`font-semibold text-[10px] uppercase ${chk.passed ? "text-emerald-600" : chk.severity === "warning" ? "text-amber-600" : "text-rose-600"}`}>
+                        {chk.passed ? "Passed" : chk.severity === "warning" ? "Warning" : "Failed"}
+                      </span>
+                    </div>
+                    {chk.message && (
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 pl-3">
+                        {chk.message}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Action Footer (Approve / Reject Buttons) */}
@@ -461,7 +507,7 @@ export function ReviewWorkspaceScreen() {
                 }`}
               >
                 <Check className="w-4 h-4" />
-                <span>{isApproved ? "Approved" : canApprove ? "Approve Document" : "Resolve Issues to Approve"}</span>
+                <span>{isApproved ? "Approved" : canApprove ? (hasFailedErrors ? "Force Approve (Admin)" : "Approve Document") : "Resolve Issues to Approve"}</span>
               </button>
             </div>
             <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">

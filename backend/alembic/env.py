@@ -20,8 +20,10 @@ import app.models  # Ensure all models are registered on Base.metadata
 
 config = context.config
 
-# Always set sqlalchemy.url from our application settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Set sqlalchemy.url from our application settings if not set or if dummy placeholder is present
+url = config.get_main_option("sqlalchemy.url")
+if not url or "driver://user:pass@localhost/dbname" in url:
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

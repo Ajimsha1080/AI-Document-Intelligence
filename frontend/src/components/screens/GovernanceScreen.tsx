@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
+import { api } from "@/lib/api";
 import { Send, Eye, EyeOff, Search, Download, Trash2 } from "lucide-react";
 
 export function GovernanceScreen() {
@@ -14,6 +15,8 @@ export function GovernanceScreen() {
     saveRetentionDays,
     runRetentionSweep,
     testWebhook,
+    webhookUrl: contextWebhookUrl,
+    setWebhookUrl: setContextWebhookUrl,
     piiMasked,
     togglePiiMasked,
     userRole,
@@ -38,14 +41,29 @@ export function GovernanceScreen() {
   const [createdKeyValue, setCreatedKeyValue] = useState<string | null>(null);
 
   // Webhook state
-  const [webhookUrl, setWebhookUrl] = useState("https://api.example.com/webhooks/docintel");
+  const [webhookUrl, setWebhookUrl] = useState(contextWebhookUrl || "");
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
+  const [isSavingWebhook, setIsSavingWebhook] = useState(false);
   const [webhookResult, setWebhookResult] = useState<any>(null);
 
   // Team invite state
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
+  const [generatedPasswordNotice, setGeneratedPasswordNotice] = useState<string | null>(null);
   const [inviteRole, setInviteRole] = useState<"admin" | "reviewer" | "viewer">("reviewer");
+
+  const generateRandomPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*";
+    const array = new Uint8Array(16);
+    window.crypto.getRandomValues(array);
+    let pwd = "";
+    for (let i = 0; i < array.length; i++) {
+      pwd += chars[array[i] % chars.length];
+    }
+    setInvitePassword(pwd);
+    setGeneratedPasswordNotice(pwd);
+  };
 
   const filteredLogs = auditLogs.filter((log) => {
     const matchesSearch =
@@ -107,9 +125,9 @@ export function GovernanceScreen() {
   const handleTestWebhook = async () => {
     setIsTestingWebhook(true);
     try {
-      const res = await testWebhook();
+      const res = await testWebhook(webhookUrl);
       setWebhookResult(res);
-      showToast("info", "Webhook test dispatched (air-gap simulated)", "تم اختبار إرسال الويب هوك");
+      showToast("info", "Webhook test evaluated", "تم تقييم اختبار الويب هوك");
     } catch (err: any) {
       showToast("error", err.message || "Webhook test failed", "فشل اختبار الويب هوك");
     } finally {
@@ -117,11 +135,31 @@ export function GovernanceScreen() {
     }
   };
 
+  const handleSaveWebhook = async () => {
+    setIsSavingWebhook(true);
+    try {
+      await api.tenants.updateSettings({ webhook_url: webhookUrl });
+      setContextWebhookUrl(webhookUrl);
+      showToast("success", "Webhook URL saved successfully", "تم حفظ رابط الويب هوك بنجاح");
+    } catch (err: any) {
+      showToast("error", err.message || "Failed to save webhook URL", "تعذر حفظ رابط الويب هوك");
+    } finally {
+      setIsSavingWebhook(false);
+    }
+  };
+
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteName.trim() || !inviteEmail.trim()) return;
+    if (!inviteName.trim() || !inviteEmail.trim()) {
+      showToast("error", "Name and email are required", "الاسم والبريد مطلوبان");
+      return;
+    }
+    if (!invitePassword || invitePassword.length < 8) {
+      showToast("error", "Initial password must be at least 8 characters", "يجب أن تكون كلمة المرور 8 خانات على الأقل");
+      return;
+    }
     try {
-      await addUser(inviteName.trim(), inviteEmail.trim(), inviteRole);
+      await addUser(inviteName.trim(), inviteEmail.trim(), inviteRole, invitePassword);
       setInviteName("");
       setInviteEmail("");
       showToast("success", "User added to workspace", "تمت إضافة المستخدم بنجاح");
@@ -287,46 +325,83 @@ export function GovernanceScreen() {
       {activeTab === "team" && (
         <section className="flex flex-col gap-6">
           {userRole === "admin" && (
-            <form onSubmit={handleInviteUser} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-wrap items-end gap-3 shadow-xs">
-              <div className="flex-1 min-w-[180px] flex flex-col gap-1">
-                <label className="text-xs font-semibold text-zinc-500">Name</label>
-                <input
-                  type="text"
-                  placeholder="Full name"
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 outline-hidden"
-                />
-              </div>
-              <div className="flex-1 min-w-[200px] flex flex-col gap-1">
-                <label className="text-xs font-semibold text-zinc-500">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="user@organization.ae"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 outline-hidden"
-                />
-              </div>
-              <div className="w-36 flex flex-col gap-1">
-                <label className="text-xs font-semibold text-zinc-500">Role</label>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as any)}
-                  className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 outline-hidden"
+            <div className="flex flex-col gap-3">
+              {generatedPasswordNotice && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 flex items-center justify-between">
+                  <div>
+                    <span className="font-bold">Initial Password Generated: </span>
+                    <span className="font-mono bg-white dark:bg-zinc-900 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 font-semibold">{generatedPasswordNotice}</span>
+                    <span className="text-[11px] text-zinc-500 ml-2">(Record securely — shown only once)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGeneratedPasswordNotice(null)}
+                    className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                  >
+                    ✕ Dismiss
+                  </button>
+                </div>
+              )}
+              <form onSubmit={handleInviteUser} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-wrap items-end gap-3 shadow-xs">
+                <div className="flex-1 min-w-[160px] flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-zinc-500">Name</label>
+                  <input
+                    type="text"
+                    placeholder="Full name"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 outline-hidden"
+                  />
+                </div>
+                <div className="flex-1 min-w-[180px] flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-zinc-500">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="user@organization.ae"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 outline-hidden"
+                  />
+                </div>
+                <div className="flex-1 min-w-[180px] flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-zinc-500">Initial Password</label>
+                    <button
+                      type="button"
+                      onClick={generateRandomPassword}
+                      className="text-[10px] text-emerald-600 hover:underline font-semibold"
+                    >
+                      Generate Random
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Min 8 characters"
+                    value={invitePassword}
+                    onChange={(e) => setInvitePassword(e.target.value)}
+                    className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 font-mono outline-hidden"
+                  />
+                </div>
+                <div className="w-32 flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-zinc-500">Role</label>
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as any)}
+                    className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 outline-hidden"
+                  >
+                    <option value="reviewer">Reviewer</option>
+                    <option value="viewer">Viewer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg text-xs font-semibold hover:opacity-90"
                 >
-                  <option value="reviewer">Reviewer</option>
-                  <option value="viewer">Viewer</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg text-xs font-semibold hover:opacity-90"
-              >
-                + Invite Member
-              </button>
-            </form>
+                  + Invite Member
+                </button>
+              </form>
+            </div>
           )}
 
           <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 overflow-hidden shadow-xs">
@@ -540,11 +615,21 @@ export function GovernanceScreen() {
           </div>
 
           <div className="flex items-center gap-3">
+            {userRole === "admin" && (
+              <button
+                type="button"
+                onClick={handleSaveWebhook}
+                disabled={isSavingWebhook}
+                className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+              >
+                Save Webhook URL
+              </button>
+            )}
             <button
               type="button"
               onClick={handleTestWebhook}
               disabled={isTestingWebhook}
-              className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+              className="px-4 py-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Test Webhook Dispatch</span>
