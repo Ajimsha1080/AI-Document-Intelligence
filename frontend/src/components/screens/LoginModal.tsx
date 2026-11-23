@@ -32,13 +32,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const executeLogin = async (loginEmail: string, loginPass: string, isAuto = false) => {
     setLoading(true);
     try {
-      const res = await api.auth.login(loginEmail.trim().toLowerCase(), loginPass);
+      await api.auth.login(loginEmail.trim().toLowerCase(), loginPass);
       setIsAuthenticated(true);
-      showToast(
-        "success",
-        `Authenticated as ${res.user.full_name || loginEmail} (${res.user.role})`,
-        "تم تسجيل الدخول بنجاح"
-      );
       await refreshDocuments();
       await refreshAuditLogs();
       onClose();
