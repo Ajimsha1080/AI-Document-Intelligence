@@ -24,17 +24,10 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setIsAuthenticated,
   } = useApp();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [password, setPassword] = useState(DEMO_PASS);
   const [loading, setLoading] = useState(false);
   const [autoLoginChecked, setAutoLoginChecked] = useState(true);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("sanad_auto_login");
-      setAutoLoginChecked(saved !== "false");
-    }
-  }, []);
 
   const executeLogin = async (loginEmail: string, loginPass: string, isAuto = false) => {
     setLoading(true);
@@ -61,6 +54,17 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sanad_auto_login");
+      const shouldAuto = saved !== "false";
+      setAutoLoginChecked(shouldAuto);
+      if (shouldAuto && !isAuthenticated && !loading) {
+        executeLogin(DEMO_EMAIL, DEMO_PASS, true);
+      }
+    }
+  }, [isOpen, isAuthenticated]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
