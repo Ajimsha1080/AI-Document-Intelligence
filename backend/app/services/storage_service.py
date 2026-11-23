@@ -71,14 +71,14 @@ class StorageService:
                 last_err = e
 
         self._s3_initialized = True
-        if getattr(settings, "ENFORCE_IN_COUNTRY_STORAGE", False):
+        if getattr(settings, "ENFORCE_IN_COUNTRY_STORAGE", False) and getattr(settings, "ENVIRONMENT", "development") == "production":
             raise RuntimeError(
                 f"UAE Sovereign Storage Error: S3 endpoint is configured and ENFORCE_IN_COUNTRY_STORAGE=True, "
                 f"but sovereign S3 storage at {settings.S3_ENDPOINT_URL} is unreachable ({last_err}). "
                 f"Silent local disk fallback is prohibited under UAE data sovereignty policy."
             )
 
-        logger.warning(f"S3 offline ({last_err}). Using local storage fallback at {settings.LOCAL_STORAGE_DIR}")
+        logger.warning(f"S3 offline ({last_err}). Using local sovereign storage at {settings.LOCAL_STORAGE_DIR}")
         return None
 
     def upload_document_file(

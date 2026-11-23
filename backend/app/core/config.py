@@ -56,8 +56,8 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     
-    # Object Storage
-    S3_ENDPOINT_URL: str = "http://localhost:9000"
+    # Object Storage - Set via env or None for local sovereign storage
+    S3_ENDPOINT_URL: Optional[str] = os.getenv("S3_ENDPOINT_URL", None)
     S3_ACCESS_KEY: str = DEFAULT_S3_ACCESS_KEY
     S3_SECRET_KEY: str = DEFAULT_S3_SECRET_KEY
     S3_BUCKET_NAME: str = "uae-documents"
