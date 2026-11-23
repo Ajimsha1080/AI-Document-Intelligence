@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
-import { ShieldCheck, Lock, Mail, Loader2, ArrowRight } from "lucide-react";
+import { ShieldCheck, Lock, Mail, Loader2, ArrowRight, Zap } from "lucide-react";
 import { api } from "@/lib/api";
+
+const DEMO_EMAIL = "admin@alhilal-demo.ae";
+const DEMO_PASS = "AdminSecurePass2026!";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -24,35 +27,65 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [autoLoginChecked, setAutoLoginChecked] = useState(true);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sanad_auto_login");
+      setAutoLoginChecked(saved !== "false");
+    }
+  }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !password) return;
-
+  const executeLogin = async (loginEmail: string, loginPass: string, isAuto = false) => {
     setLoading(true);
     try {
-      const res = await api.auth.login(email.trim().toLowerCase(), password);
+      const res = await api.auth.login(loginEmail.trim().toLowerCase(), loginPass);
       setIsAuthenticated(true);
       showToast(
         "success",
-        `Authenticated as ${res.user.full_name || email} (${res.user.role})`,
+        `Authenticated as ${res.user.full_name || loginEmail} (${res.user.role})`,
         "تم تسجيل الدخول بنجاح"
       );
       await refreshDocuments();
       await refreshAuditLogs();
       onClose();
     } catch (err: any) {
-      showToast(
-        "error",
-        err.message || "Invalid credentials. Please verify your email and password.",
-        "فشل التحقق من الهوية، يرجى التأكد من البيانات المدخلة"
-      );
+      if (!isAuto) {
+        showToast(
+          "error",
+          err.message || "Invalid credentials. Please verify your email and password.",
+          "فشل التحقق من الهوية، يرجى التأكد من البيانات المدخلة"
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    await executeLogin(email, password, false);
+  };
+
+  const handleInstantAutoLogin = async () => {
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASS);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sanad_auto_login", "true");
+    }
+    await executeLogin(DEMO_EMAIL, DEMO_PASS, false);
+  };
+
+  const toggleAutoLoginPreference = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setAutoLoginChecked(checked);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sanad_auto_login", checked ? "true" : "false");
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 select-none">
@@ -140,6 +173,34 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               </>
             )}
           </button>
+
+          <div className="relative flex py-1 items-center">
+            <div className="grow border-t border-zinc-200 dark:border-zinc-800"></div>
+            <span className="shrink mx-2 text-[10px] text-zinc-400 uppercase tracking-widest font-mono">
+              {language === "ar" ? "أو وصول سريع" : "Or Quick Access"}
+            </span>
+            <div className="grow border-t border-zinc-200 dark:border-zinc-800"></div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleInstantAutoLogin}
+            disabled={loading}
+            className="w-full py-2.5 px-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+          >
+            <Zap className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span>{language === "ar" ? "تسجيل دخول تلقائي بنقرة واحدة (مسؤول)" : "1-Click Instant Auto-Login (Admin)"}</span>
+          </button>
+
+          <label className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 cursor-pointer pt-0.5">
+            <input
+              type="checkbox"
+              checked={autoLoginChecked}
+              onChange={toggleAutoLoginPreference}
+              className="rounded-sm border-zinc-300 dark:border-zinc-700 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span>{language === "ar" ? "تفعيل تسجيل الدخول التلقائي في المرات القادمة" : "Auto-login automatically on launch"}</span>
+          </label>
         </form>
 
         {/* Footer info */}
