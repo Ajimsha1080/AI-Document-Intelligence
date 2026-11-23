@@ -764,32 +764,6 @@ async def reject_document(
         "rejection_reason": payload.rejection_reason
     }
 
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-    await log_audit_event(
-        db=db,
-        tenant_id=actor.tenant_id,
-        actor_id=actor.id,
-        actor_email=actor.email,
-        actor_role=actor.role,
-        action="DOCUMENT_REJECT",
-        entity_type="document",
-        entity_id=id,
-        ip_address=client_ip,
-        user_agent=user_agent,
-        details={
-            "file_name": doc.file_name,
-            "rejection_reason": payload.rejection_reason
-        }
-    )
-    await db.commit()
-
-    return {
-        "status": "rejected",
-        "document_id": id,
-        "rejection_reason": payload.rejection_reason
-    }
-
 @router.get("/{id}/export")
 async def export_document_data(
     id: str,
