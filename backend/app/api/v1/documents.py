@@ -23,6 +23,7 @@ from app.api.deps import (
 from app.models.document import Document, DocumentPage, ExtractedField, ValidationResult
 from app.models.document_type import DocumentType
 from app.models.tenant import Tenant
+from app.core.security import mask_pii_value
 from app.schemas.document import (
     DocumentResponse,
     DocumentDetailResponse,
@@ -344,6 +345,41 @@ async def get_document(
         dt_res = await db.execute(select(DocumentType.code).where(DocumentType.id == doc.document_type_id))
         doc_type_code = dt_res.scalar_one_or_none()
 
+    # Determine PII masking by actor role and tenant preference
+    tenant_res = await db.execute(select(Tenant).where(Tenant.id == actor.tenant_id))
+    tenant = tenant_res.scalar_one_or_none()
+    tenant_pii_default = tenant.pii_masking_default if tenant is not None else True
+
+    should_mask = False
+    if actor.role in ("viewer", "api_client"):
+        should_mask = True
+    elif tenant_pii_default and actor.role not in ("admin", "reviewer"):
+        should_mask = True
+
+    response_fields = []
+    for f in fields:
+        f_val = f.value
+        f_raw = f.raw_value
+        f_corr = f.corrected_value
+        if should_mask:
+            f_val = mask_pii_value(f.field_name, f.value) if f.value else f.value
+            f_raw = mask_pii_value(f.field_name, f.raw_value) if f.raw_value else f.raw_value
+            f_corr = mask_pii_value(f.field_name, f.corrected_value) if f.corrected_value else f.corrected_value
+        response_fields.append(
+            ExtractedFieldResponse(
+                id=f.id,
+                field_name=f.field_name,
+                value=f_val,
+                raw_value=f_raw,
+                confidence=f.confidence,
+                page_number=f.page_number,
+                bounding_box=f.bounding_box,
+                is_corrected=f.is_corrected,
+                corrected_value=f_corr,
+                corrected_at=f.corrected_at
+            )
+        )
+
     return DocumentDetailResponse(
         id=doc.id,
         tenant_id=doc.tenant_id,
@@ -357,7 +393,7 @@ async def get_document(
         language_detected=doc.language_detected,
         created_at=doc.created_at,
         updated_at=doc.updated_at,
-        extracted_fields=fields,
+        extracted_fields=response_fields,
         pages=pages,
         validation_results=validations
     )
@@ -549,8 +585,8 @@ async def correct_document_field(
         for f in all_fields
     ]
 
-    # Resolve document's real type
-    doc_type_code = "emirates_id"
+    # Resolve document's real type (do NOT default unknown documents to emirates_id)
+    doc_type_code = "unknown"
     schema_def = {}
     if doc.document_type_id:
         dt_res = await db.execute(select(DocumentType).where(DocumentType.id == doc.document_type_id))

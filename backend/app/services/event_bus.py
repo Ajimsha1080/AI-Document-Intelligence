@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import time
+import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, AsyncGenerator, Set
 
@@ -71,7 +72,7 @@ class PipelineEventBus:
         """
         now_utc = datetime.now(timezone.utc).isoformat()
         event = {
-            "event_id": f"evt-{int(time.time()*1000)}-{document_id[:8]}",
+            "event_id": str(uuid.uuid4()),
             "document_id": document_id,
             "tenant_id": tenant_id,
             "stage": stage,

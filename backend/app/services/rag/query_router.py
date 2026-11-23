@@ -72,13 +72,15 @@ async def route_and_lookup_structured_field(
 
     exact_fields = INTENT_TO_EXACT_FIELDS.get(target_intent, [target_intent])
 
-    # If document_id not provided, resolve to newest document for this tenant that contains these fields
+    # If document_id not provided, resolve to newest APPROVED document for this tenant
+    is_specific_doc = bool(document_id)
     if not document_id:
         doc_stmt = (
             select(Document.id)
             .join(ExtractedField, ExtractedField.document_id == Document.id)
             .where(
                 Document.tenant_id == tenant_id,
+                Document.status == "approved",
                 ExtractedField.field_name.in_(exact_fields)
             )
             .order_by(Document.created_at.desc())
@@ -86,8 +88,8 @@ async def route_and_lookup_structured_field(
         )
         newest_doc_id = (await db.execute(doc_stmt)).scalar_one_or_none()
         if not newest_doc_id:
-            # Fallback to newest document overall
-            overall_stmt = select(Document.id).where(Document.tenant_id == tenant_id).order_by(Document.created_at.desc()).limit(1)
+            # Fallback to newest approved document overall
+            overall_stmt = select(Document.id).where(Document.tenant_id == tenant_id, Document.status == "approved").order_by(Document.created_at.desc()).limit(1)
             newest_doc_id = (await db.execute(overall_stmt)).scalar_one_or_none()
             if not newest_doc_id:
                 return True, None
@@ -95,7 +97,7 @@ async def route_and_lookup_structured_field(
 
     # Query ExtractedField with strict tenant isolation and exact field matching
     stmt = (
-        select(ExtractedField, Document.file_name)
+        select(ExtractedField, Document.file_name, Document.status)
         .join(Document, ExtractedField.document_id == Document.id)
         .where(
             ExtractedField.tenant_id == tenant_id,
@@ -111,35 +113,45 @@ async def route_and_lookup_structured_field(
     if not records:
         return True, None
 
+    # Check status: must be approved, or needs_review if specific document_id was requested
+    first_status = records[0][2]
+    if first_status != "approved":
+        if not (is_specific_doc and first_status == "needs_review"):
+            return True, None
+
     # Pick the best record matching language context (Arabic vs English)
     is_ar_query = bool(re.search(r"[\u0600-\u06FF]", query))
     best_record = None
 
-    for f_rec, fn in records:
+    for f_rec, fn, d_status in records:
         f_val = f_rec.corrected_value or f_rec.value
         if not f_val:
             continue
         if is_ar_query and "_ar" in f_rec.field_name:
-            best_record = (f_rec, fn)
+            best_record = (f_rec, fn, d_status)
             break
         elif not is_ar_query and "_en" in f_rec.field_name:
-            best_record = (f_rec, fn)
+            best_record = (f_rec, fn, d_status)
             break
         elif best_record is None:
-            best_record = (f_rec, fn)
+            best_record = (f_rec, fn, d_status)
 
     if not best_record:
         return True, None
 
-    field_record, file_name = best_record
+    field_record, file_name, d_status = best_record
     val = field_record.corrected_value or field_record.value
+
+    is_unreviewed = (d_status == "needs_review")
+    unreviewed_suffix_en = " (unreviewed)" if is_unreviewed else ""
+    unreviewed_suffix_ar = " (قيد المراجعة)" if is_unreviewed else ""
 
     citation = {
         "chunk_id": field_record.id,
         "document_id": field_record.document_id,
         "page": field_record.page_number,
         "bounding_box": field_record.bounding_box,
-        "snippet": f"Field '{field_record.field_name}': {val}"
+        "snippet": f"Field '{field_record.field_name}': {val}{unreviewed_suffix_en}"
     }
 
     # CRITICAL: Preserve 0.0 confidence; do not coerce to 1.0
@@ -148,8 +160,8 @@ async def route_and_lookup_structured_field(
     return True, {
         "mode": "structured_field",
         "field_name": field_record.field_name,
-        "answer": f"The {field_record.field_name.replace('_', ' ')} is: {val}",
-        "answer_ar": f"قيمة {field_record.field_name}: {val}",
+        "answer": f"The {field_record.field_name.replace('_', ' ')} is: {val}{unreviewed_suffix_en}",
+        "answer_ar": f"قيمة {field_record.field_name}: {val}{unreviewed_suffix_ar}",
         "confidence": field_confidence,
         "citations": [citation]
     }

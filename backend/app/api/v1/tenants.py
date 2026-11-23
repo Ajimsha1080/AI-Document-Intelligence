@@ -124,6 +124,9 @@ async def update_current_tenant_settings(
     if payload.pii_masking_default is not None and payload.pii_masking_default != tenant.pii_masking_default:
         diff["pii_masking_default"] = {"old": tenant.pii_masking_default, "new": payload.pii_masking_default}
         tenant.pii_masking_default = payload.pii_masking_default
+    if payload.webhook_url is not None and payload.webhook_url != tenant.webhook_url:
+        diff["webhook_url"] = {"old": tenant.webhook_url, "new": payload.webhook_url}
+        tenant.webhook_url = payload.webhook_url
 
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")

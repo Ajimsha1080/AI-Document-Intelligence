@@ -122,15 +122,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+_cached_backend_name = None
+
+def get_cached_backend_name() -> str:
+    global _cached_backend_name
+    if _cached_backend_name is None:
+        try:
+            provider = get_model_provider()
+            _cached_backend_name = getattr(provider, "backend_name", settings.MODEL_PROVIDER_BACKEND)
+        except Exception:
+            _cached_backend_name = "unavailable"
+    return _cached_backend_name
+
 @app.middleware("http")
 async def uae_compliance_headers_middleware(request: Request, call_next):
     """Enforces sovereign data processing headers on all requests and responses."""
-    try:
-        provider = get_model_provider()
-        actual_backend = getattr(provider, "backend_name", settings.MODEL_PROVIDER_BACKEND)
-    except Exception:
-        actual_backend = "unavailable"
-
+    actual_backend = get_cached_backend_name()
     response = await call_next(request)
     response.headers["X-Data-Sovereignty-Region"] = settings.CURRENT_REGION
     response.headers["X-Compliance-PDPL"] = "UAE-Federal-Law-45-2021"
@@ -148,7 +155,7 @@ async def health_check(response: Response):
     - Redis queue connection status
     - Storage connection status
     - Model backend
-    Reports unvarnished truth; never silently falls back.
+    Reports unvarnished truth; logs details on failure and returns 'unhealthy'.
     """
     from app.services.model_engine.local_ocr_adapter import LocalOCRAdapter
     from app.core.database import AsyncSessionLocal
@@ -166,7 +173,8 @@ async def health_check(response: Response):
         async with AsyncSessionLocal() as session:
             await session.execute(text("SELECT 1"))
     except Exception as e:
-        db_status = f"unhealthy: {str(e)}"
+        logger.error(f"Health check DB connection failed: {e}")
+        db_status = "unhealthy"
 
     # 2. Redis queue check
     redis_status = "healthy"
@@ -178,7 +186,8 @@ async def health_check(response: Response):
         else:
             redis_status = "unavailable"
     except Exception as e:
-        redis_status = f"unhealthy: {str(e)}"
+        logger.error(f"Health check Redis connection failed: {e}")
+        redis_status = "unhealthy"
 
     # 3. Storage check
     storage_status = "healthy"
@@ -186,15 +195,17 @@ async def health_check(response: Response):
         if not os.path.exists(settings.LOCAL_STORAGE_DIR):
             os.makedirs(settings.LOCAL_STORAGE_DIR, exist_ok=True)
     except Exception as e:
-        storage_status = f"unhealthy: {str(e)}"
+        logger.error(f"Health check Storage access failed: {e}")
+        storage_status = "unhealthy"
 
     # 4. Model Provider Backend
     try:
+        actual_backend = get_cached_backend_name()
         provider = get_model_provider()
-        actual_backend = getattr(provider, "backend_name", settings.MODEL_PROVIDER_BACKEND)
         is_mock = getattr(provider, "is_mock", False)
     except Exception as e:
-        actual_backend = f"unavailable: {str(e)}"
+        logger.error(f"Health check Model Provider failed: {e}")
+        actual_backend = "unavailable"
         is_mock = False
 
     if actual_backend == "local" and not ocr_available:

@@ -77,6 +77,10 @@ def mask_pii_value(key: str, val: Any) -> Any:
         if len(parts) == 4:
             return f"{parts[0]}-****-*******-{parts[3]}"
         return f"{parts[0]}-****-*******-{val[-1]}" if len(parts) >= 2 else (f"{val[:4]}****{val[-2:]}" if len(val) > 6 else "****")
+
+    # TRN pattern (15 digits starting with 100)
+    if any(k in clean_key for k in ["trn", "tax_registration_number"]) or re.match(r"^100\d{12}$", val):
+        return f"{val[:3]}*********{(val[-3:] if len(val) >= 3 else '')}"
         
     # Email pattern
     if "email" in clean_key or "@" in val:

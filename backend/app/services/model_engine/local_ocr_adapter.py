@@ -676,6 +676,8 @@ class LocalOCRAdapter(BaseModelProvider):
         """
         fields: List[ExtractedFieldData] = []
         schema_fields = schema.get("fields", []) if isinstance(schema, dict) else []
+        GENERIC_WORDS = {"amount", "number", "date", "name", "total", "code", "type", "id", "no", "num"}
+        used_label_indices: set = set()
 
         for sf in schema_fields:
             if isinstance(sf, dict):
@@ -689,41 +691,63 @@ class LocalOCRAdapter(BaseModelProvider):
                 name_ar = getattr(sf, "name_ar", "")
                 data_type = getattr(sf, "data_type", "string")
 
-            # Collect label search terms (at least 3 chars)
-            raw_terms = [t.lower().strip() for t in [f_key.replace("_", " "), name_en, name_ar] if t and len(t.strip()) >= 3]
-            label_terms = []
-            for term in raw_terms:
-                label_terms.extend([w for w in term.split() if len(w) >= 3])
+            # Collect label search terms (require multi-word or non-generic word)
+            raw_phrases = [t.lower().strip() for t in [f_key.replace("_", " "), name_en, name_ar] if t and len(t.strip()) >= 3]
+            valid_terms = []
+            for phrase in raw_phrases:
+                words = phrase.split()
+                if len(words) > 1:
+                    valid_terms.append(phrase)
+                elif len(words) == 1 and words[0] not in GENERIC_WORDS and len(words[0]) >= 3:
+                    valid_terms.append(words[0])
 
-            # Find candidate label tokens in OCR tokens using stricter whole-word matching
-            label_tokens = []
-            for t in tokens:
+            matched_label_idx: Optional[int] = None
+            # Find candidate label token by checking multi-word phrase match
+            for i, t in enumerate(tokens):
+                if i in used_label_indices:
+                    continue
                 t_lower = t["text"].lower().strip(":")
-                for term in label_terms:
-                    # Stricter whole-word matching
-                    if re.search(rf"\b{re.escape(term)}\b", t_lower):
-                        label_tokens.append(t)
+                # Check single token contains full term
+                found = False
+                for term in valid_terms:
+                    if term in t_lower:
+                        matched_label_idx = i
+                        found = True
                         break
+                    # Also check 2-word phrase across adjacent tokens on same line
+                    term_words = term.split()
+                    if len(term_words) >= 2 and i + 1 < len(tokens) and (i + 1) not in used_label_indices:
+                        t_next = tokens[i + 1]
+                        if abs(t["center_y"] - t_next["center_y"]) < 0.03:
+                            combined_2 = f"{t_lower} {t_next['text'].lower().strip(':')}"
+                            if term in combined_2:
+                                matched_label_idx = i
+                                used_label_indices.add(i + 1)
+                                found = True
+                                break
+                if found:
+                    used_label_indices.add(i)
+                    break
 
             matched_value_tokens: List[Dict[str, Any]] = []
-            if label_tokens:
-                lbl = label_tokens[0]
+            if matched_label_idx is not None:
+                lbl = tokens[matched_label_idx]
                 # Look for value tokens horizontally to the right
                 cand_right = [
-                    t for t in tokens
-                    if abs(t["center_y"] - lbl["center_y"]) < 0.035
+                    t for idx, t in enumerate(tokens)
+                    if idx not in used_label_indices
+                    and abs(t["center_y"] - lbl["center_y"]) < 0.035
                     and t["left"] >= lbl["right"] - 0.02
-                    and t not in label_tokens
                 ]
                 if cand_right:
                     matched_value_tokens = cand_right[:8]
                 else:
                     # Look for value tokens on the line directly below
                     cand_below = [
-                        t for t in tokens
-                        if 0.005 < t["top"] - lbl["bottom"] < 0.06
+                        t for idx, t in enumerate(tokens)
+                        if idx not in used_label_indices
+                        and 0.005 < t["top"] - lbl["bottom"] < 0.06
                         and abs(t["center_x"] - lbl["center_x"]) < 0.35
-                        and t not in label_tokens
                     ]
                     if cand_below:
                         matched_value_tokens = cand_below[:8]

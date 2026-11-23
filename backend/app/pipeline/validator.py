@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, date
 from app.services.model_engine.base import ExtractedFieldData
 from app.pipeline.emirates_id_parser import validate_emirates_id_number, parse_date_string, normalize_arabic_digits
+from app.core.security import mask_pii_value
 
 def run_validation_rules(
     document_type_code: str,
@@ -243,6 +244,7 @@ def run_validation_rules(
                 })
             else:
                 valid, formatted_id, expected_check = validate_emirates_id_number(f_entry.value)
+                masked_id = mask_pii_value("emirates_id", str(f_entry.value))
                 if not valid:
                     results.append({
                         "rule_name": "EMIRATES_ID_FORMAT_AND_CHECKSUM",
@@ -250,17 +252,18 @@ def run_validation_rules(
                         "passed": False,
                         "severity": "error",
                         "message": (
-                            f"Emirates ID '{f_entry.value}' failed check-digit validation. "
+                            f"Emirates ID '{masked_id}' failed check-digit validation. "
                             f"Expected check digit: {expected_check}."
                         )
                     })
                 else:
+                    masked_formatted = mask_pii_value("emirates_id", formatted_id)
                     results.append({
                         "rule_name": "EMIRATES_ID_FORMAT_AND_CHECKSUM",
                         "field_name": target_field,
                         "passed": True,
                         "severity": "info",
-                        "message": f"Emirates ID check digit verified successfully ({formatted_id})."
+                        "message": f"Emirates ID check digit verified successfully ({masked_formatted})."
                     })
 
         # Rule: valid_trn_format (15 digits starting with 100)
@@ -275,21 +278,23 @@ def run_validation_rules(
                 })
             else:
                 digits_only = re.sub(r"\D", "", normalize_arabic_digits(f_entry.value))
+                masked_trn = mask_pii_value("trn", digits_only)
                 if len(digits_only) == 15 and digits_only.startswith("100"):
                     results.append({
                         "rule_name": "VALID_TRN_FORMAT",
                         "field_name": target_field,
                         "passed": True,
                         "severity": "info",
-                        "message": f"TRN '{digits_only}' verified (15 digits starting with 100)."
+                        "message": f"TRN '{masked_trn}' verified (15 digits starting with 100)."
                     })
                 else:
+                    raw_masked_trn = mask_pii_value("trn", str(f_entry.value))
                     results.append({
                         "rule_name": "VALID_TRN_FORMAT",
                         "field_name": target_field,
                         "passed": False,
                         "severity": "error",
-                        "message": f"Invalid UAE TRN '{f_entry.value}': must be exactly 15 digits starting with 100."
+                        "message": f"Invalid UAE TRN '{raw_masked_trn}': must be exactly 15 digits starting with 100."
                     })
 
     return results

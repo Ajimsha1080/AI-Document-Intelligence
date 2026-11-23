@@ -237,8 +237,8 @@ async def delete_document_type(
         entity_id=dt.id,
         ip_address=client_ip,
         user_agent=user_agent,
-        details={"code": dt.code, "name_en": dt.name_en}
+        details={"code": dt.code, "name_en": dt.name_en, "soft_delete": True}
     )
-    await db.delete(dt)
+    dt.is_active = False
     await db.commit()
-    return {"detail": "Document type deleted successfully", "id": id}
+    return {"detail": "Document type deactivated successfully", "id": id, "is_active": False}

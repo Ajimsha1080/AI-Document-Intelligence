@@ -86,6 +86,10 @@ def enqueue_document_job(document_id: str, tenant_id: str) -> Optional[str]:
             logger.error(f"Failed to enqueue to RQ ({e}).")
     
     # Standalone fallback when Redis / RQ is unavailable
+    if settings.ENVIRONMENT == "production":
+        logger.error("Redis queue is unavailable in production. Background thread fallback disabled.")
+        return None
+
     try:
         import threading
         from app.worker.cli import run_worker_job

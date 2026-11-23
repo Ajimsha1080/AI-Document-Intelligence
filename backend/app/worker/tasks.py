@@ -44,9 +44,14 @@ async def _run_pipeline_core(document_id: str, tenant_id: str, db: AsyncSession)
         # 2. Retrieve document bytes
         raw_bytes = storage_service.get_document_bytes(doc.storage_path)
 
-        # 3. Preprocess image
+        # 3. Preprocess image or handle multi-page PDF
         t_prep_start = time.perf_counter()
-        processed_bytes, prep_meta = ImagePreprocessor.preprocess_image(raw_bytes)
+        is_pdf = raw_bytes.startswith(b"%PDF")
+        if is_pdf:
+            processed_bytes = raw_bytes
+            prep_meta = {"is_pdf": True}
+        else:
+            processed_bytes, prep_meta = ImagePreprocessor.preprocess_image(raw_bytes)
         prep_ms = (time.perf_counter() - t_prep_start) * 1000
 
         # 4. Resolve document type
@@ -81,6 +86,9 @@ async def _run_pipeline_core(document_id: str, tenant_id: str, db: AsyncSession)
         if doc_type_code == "unknown":
             doc.status = "needs_review"
             doc.confidence_score = 0.30
+            from sqlalchemy import delete
+            await db.execute(delete(ValidationResult).where(ValidationResult.document_id == doc.id))
+            await db.flush()
             val_row = ValidationResult(
                 document_id=doc.id,
                 tenant_id=doc.tenant_id,
@@ -267,6 +275,21 @@ async def _run_pipeline_core(document_id: str, tenant_id: str, db: AsyncSession)
         else:
             doc.status = "approved"
             terminal_stage = "approved"
+            try:
+                from app.services.webhook_service import dispatch_document_approved_webhook
+                fields_dict = {f.field_name: f.value for f in extraction_res.fields}
+                await dispatch_document_approved_webhook(
+                    tenant_id=doc.tenant_id,
+                    document_id=doc.id,
+                    document_data={
+                        "file_name": doc.file_name,
+                        "status": "approved",
+                        "confidence_score": doc.confidence_score,
+                        "extracted_fields": fields_dict
+                    }
+                )
+            except Exception as wh_err:
+                logger.warning(f"Auto-approve webhook dispatch encountered error: {wh_err}")
 
         await log_audit_event(
             db=db,
@@ -350,9 +373,16 @@ async def process_document_pipeline(
     """
     End-to-end extraction pipeline execution:
     If db session is provided (e.g. testing context), uses it;
-    otherwise opens an AsyncSessionLocal().
+    otherwise creates a worker engine with NullPool, runs the job, and disposes the engine cleanly.
     """
     if db is not None:
         return await _run_pipeline_core(document_id, tenant_id, db)
-    async with AsyncSessionLocal() as session:
-        return await _run_pipeline_core(document_id, tenant_id, session)
+
+    from app.core.database import create_worker_engine, create_worker_sessionmaker
+    worker_engine = create_worker_engine()
+    worker_session_maker = create_worker_sessionmaker(worker_engine)
+    try:
+        async with worker_session_maker() as session:
+            return await _run_pipeline_core(document_id, tenant_id, session)
+    finally:
+        await worker_engine.dispose()

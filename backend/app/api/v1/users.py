@@ -279,6 +279,6 @@ async def delete_user(
         details={"deleted_user_email": user.email, "role": user.role}
     )
 
-    await db.delete(user)
+    user.is_active = False
     await db.commit()
-    return {"detail": "User deleted successfully", "id": id}
+    return {"detail": "User deactivated successfully", "id": id, "is_active": False}

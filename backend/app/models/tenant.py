@@ -12,6 +12,7 @@ class Tenant(Base):
     tier = Column(String(50), default="standard", nullable=False)
     retention_days = Column(Integer, default=365, nullable=False)
     pii_masking_default = Column(Boolean, default=True, nullable=False)
+    webhook_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)

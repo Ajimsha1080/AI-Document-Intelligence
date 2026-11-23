@@ -116,8 +116,17 @@ class Settings(BaseSettings):
         """
         if self.ENVIRONMENT.lower() == "production":
             violations = []
-            if self.SECRET_KEY == DEFAULT_SECRET_KEY or "CHANGE_THIS" in self.SECRET_KEY or len(self.SECRET_KEY) < 32:
-                violations.append("SECRET_KEY is using the default or an insecure template key")
+            if (
+                self.SECRET_KEY == DEFAULT_SECRET_KEY
+                or "CHANGE_THIS" in self.SECRET_KEY
+                or "demo_dev_secret_key" in self.SECRET_KEY
+                or "demo" in self.SECRET_KEY.lower()
+                or "dev_secret" in self.SECRET_KEY.lower()
+                or len(self.SECRET_KEY) < 32
+            ):
+                violations.append("SECRET_KEY is using a demo, development, or insecure key (min 32 chars required)")
+            if not self.PLATFORM_ADMIN_API_KEY or len(self.PLATFORM_ADMIN_API_KEY.strip()) < 16:
+                violations.append("PLATFORM_ADMIN_API_KEY must be configured in production (min 16 chars)")
             if self.DEFAULT_ADMIN_PASSWORD == DEFAULT_ADMIN_PASSWORD:
                 violations.append("DEFAULT_ADMIN_PASSWORD is still set to the default bootstrap password")
             if self.S3_ACCESS_KEY == DEFAULT_S3_ACCESS_KEY or self.S3_SECRET_KEY == DEFAULT_S3_SECRET_KEY:
