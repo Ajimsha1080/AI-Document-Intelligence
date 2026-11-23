@@ -58,8 +58,10 @@ interface AppContextType {
   activeTenant: TenantInfo;
   currentScreen: ScreenId;
   sidebarCollapsed: boolean;
+  isMobileMenuOpen: boolean;
   isUploadModalOpen: boolean;
   isCommandPaletteOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
   setIsUploadModalOpen: (open: boolean) => void;
   setIsCommandPaletteOpen: (open: boolean) => void;
   toggleLanguage: () => void;
@@ -155,6 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [useArabicDigits, setUseArabicDigits] = useState<boolean>(false);
   const [currentScreen, setCurrentScreen] = useState<ScreenId>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [activeTenant, setActiveTenant] = useState<TenantInfo>(defaultTenant);
@@ -680,8 +683,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         activeTenant,
         currentScreen,
         sidebarCollapsed,
+        isMobileMenuOpen,
         isUploadModalOpen,
         isCommandPaletteOpen,
+        setIsMobileMenuOpen,
         setIsUploadModalOpen,
         setIsCommandPaletteOpen,
         toggleLanguage,

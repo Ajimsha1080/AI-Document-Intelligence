@@ -12,6 +12,7 @@ import {
   Compass,
   ArrowUpRight,
   ShieldCheck,
+  X,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -21,6 +22,8 @@ export function Sidebar() {
     documents,
     activeTenant,
     language,
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
   } = useApp();
 
   const totalCount = documents.length;
@@ -81,10 +84,15 @@ export function Sidebar() {
     return currentScreen === id;
   };
 
-  return (
-    <aside className="w-56 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col py-4 px-3 select-none h-full">
+  const handleNavigate = (id: ScreenId) => {
+    setCurrentScreen(id);
+    setIsMobileMenuOpen(false);
+  };
+
+  const navContent = (
+    <>
       {/* Navigation Links */}
-      <nav aria-label="Main" className="flex-1 flex flex-col gap-1">
+      <nav aria-label="Main" className="flex-1 flex flex-col gap-1 overflow-y-auto">
         <span className="px-2 pb-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
           Workspace
         </span>
@@ -96,8 +104,8 @@ export function Sidebar() {
           return (
             <button
               key={item.id}
-              onClick={() => setCurrentScreen(item.id)}
-              className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition text-start ${
+              onClick={() => handleNavigate(item.id)}
+              className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition text-start cursor-pointer ${
                 active
                   ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs"
                   : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
@@ -127,21 +135,21 @@ export function Sidebar() {
           );
         })}
 
-        {/* Saved Views (Matching v2/Command.dc.html) */}
+        {/* Saved Views */}
         <div className="pt-4 flex flex-col gap-1">
           <span className="px-2 pb-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
             Saved Views
           </span>
           <button
-            onClick={() => setCurrentScreen("command")}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start"
+            onClick={() => handleNavigate("command")}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start cursor-pointer"
           >
             <span>Expiring IDs</span>
             <span className="text-[10px] text-zinc-400 font-semibold">12</span>
           </button>
           <button
-            onClick={() => setCurrentScreen("command")}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start"
+            onClick={() => handleNavigate("command")}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start cursor-pointer"
           >
             <span>Invoices &gt; AED 100k</span>
             <span className="text-[10px] text-zinc-400 font-semibold">4</span>
@@ -151,8 +159,8 @@ export function Sidebar() {
         {/* Public Landing Page Showcase */}
         <div className="pt-3">
           <button
-            onClick={() => setCurrentScreen("landing")}
-            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition text-start ${
+            onClick={() => handleNavigate("landing")}
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition text-start cursor-pointer ${
               currentScreen === "landing"
                 ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold"
                 : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
@@ -167,20 +175,59 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* Sovereign Air-Gap Status Box at bottom (Matching v2/Landing.dc.html) */}
-      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-xs flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100 text-[11px]">
-          <ShieldCheck className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100 shrink-0" />
-          <span>Sovereign Boundary</span>
-        </div>
-        <p className="text-[10px] text-zinc-500 leading-snug">
-          100% In-Country UAE Data Boundary (Federal Decree-Law 45/2021)
-        </p>
-        <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400 font-medium">
-          <span>{activeTenant.tier.split(" ")[0]}</span>
-          <span className="text-zinc-900 dark:text-zinc-100 font-bold">In-Region</span>
+      {/* Sovereign Air-Gap Status Box at bottom */}
+      <div className="mt-auto pt-3">
+        <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-xs flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100 text-[11px]">
+            <ShieldCheck className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100 shrink-0" />
+            <span>Sovereign Boundary</span>
+          </div>
+          <p className="text-[10px] text-zinc-500 leading-snug">
+            100% In-Country UAE Data Boundary (Federal Decree-Law 45/2021)
+          </p>
+          <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400 font-medium">
+            <span>{activeTenant.tier.split(" ")[0]}</span>
+            <span className="text-zinc-900 dark:text-zinc-100 font-bold">In-Region</span>
+          </div>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden md:flex w-56 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex-col py-4 px-3 select-none h-full">
+        {navContent}
+      </aside>
+
+      {/* Mobile Slide-Over Drawer with Backdrop */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <aside className="relative w-72 max-w-[85vw] bg-white dark:bg-zinc-900 h-full p-4 flex flex-col z-10 shadow-2xl animate-in slide-in-from-left duration-200">
+            {/* Mobile Drawer Header */}
+            <div className="flex items-center justify-between pb-3 mb-2 border-b border-zinc-100 dark:border-zinc-800">
+              <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                {language === "ar" ? activeTenant.nameAr : activeTenant.nameEn}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {navContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

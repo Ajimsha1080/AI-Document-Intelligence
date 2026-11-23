@@ -3,7 +3,7 @@
 import React from "react";
 import { useApp } from "@/context/AppContext";
 import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
-import { Search, Plus, Sparkles } from "lucide-react";
+import { Search, Plus, Sparkles, Menu } from "lucide-react";
 
 interface HeaderProps {
   onOpenLoginModal?: () => void;
@@ -18,16 +18,26 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
     activeTenant,
     setIsUploadModalOpen,
     setIsCommandPaletteOpen,
+    setIsMobileMenuOpen,
   } = useApp();
 
   return (
-    <header className="sticky top-0 z-30 w-full h-14 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-6 flex items-center justify-between gap-3 select-none">
-      {/* Brand & Organization Title */}
-      <div className="flex items-center gap-2.5 min-w-0">
+    <header className="sticky top-0 z-30 w-full h-14 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-3 sm:px-6 flex items-center justify-between gap-2.5 select-none">
+      {/* Brand & Organization Title & Mobile Hamburger */}
+      <div className="flex items-center gap-2 min-w-0">
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="md:hidden p-1.5 -ml-1 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition shrink-0"
+          aria-label="Open Navigation Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         <button
           type="button"
           onClick={() => setCurrentScreen("command")}
-          className="text-sm font-bold text-zinc-900 dark:text-zinc-50 hover:opacity-85 transition truncate max-w-[200px] sm:max-w-none"
+          className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-50 hover:opacity-85 transition truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none"
         >
           {language === "ar" ? activeTenant.nameAr : activeTenant.nameEn}
         </button>
@@ -39,7 +49,7 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
         </span>
       </div>
 
-      {/* Center: Command Palette Trigger */}
+      {/* Center: Command Palette Trigger (Desktop) */}
       <div className="flex-1 max-w-md mx-auto hidden md:block">
         <button
           type="button"
@@ -57,13 +67,23 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* Mobile Search Button */}
+        <button
+          type="button"
+          onClick={() => setIsCommandPaletteOpen(true)}
+          className="md:hidden p-2 rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+          aria-label="Open Search Command Palette"
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
         {/* Quick Upload Button */}
         {userRole !== "viewer" && (
           <button
             type="button"
             onClick={() => setIsUploadModalOpen(true)}
-            className="h-8 px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold hover:opacity-90 transition flex items-center gap-1.5 shadow-xs"
+            className="h-8 px-2.5 sm:px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold hover:opacity-90 transition flex items-center gap-1.5 shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Upload</span>

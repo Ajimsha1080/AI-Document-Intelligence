@@ -178,12 +178,14 @@ export function CommandCenterScreen() {
 
           {/* Table Container */}
           <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 overflow-hidden shadow-xs">
-            <div className="grid grid-cols-12 gap-3 px-4 py-2.5 text-xs font-semibold text-zinc-500 bg-zinc-50 dark:bg-zinc-950/60 border-b border-zinc-200 dark:border-zinc-800">
-              <span className="col-span-5">Document</span>
-              <span className="col-span-3">Status</span>
-              <span className="col-span-2">Confidence</span>
-              <span className="col-span-2 text-end">Action</span>
-            </div>
+            <div className="overflow-x-auto">
+              <div className="min-w-[580px]">
+                <div className="grid grid-cols-12 gap-3 px-4 py-2.5 text-xs font-semibold text-zinc-500 bg-zinc-50 dark:bg-zinc-950/60 border-b border-zinc-200 dark:border-zinc-800">
+                  <span className="col-span-5">Document</span>
+                  <span className="col-span-3">Status</span>
+                  <span className="col-span-2">Confidence</span>
+                  <span className="col-span-2 text-end">Action</span>
+                </div>
 
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
               {filteredDocuments.length === 0 ? (
@@ -273,6 +275,8 @@ export function CommandCenterScreen() {
                   );
                 })
               )}
+            </div>
+              </div>
             </div>
           </div>
         </div>
