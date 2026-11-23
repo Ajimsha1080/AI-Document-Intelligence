@@ -162,16 +162,16 @@ export function CommandCenterScreen() {
                   }`}
                 >
                   <span>{t.label}</span>
-                  <span className="text-[11px] font-mono text-zinc-400">{t.count}</span>
+                  <span className="text-[11px] font-semibold text-zinc-400">{t.count}</span>
                 </button>
               ))}
             </div>
 
             <div className="hidden sm:flex items-center gap-2 text-xs text-zinc-400">
-              <span className="font-mono bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">J</span>
-              <span className="font-mono bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">K</span>
+              <span className="font-semibold bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">J</span>
+              <span className="font-semibold bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">K</span>
               <span>navigate</span>
-              <span className="font-mono bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">↵</span>
+              <span className="font-semibold bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">↵</span>
               <span>open</span>
             </div>
           </div>
@@ -218,7 +218,7 @@ export function CommandCenterScreen() {
                         <span className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                           {doc.fileName}
                         </span>
-                        <span className="text-[11px] text-zinc-400 font-mono truncate">
+                        <span className="text-[11px] text-zinc-400 font-medium truncate">
                           {doc.referenceNumber} · {doc.documentTypeNameEn}
                         </span>
                       </div>
@@ -245,7 +245,7 @@ export function CommandCenterScreen() {
                             style={{ width: `${confPct}%` }}
                           />
                         </div>
-                        <span className="font-mono text-zinc-500 text-[11px]">{confPct}%</span>
+                        <span className="font-semibold text-zinc-500 text-[11px]">{confPct}%</span>
                       </div>
 
                       {/* Quick Action Button */}
@@ -281,7 +281,7 @@ export function CommandCenterScreen() {
         {selectedDoc && (
           <aside className="w-full lg:w-80 shrink-0 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 p-5 flex flex-col gap-4 shadow-xs sticky top-20">
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-mono text-zinc-400">{selectedDoc.referenceNumber}</span>
+              <span className="text-[11px] font-medium text-zinc-400">{selectedDoc.referenceNumber}</span>
               <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100 truncate">
                 {selectedDoc.fileName}
               </h3>
@@ -316,7 +316,7 @@ export function CommandCenterScreen() {
               {(selectedDoc.fields || []).slice(0, 4).map((f) => (
                 <div key={f.id} className="p-2.5 flex items-center justify-between gap-2">
                   <span className="text-zinc-500">{f.nameEn}</span>
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono truncate max-w-[140px]">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[140px]">
                     {f.value || "null"}
                   </span>
                 </div>
@@ -326,7 +326,7 @@ export function CommandCenterScreen() {
             {/* Timeline */}
             <div className="flex flex-col gap-2 text-xs">
               <span className="font-semibold text-zinc-500 text-[11px] uppercase tracking-wider">Audit Timeline</span>
-              <div className="space-y-1.5 text-[11px] text-zinc-500 font-mono">
+              <div className="space-y-1.5 text-[11px] text-zinc-500 font-medium">
                 <div className="flex gap-2">
                   <span className="text-zinc-400">10:42</span>
                   <span>Uploaded via sovereign ingest</span>

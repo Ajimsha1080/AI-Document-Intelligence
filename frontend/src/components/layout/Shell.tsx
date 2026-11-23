@@ -138,7 +138,7 @@ export function Shell() {
               <div className="flex-1">
                 <p className="font-medium">{toast.messageEn}</p>
                 {toast.messageAr && (
-                  <p className="text-[11px] opacity-80 font-arabic mt-0.5">
+                  <p className="text-[11px] opacity-80 mt-0.5">
                     {toast.messageAr}
                   </p>
                 )}

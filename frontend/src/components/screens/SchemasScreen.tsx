@@ -107,7 +107,7 @@ export function SchemasScreen() {
                     Live
                   </span>
                 </div>
-                <span className="text-[11px] text-zinc-400 font-mono">
+                <span className="text-[11px] text-zinc-400 font-medium">
                   {(s.fields || []).length} fields · {(s.rules || []).length} rules · {s.code}
                 </span>
               </button>
@@ -135,7 +135,7 @@ export function SchemasScreen() {
                 dir="rtl"
                 value={currentSchema?.nameAr || ""}
                 disabled
-                className="w-full mt-1 px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg font-arabic text-zinc-700 dark:text-zinc-300"
+                className="w-full mt-1 px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-700 dark:text-zinc-300"
               />
             </div>
             <div>
@@ -144,7 +144,7 @@ export function SchemasScreen() {
                 type="text"
                 value={currentSchema?.code || ""}
                 disabled
-                className="w-full mt-1 px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg font-mono text-zinc-700 dark:text-zinc-300"
+                className="w-full mt-1 px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-700 dark:text-zinc-300 font-medium"
               />
             </div>
           </div>
@@ -191,15 +191,15 @@ export function SchemasScreen() {
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
                     {schemaFields.map((f) => (
                       <tr key={f.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
-                        <td className="p-3 font-mono text-zinc-700 dark:text-zinc-300">{f.key}</td>
+                        <td className="p-3 font-medium text-zinc-700 dark:text-zinc-300">{f.key}</td>
                         <td className="p-3">
                           <div className="flex flex-col">
                             <span className="font-semibold text-zinc-900 dark:text-zinc-100">{f.nameEn}</span>
-                            <span className="text-[11px] text-zinc-400 font-arabic">{f.nameAr}</span>
+                            <span className="text-[11px] text-zinc-400">{f.nameAr}</span>
                           </div>
                         </td>
                         <td className="p-3">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 uppercase">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 uppercase">
                             {f.dataType}
                           </span>
                         </td>
@@ -208,7 +208,7 @@ export function SchemasScreen() {
                             {f.required ? "Required" : "Optional"}
                           </span>
                         </td>
-                        <td className="p-3 font-mono text-zinc-500">
+                        <td className="p-3 font-medium text-zinc-500">
                           {Math.round((f.confidenceThreshold || 0.85) * 100)}%
                         </td>
                         <td className="p-3 text-end">
@@ -236,7 +236,7 @@ export function SchemasScreen() {
                     placeholder="field_key"
                     value={newFieldKey}
                     onChange={(e) => setNewFieldKey(e.target.value)}
-                    className="w-32 px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 font-mono outline-hidden"
+                    className="w-32 px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 outline-hidden font-medium"
                   />
                   <input
                     type="text"
@@ -251,7 +251,7 @@ export function SchemasScreen() {
                     placeholder="الاسم بالعربية"
                     value={newFieldNameAr}
                     onChange={(e) => setNewFieldNameAr(e.target.value)}
-                    className="flex-1 min-w-[140px] px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 font-arabic outline-hidden"
+                    className="flex-1 min-w-[140px] px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 outline-hidden"
                   />
                   <select
                     value={newFieldType}
@@ -280,7 +280,7 @@ export function SchemasScreen() {
                 <div key={r.id} className="py-3 flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
                     <span className="font-semibold text-zinc-900 dark:text-zinc-100">{r.nameEn}</span>
-                    <span className="text-[11px] font-mono text-zinc-400">
+                    <span className="text-[11px] font-medium text-zinc-400">
                       Rule Type: {r.ruleType} · Target Field: {r.targetField}
                     </span>
                   </div>

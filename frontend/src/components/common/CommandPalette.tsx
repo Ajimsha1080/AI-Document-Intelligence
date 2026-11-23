@@ -109,7 +109,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 {language === "ar" ? "+ تحميل مستند جديد الآن" : "+ Upload New Document Now"}
               </span>
-              <kbd className="font-mono text-[10px] bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">U</kbd>
+              <kbd className="text-[10px] bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 font-semibold">U</kbd>
             </button>
           </div>
 
@@ -150,7 +150,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 >
                   <div className="flex flex-col min-w-0">
                     <span className="font-semibold truncate">{d.fileName}</span>
-                    <span className="text-[11px] text-zinc-500 font-mono">
+                    <span className="text-[11px] text-zinc-500 font-medium">
                       {d.referenceNumber} · {d.documentTypeNameEn}
                     </span>
                   </div>
@@ -166,7 +166,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                     >
                       {d.status.replace("_", " ")}
                     </span>
-                    <span className="font-mono text-zinc-400 text-[11px]">
+                    <span className="text-zinc-400 text-[11px] font-semibold">
                       {Math.round(d.overallConfidence * 100)}%
                     </span>
                   </div>
@@ -179,7 +179,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         {/* Footer shortcuts */}
         <div className="px-4 py-2 bg-zinc-50 dark:bg-zinc-950/60 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[11px] text-zinc-500">
           <span>Navigate with <strong>↑</strong> <strong>↓</strong> and <strong>↵</strong></span>
-          <span className="font-mono">DocIntel UAE Sovereign</span>
+          <span className="font-semibold">UAE Sovereign Platform</span>
         </div>
       </div>
     </div>

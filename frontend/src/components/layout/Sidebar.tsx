@@ -114,7 +114,7 @@ export function Sidebar() {
 
               {item.badge !== undefined && (
                 <span
-                  className={`font-mono text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                  className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
                     item.badgeAmber
                       ? "text-amber-800 bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
                       : "text-zinc-500 bg-zinc-200 dark:bg-zinc-800"
@@ -137,14 +137,14 @@ export function Sidebar() {
             className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start"
           >
             <span>Expiring IDs</span>
-            <span className="font-mono text-[10px] text-zinc-400">12</span>
+            <span className="text-[10px] text-zinc-400 font-semibold">12</span>
           </button>
           <button
             onClick={() => setCurrentScreen("command")}
             className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start"
           >
             <span>Invoices &gt; AED 100k</span>
-            <span className="font-mono text-[10px] text-zinc-400">4</span>
+            <span className="text-[10px] text-zinc-400 font-semibold">4</span>
           </button>
         </div>
 
@@ -176,7 +176,7 @@ export function Sidebar() {
         <p className="text-[10px] text-zinc-500 leading-snug">
           100% In-Country UAE Data Boundary (Federal Decree-Law 45/2021)
         </p>
-        <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+        <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400 font-medium">
           <span>{activeTenant.tier.split(" ")[0]}</span>
           <span className="text-emerald-600 dark:text-emerald-400 font-bold">In-Region</span>
         </div>

@@ -52,7 +52,7 @@ export function LandingScreen() {
             </button>
           </div>
 
-          <span className="text-xs text-zinc-500 font-mono">
+          <span className="text-xs text-zinc-500 font-medium">
             Runs 100% in UAE cloud region or on-prem · Zero foreign data egress
           </span>
 
@@ -63,14 +63,14 @@ export function LandingScreen() {
               <div className="flex-1 w-full max-w-sm aspect-[1.586] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 p-4 relative text-xs flex flex-col justify-between overflow-hidden shadow-md">
                 <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 border-b border-zinc-200 dark:border-zinc-800 pb-1">
                   <span>IDENTITY CARD</span>
-                  <span className="font-arabic">بطاقة هوية</span>
+                  <span>بطاقة هوية</span>
                 </div>
                 <div className="flex gap-3 items-center">
                   <div className="w-14 h-16 bg-zinc-200 dark:bg-zinc-800 rounded flex items-center justify-center text-[10px] text-zinc-400">
                     Photo
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <span className="font-mono font-bold text-xs p-1 rounded border border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                    <span className="font-bold text-xs p-1 rounded border border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                       784-1990-1234567-1
                     </span>
                     <span className="font-semibold text-xs text-zinc-800 dark:text-zinc-200">
@@ -89,7 +89,7 @@ export function LandingScreen() {
               <div className="flex-1 w-full flex flex-col gap-3 text-start">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm">Emirates ID · Extracted</span>
-                  <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
                     1.8s P95
                   </span>
                 </div>
@@ -97,7 +97,7 @@ export function LandingScreen() {
                 <div className="space-y-1.5 text-xs">
                   <div className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 flex justify-between">
                     <span className="text-zinc-500">ID Number</span>
-                    <span className="font-mono font-bold">784-1990-1234567-1 <span className="text-emerald-600">99%</span></span>
+                    <span className="font-bold">784-1990-1234567-1 <span className="text-emerald-600">99%</span></span>
                   </div>
                   <div className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 flex justify-between">
                     <span className="text-zinc-500">Full Name</span>
@@ -122,7 +122,7 @@ export function LandingScreen() {
       {/* Feature Pillars Section */}
       <section className="py-16 px-6 lg:px-12 max-w-5xl mx-auto flex flex-col gap-10">
         <div className="flex flex-col gap-2">
-          <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
             Architecture Pillars
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -132,7 +132,7 @@ export function LandingScreen() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-3 shadow-xs">
-            <span className="font-mono text-xs text-zinc-400">01 · READ</span>
+            <span className="text-xs text-zinc-400 font-semibold">01 · READ</span>
             <h3 className="font-bold text-base">Arabic and English, together</h3>
             <p className="text-xs text-zinc-500 leading-relaxed">
               Deskews camera photos, auto-detects document types, and reads both Arabic cursive and English scripts on the same page.
@@ -140,7 +140,7 @@ export function LandingScreen() {
           </div>
 
           <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-3 shadow-xs">
-            <span className="font-mono text-xs text-zinc-400">02 · VERIFY</span>
+            <span className="text-xs text-zinc-400 font-semibold">02 · VERIFY</span>
             <h3 className="font-bold text-base">Checks a compliance officer would</h3>
             <p className="text-xs text-zinc-500 leading-relaxed">
               Enforces UAE Luhn check digits, TRN format (15 digits starting with 100), expiration dates, and sanctions name screening.
@@ -148,7 +148,7 @@ export function LandingScreen() {
           </div>
 
           <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-3 shadow-xs">
-            <span className="font-mono text-xs text-zinc-400">03 · SOVEREIGN</span>
+            <span className="text-xs text-zinc-400 font-semibold">03 · SOVEREIGN</span>
             <h3 className="font-bold text-base">Zero foreign egress boundary</h3>
             <p className="text-xs text-zinc-500 leading-relaxed">
               Fully compliant with Federal Decree-Law No. 45/2021. Operates entirely in UAE cloud regions or air-gapped on-premise clusters.

@@ -127,7 +127,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 placeholder="name@organization.ae"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono outline-hidden focus:ring-1 focus:ring-zinc-900 dark:focus:ring-white transition"
+                className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 outline-hidden focus:ring-1 focus:ring-zinc-900 dark:focus:ring-white transition"
                 required
                 autoComplete="email"
               />
@@ -145,7 +145,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono outline-hidden focus:ring-1 focus:ring-zinc-900 dark:focus:ring-white transition"
+                className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 outline-hidden focus:ring-1 focus:ring-zinc-900 dark:focus:ring-white transition"
                 required
                 autoComplete="current-password"
               />
@@ -172,7 +172,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
           <div className="relative flex py-1 items-center">
             <div className="grow border-t border-zinc-200 dark:border-zinc-800"></div>
-            <span className="shrink mx-2 text-[10px] text-zinc-400 uppercase tracking-widest font-mono">
+            <span className="shrink mx-2 text-[10px] text-zinc-400 uppercase tracking-widest font-semibold">
               {language === "ar" ? "أو وصول سريع" : "Or Quick Access"}
             </span>
             <div className="grow border-t border-zinc-200 dark:border-zinc-800"></div>
@@ -208,7 +208,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           >
             {language === "ar" ? "English" : "تبديل إلى العربية"}
           </button>
-          <span className="font-mono">UAE PDPL Law 45/2021</span>
+          <span className="text-zinc-400">UAE PDPL Law 45/2021</span>
         </div>
       </div>
     </div>

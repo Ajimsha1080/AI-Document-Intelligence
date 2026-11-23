@@ -50,7 +50,7 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
             <Search className="w-3.5 h-3.5 text-zinc-400" />
             <span>Search documents, fields, people…</span>
           </span>
-          <kbd className="font-mono text-[10px] text-zinc-500 bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
+          <kbd className="text-[10px] text-zinc-500 bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 font-semibold">
             ⌘K
           </kbd>
         </button>

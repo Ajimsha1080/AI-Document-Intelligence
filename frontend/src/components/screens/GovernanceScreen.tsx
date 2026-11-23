@@ -200,7 +200,7 @@ export function GovernanceScreen() {
           >
             <span>{t.label}</span>
             {t.count !== undefined && (
-              <span className="font-mono text-[10px] text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.2 rounded-full">
+              <span className="text-[10px] font-semibold text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.2 rounded-full">
                 {t.count}
               </span>
             )}
@@ -283,7 +283,7 @@ export function GovernanceScreen() {
                 ) : (
                   filteredLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30">
-                      <td className="p-3 font-mono text-zinc-400 whitespace-nowrap">
+                      <td className="p-3 font-medium text-zinc-400 whitespace-nowrap">
                         {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "Just now"}
                       </td>
                       <td className="p-3">
@@ -304,12 +304,12 @@ export function GovernanceScreen() {
                       <td className="p-3 text-zinc-600 dark:text-zinc-400">
                         {log.detailsEn}
                         {log.diff && (
-                          <span className="block font-mono text-[10px] text-zinc-400 mt-0.5">
+                          <span className="block font-medium text-[10px] text-zinc-400 mt-0.5">
                             {log.diff.field}: {log.diff.oldValue} → {log.diff.newValue}
                           </span>
                         )}
                       </td>
-                      <td className="p-3 font-mono text-zinc-400 text-[11px]">
+                      <td className="p-3 font-medium text-zinc-400 text-[11px]">
                         {log.ipAddress || "127.0.0.1"}
                       </td>
                     </tr>
@@ -330,7 +330,7 @@ export function GovernanceScreen() {
                 <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 flex items-center justify-between">
                   <div>
                     <span className="font-bold">Initial Password Generated: </span>
-                    <span className="font-mono bg-white dark:bg-zinc-900 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 font-semibold">{generatedPasswordNotice}</span>
+                    <span className="bg-white dark:bg-zinc-900 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 font-semibold">{generatedPasswordNotice}</span>
                     <span className="text-[11px] text-zinc-500 ml-2">(Record securely — shown only once)</span>
                   </div>
                   <button
@@ -379,7 +379,7 @@ export function GovernanceScreen() {
                     placeholder="Min 8 characters"
                     value={invitePassword}
                     onChange={(e) => setInvitePassword(e.target.value)}
-                    className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 font-mono outline-hidden"
+                    className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 outline-hidden font-medium"
                   />
                 </div>
                 <div className="w-32 flex flex-col gap-1">
@@ -419,7 +419,7 @@ export function GovernanceScreen() {
                 {users.map((u) => (
                   <tr key={u.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
                     <td className="p-3 font-semibold text-zinc-900 dark:text-zinc-100">{u.name}</td>
-                    <td className="p-3 text-zinc-500 font-mono">{u.email}</td>
+                    <td className="p-3 text-zinc-500 font-medium">{u.email}</td>
                     <td className="p-3">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 uppercase">
                         {u.role}
@@ -490,7 +490,7 @@ export function GovernanceScreen() {
               <span className="font-bold text-xs text-emerald-900 dark:text-emerald-200">
                 Key Generated Successfully — Copy Now (Will Not Be Shown Again)
               </span>
-              <code className="p-2 rounded bg-white dark:bg-zinc-900 border border-emerald-300 font-mono text-xs text-emerald-800 dark:text-emerald-300 select-all">
+              <code className="p-2 rounded bg-white dark:bg-zinc-900 border border-emerald-300 font-semibold text-xs text-emerald-800 dark:text-emerald-300 select-all">
                 {createdKeyValue}
               </code>
             </div>
@@ -511,7 +511,7 @@ export function GovernanceScreen() {
                 {apiKeys.map((k) => (
                   <tr key={k.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
                     <td className="p-3 font-semibold text-zinc-900 dark:text-zinc-100">{k.name}</td>
-                    <td className="p-3 font-mono text-zinc-400">{k.prefix || "uae_live_..."}</td>
+                    <td className="p-3 font-medium text-zinc-400">{k.prefix || "uae_live_..."}</td>
                     <td className="p-3">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 uppercase">
                         {k.role}
@@ -553,7 +553,7 @@ export function GovernanceScreen() {
           <div className="flex flex-col gap-3">
             <div className="flex justify-between items-center">
               <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Retention Duration:</span>
-              <span className="font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
+              <span className="font-bold text-base text-emerald-600 dark:text-emerald-400">
                 {sliderDays} Days (~{Math.round(sliderDays / 30)} months)
               </span>
             </div>
@@ -610,7 +610,7 @@ export function GovernanceScreen() {
               type="text"
               value={webhookUrl}
               onChange={(e) => setWebhookUrl(e.target.value)}
-              className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 font-mono outline-hidden"
+              className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 font-medium outline-hidden"
             />
           </div>
 
@@ -637,7 +637,7 @@ export function GovernanceScreen() {
           </div>
 
           {webhookResult && (
-            <div className="p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-mono">
+            <div className="p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs">
               <span className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
                 Dispatch Result:
               </span>

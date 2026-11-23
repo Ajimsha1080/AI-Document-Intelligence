@@ -188,7 +188,7 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
             <CheckCircle2 className="w-3.5 h-3.5" />
             Zero-Egress Sovereign Boundary
           </span>
-          <span className="font-mono">UAE PDPL Law 45/2021</span>
+          <span className="text-zinc-400">UAE PDPL Law 45/2021</span>
         </div>
       </div>
     </div>

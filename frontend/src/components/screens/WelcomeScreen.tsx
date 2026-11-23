@@ -11,7 +11,7 @@ export function WelcomeScreen() {
     <div className="max-w-4xl mx-auto flex flex-col gap-8 py-4">
       {/* Hero Welcome Header */}
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
           Onboarding & Quickstart
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -26,7 +26,7 @@ export function WelcomeScreen() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-5 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 flex flex-col gap-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold text-zinc-400">01 · INGEST</span>
+            <span className="text-xs font-bold text-zinc-400">01 · INGEST</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
           </div>
           <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">Upload a UAE Document</h3>
@@ -45,7 +45,7 @@ export function WelcomeScreen() {
 
         <div className="p-5 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 flex flex-col gap-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold text-zinc-400">02 · REVIEW</span>
+            <span className="text-xs font-bold text-zinc-400">02 · REVIEW</span>
             <span className="w-2 h-2 rounded-full bg-amber-500" />
           </div>
           <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">Inspect & Correct</h3>
@@ -64,7 +64,7 @@ export function WelcomeScreen() {
 
         <div className="p-5 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 flex flex-col gap-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold text-zinc-400">03 · QUERY</span>
+            <span className="text-xs font-bold text-zinc-400">03 · QUERY</span>
             <span className="w-2 h-2 rounded-full bg-blue-500" />
           </div>
           <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">Ask Documents (Sovereign RAG)</h3>
@@ -83,7 +83,7 @@ export function WelcomeScreen() {
 
         <div className="p-5 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 flex flex-col gap-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold text-zinc-400">04 · GOVERN</span>
+            <span className="text-xs font-bold text-zinc-400">04 · GOVERN</span>
             <span className="w-2 h-2 rounded-full bg-purple-500" />
           </div>
           <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">Audit & Sovereign Retention</h3>
@@ -116,7 +116,7 @@ export function WelcomeScreen() {
             </p>
           </div>
         </div>
-        <span className="px-3 py-1 bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-300 font-mono text-xs rounded-full border border-emerald-200 dark:border-emerald-800 font-semibold whitespace-nowrap">
+        <span className="px-3 py-1 bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-300 text-xs rounded-full border border-emerald-200 dark:border-emerald-800 font-semibold whitespace-nowrap">
           UAE North Sovereign Zone
         </span>
       </div>

@@ -129,7 +129,7 @@ export function AskWorkspaceScreen() {
           className="w-full py-2 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 font-semibold text-xs text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition text-start flex items-center justify-between"
         >
           <span>+ New question</span>
-          <kbd className="font-mono text-[10px] text-zinc-400">⌘N</kbd>
+          <kbd className="text-[10px] text-zinc-400 font-semibold">⌘N</kbd>
         </button>
 
         <div className="flex flex-col gap-1">
@@ -169,7 +169,7 @@ export function AskWorkspaceScreen() {
             </span>
             <span>Grounded against {approvedDocsCount || 214} verified documents</span>
           </div>
-          <span className="text-zinc-400 font-mono text-[11px]">UAE North Sovereign Zone</span>
+          <span className="text-zinc-400 font-medium text-[11px]">UAE North Sovereign Zone</span>
         </div>
 
         {/* Conversation Stream */}
@@ -259,7 +259,7 @@ export function AskWorkspaceScreen() {
           <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
             Sources & Grounding ({activeSources.length})
           </h3>
-          <span className="text-[11px] font-mono text-zinc-400">Strict Citations</span>
+          <span className="text-[11px] font-medium text-zinc-400">Strict Citations</span>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-3">
@@ -270,7 +270,7 @@ export function AskWorkspaceScreen() {
             >
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                  <span className="w-4 h-4 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] flex items-center justify-center font-mono">
+                  <span className="w-4 h-4 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] flex items-center justify-center font-bold">
                     {s.n}
                   </span>
                   <span className="truncate max-w-[140px]">{s.file}</span>
@@ -282,7 +282,7 @@ export function AskWorkspaceScreen() {
               </p>
               <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-0.5">
                 <span className="text-emerald-600 font-semibold">{s.score}</span>
-                <span className="font-mono">Chunk Verified</span>
+                <span className="font-medium">Chunk Verified</span>
               </div>
             </div>
           ))}

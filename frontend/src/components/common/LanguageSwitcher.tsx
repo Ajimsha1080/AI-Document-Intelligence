@@ -18,7 +18,7 @@ export function LanguageSwitcher() {
 
       <button
         onClick={toggleArabicDigits}
-        className={`px-2 py-1 text-xs font-mono rounded-md transition-all ${
+        className={`px-2 py-1 text-xs font-semibold rounded-md transition-all ${
           useArabicDigits
             ? "bg-primary text-primary-foreground font-bold"
             : "text-muted-foreground hover:text-foreground"

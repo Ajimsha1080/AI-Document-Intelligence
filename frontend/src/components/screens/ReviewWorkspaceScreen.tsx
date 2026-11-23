@@ -186,7 +186,7 @@ export function ReviewWorkspaceScreen() {
           <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate max-w-xs">
             {doc.fileName}
           </span>
-          <span className="font-mono text-xs text-zinc-400">{doc.referenceNumber}</span>
+          <span className="text-xs text-zinc-400 font-medium">{doc.referenceNumber}</span>
           <span
             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
               doc.status === "approved"
@@ -391,7 +391,7 @@ export function ReviewWorkspaceScreen() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-zinc-500">{field.nameEn}</span>
                     <span
-                      className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                         field.isCorrected
                           ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
                           : confPct >= 85
@@ -410,7 +410,7 @@ export function ReviewWorkspaceScreen() {
                         autoFocus
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="flex-1 px-2.5 py-1 text-xs border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-900 outline-hidden focus:ring-1 focus:ring-zinc-900"
+                        className="flex-1 px-2.5 py-1 text-xs border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-900 outline-hidden focus:ring-1 focus:ring-zinc-900 font-medium"
                       />
                       <button
                         type="button"
@@ -429,8 +429,8 @@ export function ReviewWorkspaceScreen() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 font-mono truncate">
-                        {field.value || <span className="text-zinc-400 italic font-sans text-xs">Not found</span>}
+                      <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                        {field.value || <span className="text-zinc-400 italic text-xs">Not found</span>}
                       </span>
                       <button
                         type="button"
@@ -453,7 +453,7 @@ export function ReviewWorkspaceScreen() {
           <div className="p-4 bg-zinc-50 dark:bg-zinc-950/60 border-t border-zinc-200 dark:border-zinc-800 flex flex-col gap-2 text-xs">
             <div className="flex items-center justify-between font-bold text-zinc-700 dark:text-zinc-300">
               <span>Validation Results</span>
-              <span className="font-mono text-zinc-400">
+              <span className="font-medium text-zinc-400">
                 {passedChecksCount} / {validationResults.length} Passed
               </span>
             </div>
@@ -510,7 +510,7 @@ export function ReviewWorkspaceScreen() {
                 <span>{isApproved ? "Approved" : canApprove ? (hasFailedErrors ? "Force Approve (Admin)" : "Approve Document") : "Resolve Issues to Approve"}</span>
               </button>
             </div>
-            <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+            <div className="flex items-center justify-between text-[10px] text-zinc-400 font-medium">
               <span>Hotkeys: <strong>A</strong> Approve · <strong>R</strong> Reject · <strong>E</strong> Edit</span>
               <span>Sovereign Enforced</span>
             </div>
