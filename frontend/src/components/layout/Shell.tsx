@@ -120,14 +120,14 @@ export function Shell() {
               onClick={() => dismissToast(toast.id)}
               className={`p-3 rounded-xl border shadow-xl flex items-start gap-2.5 text-xs pointer-events-auto transition-all cursor-pointer ${
                 toast.type === "success"
-                  ? "bg-emerald-950 text-emerald-100 border-emerald-800"
+                  ? "bg-zinc-950 text-zinc-100 border-zinc-700"
                   : toast.type === "error"
                   ? "bg-rose-950 text-rose-100 border-rose-800"
                   : "bg-zinc-900 text-zinc-100 border-zinc-700"
               }`}
             >
               {toast.type === "success" && (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-zinc-100 shrink-0 mt-0.5" />
               )}
               {toast.type === "error" && (
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />

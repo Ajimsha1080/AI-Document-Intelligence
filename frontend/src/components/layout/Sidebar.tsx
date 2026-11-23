@@ -106,7 +106,7 @@ export function Sidebar() {
               <div className="flex items-center gap-2.5 truncate">
                 <Icon
                   className={`w-4 h-4 shrink-0 ${
-                    active ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-400"
+                    active ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400"
                   }`}
                 />
                 <span className="truncate">{language === "ar" ? item.labelAr : item.label}</span>
@@ -154,12 +154,12 @@ export function Sidebar() {
             onClick={() => setCurrentScreen("landing")}
             className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition text-start ${
               currentScreen === "landing"
-                ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold"
+                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold"
                 : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
             }`}
           >
             <span className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100" />
               <span>Landing Page</span>
             </span>
             <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400" />
@@ -170,7 +170,7 @@ export function Sidebar() {
       {/* Sovereign Air-Gap Status Box at bottom (Matching v2/Landing.dc.html) */}
       <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-xs flex flex-col gap-1.5">
         <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100 text-[11px]">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <ShieldCheck className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100 shrink-0" />
           <span>Sovereign Boundary</span>
         </div>
         <p className="text-[10px] text-zinc-500 leading-snug">
@@ -178,7 +178,7 @@ export function Sidebar() {
         </p>
         <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400 font-medium">
           <span>{activeTenant.tier.split(" ")[0]}</span>
-          <span className="text-emerald-600 dark:text-emerald-400 font-bold">In-Region</span>
+          <span className="text-zinc-900 dark:text-zinc-100 font-bold">In-Region</span>
         </div>
       </div>
     </aside>

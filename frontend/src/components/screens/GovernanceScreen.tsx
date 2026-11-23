@@ -242,7 +242,7 @@ export function GovernanceScreen() {
                   onClick={togglePiiMasked}
                   className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition ${
                     piiMasked
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                      ? "border-zinc-300 bg-zinc-100 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                       : "border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
                   }`}
                 >
@@ -327,10 +327,10 @@ export function GovernanceScreen() {
           {userRole === "admin" && (
             <div className="flex flex-col gap-3">
               {generatedPasswordNotice && (
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 flex items-center justify-between">
+                <div className="p-3 bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
                   <div>
                     <span className="font-bold">Initial Password Generated: </span>
-                    <span className="bg-white dark:bg-zinc-900 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 font-semibold">{generatedPasswordNotice}</span>
+                    <span className="bg-white dark:bg-zinc-900 px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-600 font-semibold text-zinc-900 dark:text-zinc-100">{generatedPasswordNotice}</span>
                     <span className="text-[11px] text-zinc-500 ml-2">(Record securely — shown only once)</span>
                   </div>
                   <button
@@ -369,7 +369,7 @@ export function GovernanceScreen() {
                     <button
                       type="button"
                       onClick={generateRandomPassword}
-                      className="text-[10px] text-emerald-600 hover:underline font-semibold"
+                      className="text-[10px] text-zinc-900 dark:text-zinc-100 hover:underline font-semibold"
                     >
                       Generate Random
                     </button>
@@ -426,8 +426,8 @@ export function GovernanceScreen() {
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className="text-emerald-600 font-semibold flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-zinc-900 dark:text-zinc-100 font-semibold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100" />
                         Active
                       </span>
                     </td>
@@ -486,11 +486,11 @@ export function GovernanceScreen() {
           )}
 
           {createdKeyValue && (
-            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex flex-col gap-2">
-              <span className="font-bold text-xs text-emerald-900 dark:text-emerald-200">
+            <div className="p-4 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 flex flex-col gap-2">
+              <span className="font-bold text-xs text-zinc-900 dark:text-zinc-100">
                 Key Generated Successfully — Copy Now (Will Not Be Shown Again)
               </span>
-              <code className="p-2 rounded bg-white dark:bg-zinc-900 border border-emerald-300 font-semibold text-xs text-emerald-800 dark:text-emerald-300 select-all">
+              <code className="p-2 rounded bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 font-semibold text-xs text-zinc-900 dark:text-zinc-100 select-all">
                 {createdKeyValue}
               </code>
             </div>
@@ -518,7 +518,7 @@ export function GovernanceScreen() {
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className="text-emerald-600 font-semibold">Active</span>
+                      <span className="text-zinc-900 dark:text-zinc-100 font-semibold">Active</span>
                     </td>
                     <td className="p-3 text-end">
                       {userRole === "admin" && (
@@ -553,7 +553,7 @@ export function GovernanceScreen() {
           <div className="flex flex-col gap-3">
             <div className="flex justify-between items-center">
               <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Retention Duration:</span>
-              <span className="font-bold text-base text-emerald-600 dark:text-emerald-400">
+              <span className="font-bold text-base text-zinc-900 dark:text-zinc-100">
                 {sliderDays} Days (~{Math.round(sliderDays / 30)} months)
               </span>
             </div>
@@ -563,7 +563,7 @@ export function GovernanceScreen() {
               max={3650}
               value={sliderDays}
               onChange={(e) => setSliderDays(Number(e.target.value))}
-              className="w-full accent-emerald-600 cursor-pointer"
+              className="w-full accent-zinc-900 dark:accent-zinc-100 cursor-pointer"
             />
           </div>
 

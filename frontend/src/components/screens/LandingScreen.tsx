@@ -23,13 +23,13 @@ export function LandingScreen() {
 
         <div className="max-w-5xl mx-auto flex flex-col items-center text-center gap-6 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/80 text-xs text-zinc-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-zinc-100 animate-pulse" />
             <span>In-country document AI for UAE banks & fintechs</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight max-w-4xl leading-[1.08]">
             Verified KYC data from any UAE document.{" "}
-            <span className="text-emerald-400">In seconds. In-country.</span>
+            <span className="text-white">In seconds. In-country.</span>
           </h1>
 
           <p className="text-base sm:text-lg text-zinc-400 max-w-2xl leading-relaxed">
@@ -39,7 +39,7 @@ export function LandingScreen() {
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
               onClick={() => setCurrentScreen("command")}
-              className="px-6 py-3 rounded-xl bg-emerald-400 text-zinc-950 font-bold text-sm hover:bg-emerald-300 transition shadow-lg shadow-emerald-500/20 flex items-center gap-2"
+              className="px-6 py-3 rounded-xl bg-zinc-100 text-zinc-950 font-bold text-sm hover:bg-white transition shadow-lg shadow-black/20 flex items-center gap-2"
             >
               <span>Open Command Center</span>
               <ArrowRight className="w-4 h-4" />
@@ -70,7 +70,7 @@ export function LandingScreen() {
                     Photo
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
-                    <span className="font-bold text-xs p-1 rounded border border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                    <span className="font-bold text-xs p-1 rounded border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
                       784-1990-1234567-1
                     </span>
                     <span className="font-semibold text-xs text-zinc-800 dark:text-zinc-200">
@@ -81,7 +81,7 @@ export function LandingScreen() {
                 </div>
                 <div className="flex justify-between text-[9px] text-zinc-400">
                   <span>UAE RESIDENT</span>
-                  <span className="text-emerald-600 font-bold">100% Sovereign Ingest</span>
+                  <span className="text-zinc-900 dark:text-zinc-100 font-bold">100% Sovereign Ingest</span>
                 </div>
               </div>
 
@@ -89,7 +89,7 @@ export function LandingScreen() {
               <div className="flex-1 w-full flex flex-col gap-3 text-start">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm">Emirates ID · Extracted</span>
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700">
                     1.8s P95
                   </span>
                 </div>
@@ -97,11 +97,11 @@ export function LandingScreen() {
                 <div className="space-y-1.5 text-xs">
                   <div className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 flex justify-between">
                     <span className="text-zinc-500">ID Number</span>
-                    <span className="font-bold">784-1990-1234567-1 <span className="text-emerald-600">99%</span></span>
+                    <span className="font-bold">784-1990-1234567-1 <span className="text-zinc-900 dark:text-zinc-100 font-bold">99%</span></span>
                   </div>
                   <div className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 flex justify-between">
                     <span className="text-zinc-500">Full Name</span>
-                    <span className="font-semibold">Sara Ahmed Example <span className="text-emerald-600">97%</span></span>
+                    <span className="font-semibold">Sara Ahmed Example <span className="text-zinc-900 dark:text-zinc-100 font-bold">97%</span></span>
                   </div>
                   <div className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 flex justify-between">
                     <span className="text-zinc-500">Expiry Date</span>
@@ -109,7 +109,7 @@ export function LandingScreen() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 pt-1">
+                <div className="flex items-center gap-2 text-xs font-medium text-zinc-900 dark:text-zinc-100 pt-1">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>Check digit valid · Not expired · ISO format passed</span>
                 </div>
@@ -122,7 +122,7 @@ export function LandingScreen() {
       {/* Feature Pillars Section */}
       <section className="py-16 px-6 lg:px-12 max-w-5xl mx-auto flex flex-col gap-10">
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+          <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
             Architecture Pillars
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">

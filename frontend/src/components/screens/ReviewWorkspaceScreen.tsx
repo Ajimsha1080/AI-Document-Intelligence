@@ -190,7 +190,7 @@ export function ReviewWorkspaceScreen() {
           <span
             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
               doc.status === "approved"
-                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
                 : doc.status === "needs_review"
                 ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                 : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
@@ -292,8 +292,8 @@ export function ReviewWorkspaceScreen() {
                       }}
                       className={`cursor-pointer transition border rounded-xs ${
                         isSelected
-                          ? "border-2 border-emerald-500 bg-emerald-500/25 ring-2 ring-emerald-500/30 z-20"
-                          : "border border-blue-500/80 bg-blue-500/10 hover:bg-blue-500/25 z-10"
+                          ? "border-2 border-zinc-900 bg-zinc-900/20 ring-2 ring-zinc-900/30 z-20 dark:border-zinc-100 dark:bg-zinc-100/20"
+                          : "border border-zinc-400/80 bg-zinc-400/10 hover:bg-zinc-400/25 z-10"
                       }`}
                       title={`${field.nameEn}: ${field.value || "Not found"}`}
                     />
@@ -360,8 +360,8 @@ export function ReviewWorkspaceScreen() {
               </div>
             </div>
           ) : isApproved ? (
-            <div className="m-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center gap-2 text-emerald-900 dark:text-emerald-200 text-xs font-semibold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="m-4 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 flex items-center gap-2 text-zinc-900 dark:text-zinc-100 text-xs font-semibold">
+              <CheckCircle2 className="w-4 h-4 text-zinc-900 dark:text-zinc-100 shrink-0" />
               <span>Approved · Webhook dispatched & logged into sovereign audit trail.</span>
             </div>
           ) : null}
@@ -393,9 +393,9 @@ export function ReviewWorkspaceScreen() {
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                         field.isCorrected
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                          ? "bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
                           : confPct >= 85
-                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                          ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
                           : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                       }`}
                     >
@@ -415,7 +415,7 @@ export function ReviewWorkspaceScreen() {
                       <button
                         type="button"
                         onClick={() => saveEdit(field.key)}
-                        className="p-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                        className="p-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded hover:opacity-90"
                       >
                         <Check className="w-3.5 h-3.5" />
                       </button>
@@ -465,10 +465,10 @@ export function ReviewWorkspaceScreen() {
                   <div key={chk.id || i} className="flex flex-col gap-0.5 text-[11px] p-1.5 rounded-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                     <div className="flex items-center justify-between">
                       <span className="text-zinc-700 dark:text-zinc-300 font-medium flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${chk.passed ? "bg-emerald-500" : chk.severity === "warning" ? "bg-amber-500" : "bg-rose-500"}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${chk.passed ? "bg-zinc-900 dark:bg-zinc-100" : chk.severity === "warning" ? "bg-amber-500" : "bg-rose-500"}`} />
                         {chk.ruleName}
                       </span>
-                      <span className={`font-semibold text-[10px] uppercase ${chk.passed ? "text-emerald-600" : chk.severity === "warning" ? "text-amber-600" : "text-rose-600"}`}>
+                      <span className={`font-semibold text-[10px] uppercase ${chk.passed ? "text-zinc-900 dark:text-zinc-100" : chk.severity === "warning" ? "text-amber-600" : "text-rose-600"}`}>
                         {chk.passed ? "Passed" : chk.severity === "warning" ? "Warning" : "Failed"}
                       </span>
                     </div>
@@ -500,7 +500,7 @@ export function ReviewWorkspaceScreen() {
                 disabled={isApproving || !canApprove}
                 className={`flex-[2] py-2.5 px-4 rounded-xl font-semibold text-xs transition shadow-xs flex items-center justify-center gap-2 ${
                   isApproved
-                    ? "bg-emerald-600 text-white cursor-default"
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 cursor-default"
                     : canApprove
                     ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90"
                     : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed"

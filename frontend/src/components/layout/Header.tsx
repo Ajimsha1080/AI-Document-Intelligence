@@ -33,8 +33,8 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
         </button>
 
         {/* UAE Sovereign Region Pill */}
-        <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+        <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+          <span className="w-1.5 h-1.5 rounded-full bg-zinc-950 dark:bg-zinc-100" />
           UAE North
         </span>
       </div>
@@ -77,7 +77,7 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
           className="h-8 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-medium text-zinc-700 dark:text-zinc-300 transition flex items-center gap-1.5"
           title="Ask Sovereign AI"
         >
-          <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+          <Sparkles className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100" />
           <span className="hidden lg:inline">Ask AI</span>
         </button>
 
@@ -91,7 +91,7 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
           className="flex items-center gap-2 pl-1.5 hover:opacity-85 transition text-start"
           title="Click to view profile or sign out"
         >
-          <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center font-bold text-xs">
+          <div className="w-8 h-8 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center font-bold text-xs">
             {(currentUser?.name || "AD").slice(0, 2).toUpperCase()}
           </div>
         </button>

@@ -86,7 +86,7 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-zinc-900 text-emerald-400 dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center font-bold text-sm">
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center font-bold text-sm">
               <UploadCloud className="w-4 h-4" />
             </div>
             <div>
@@ -142,7 +142,7 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
           onClick={() => fileInputRef.current?.click()}
           className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition ${
             isDragging
-              ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
+              ? "border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800"
               : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 bg-zinc-50/50 dark:bg-zinc-950/40"
           }`}
         >
@@ -156,7 +156,7 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
           <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-3 text-zinc-600 dark:text-zinc-400">
             {isUploading ? (
-              <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+              <Loader2 className="w-6 h-6 animate-spin text-zinc-900 dark:text-zinc-100" />
             ) : (
               <FileText className="w-6 h-6" />
             )}
@@ -176,7 +176,7 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
           {isUploading && (
             <div className="w-full max-w-xs mt-4 bg-zinc-200 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-200"
+                className="bg-zinc-900 dark:bg-zinc-100 h-1.5 rounded-full transition-all duration-200"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
@@ -184,7 +184,7 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
         </div>
 
         <div className="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-          <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+          <span className="flex items-center gap-1.5 text-zinc-900 dark:text-zinc-100 font-semibold">
             <CheckCircle2 className="w-3.5 h-3.5" />
             Zero-Egress Sovereign Boundary
           </span>

@@ -11,7 +11,7 @@ export function WelcomeScreen() {
     <div className="max-w-4xl mx-auto flex flex-col gap-8 py-4">
       {/* Hero Welcome Header */}
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
           Onboarding & Quickstart
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -27,7 +27,7 @@ export function WelcomeScreen() {
         <div className="p-5 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 flex flex-col gap-3 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-zinc-400">01 · INGEST</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="w-2 h-2 rounded-full bg-zinc-900 dark:bg-zinc-100" />
           </div>
           <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">Upload a UAE Document</h3>
           <p className="text-xs text-zinc-500 leading-relaxed">
@@ -77,7 +77,7 @@ export function WelcomeScreen() {
             className="mt-auto py-2 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition flex items-center justify-between"
           >
             <span>Open Ask Pro</span>
-            <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+            <Sparkles className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100" />
           </button>
         </div>
 
@@ -102,21 +102,21 @@ export function WelcomeScreen() {
       </div>
 
       {/* Sovereign Air-Gap Guarantee Banner */}
-      <div className="p-5 border border-emerald-200 dark:border-emerald-900/60 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-5 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-100/60 dark:bg-zinc-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
+          <div className="w-9 h-9 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center font-bold">
             <Shield className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+            <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
               UAE Sovereign Data Guarantee (Federal Decree-Law No. 45/2021)
             </h4>
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+            <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
               Zero outbound network egress. Local Tesseract OCR + local FastEmbed + local Ollama backend.
             </p>
           </div>
         </div>
-        <span className="px-3 py-1 bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-300 text-xs rounded-full border border-emerald-200 dark:border-emerald-800 font-semibold whitespace-nowrap">
+        <span className="px-3 py-1 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs rounded-full border border-zinc-300 dark:border-zinc-700 font-semibold whitespace-nowrap">
           UAE North Sovereign Zone
         </span>
       </div>

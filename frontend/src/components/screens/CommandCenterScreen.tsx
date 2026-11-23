@@ -39,9 +39,9 @@ export function CommandCenterScreen() {
     switch (status) {
       case "approved":
         return {
-          dot: "bg-emerald-500",
+          dot: "bg-zinc-900 dark:bg-zinc-100",
           text: language === "ar" ? "معتمد" : "Approved",
-          chip: "text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
+          chip: "text-zinc-900 bg-zinc-100 border-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700",
         };
       case "needs_review":
         return {
@@ -91,7 +91,7 @@ export function CommandCenterScreen() {
             <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{totalCount}</span>
             <div className="flex items-end gap-1 h-5" aria-hidden="true">
               {[40, 65, 45, 80, 95, 60, 85].map((h, i) => (
-                <span key={i} className="w-1 bg-emerald-500/80 rounded-t" style={{ height: `${h}%` }} />
+                <span key={i} className="w-1 bg-zinc-900/80 dark:bg-zinc-100/80 rounded-t" style={{ height: `${h}%` }} />
               ))}
             </div>
           </div>
@@ -119,7 +119,7 @@ export function CommandCenterScreen() {
             <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{straightThroughRate}%</span>
             <div className="flex items-end gap-1 h-5" aria-hidden="true">
               {[70, 75, 80, 85, 90, 88, 92].map((h, i) => (
-                <span key={i} className="w-1 bg-emerald-500/80 rounded-t" style={{ height: `${h}%` }} />
+                <span key={i} className="w-1 bg-zinc-900/80 dark:bg-zinc-100/80 rounded-t" style={{ height: `${h}%` }} />
               ))}
             </div>
           </div>
@@ -130,7 +130,7 @@ export function CommandCenterScreen() {
           <span className="text-xs text-zinc-500 font-medium">Avg Processing P95</span>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">1.8s</span>
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
               In-Country
             </span>
           </div>
@@ -192,7 +192,7 @@ export function CommandCenterScreen() {
                   <span>No documents found in this status.</span>
                   <button
                     onClick={() => setIsUploadModalOpen(true)}
-                    className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    className="mt-2 text-xs font-semibold text-zinc-900 dark:text-zinc-100 hover:underline"
                   >
                     + Upload your first document
                   </button>
@@ -209,7 +209,7 @@ export function CommandCenterScreen() {
                       onClick={() => setSelectedDocumentId(doc.id)}
                       className={`grid grid-cols-12 gap-3 px-4 py-3 items-center text-xs cursor-pointer transition ${
                         isSelected
-                          ? "bg-zinc-50 dark:bg-zinc-800/60 border-s-2 border-emerald-600 dark:border-emerald-400"
+                          ? "bg-zinc-50 dark:bg-zinc-800/60 border-s-2 border-zinc-900 dark:border-zinc-100"
                           : "hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30"
                       }`}
                     >
@@ -237,7 +237,7 @@ export function CommandCenterScreen() {
                           <div
                             className={`h-full rounded-full ${
                               confPct >= 85
-                                ? "bg-emerald-500"
+                                ? "bg-zinc-900 dark:bg-zinc-100"
                                 : confPct >= 65
                                 ? "bg-amber-500"
                                 : "bg-rose-500"
@@ -305,8 +305,8 @@ export function CommandCenterScreen() {
                 </span>
               </div>
             ) : (
-              <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-zinc-900 dark:text-zinc-100 shrink-0" />
                 <span>All sovereign compliance and format rules passed.</span>
               </div>
             )}

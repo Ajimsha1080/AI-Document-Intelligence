@@ -103,7 +103,7 @@ export function SchemasScreen() {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs text-zinc-900 dark:text-zinc-100">{s.nameEn}</span>
-                  <span className="px-2 py-0.2 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 text-zinc-900 border border-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700">
                     Live
                   </span>
                 </div>
@@ -204,7 +204,7 @@ export function SchemasScreen() {
                           </span>
                         </td>
                         <td className="p-3">
-                          <span className={f.required ? "text-emerald-600 font-semibold" : "text-zinc-400"}>
+                          <span className={f.required ? "text-zinc-900 dark:text-zinc-100 font-semibold" : "text-zinc-400"}>
                             {f.required ? "Required" : "Optional"}
                           </span>
                         </td>
@@ -284,7 +284,7 @@ export function SchemasScreen() {
                       Rule Type: {r.ruleType} · Target Field: {r.targetField}
                     </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-900 border border-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700">
                     Enforced
                   </span>
                 </div>
@@ -298,7 +298,7 @@ export function SchemasScreen() {
               <button
                 type="button"
                 onClick={handleSaveSchema}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition flex items-center gap-1.5 shadow-xs"
+                className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 font-semibold text-xs rounded-lg transition flex items-center gap-1.5 shadow-xs"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Save Schema Changes</span>

@@ -108,8 +108,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             {language === "ar" ? "تسجيل الدخول المؤسسي" : "Enterprise Sign In"}
           </h2>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
+            <ShieldCheck className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-300 shrink-0" />
             <span>UAE Sovereign Identity Gateway · UAE North</span>
           </div>
         </div>
@@ -182,9 +182,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             type="button"
             onClick={handleInstantAutoLogin}
             disabled={loading}
-            className="w-full py-2.5 px-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
           >
-            <Zap className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <Zap className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100 shrink-0" />
             <span>{language === "ar" ? "تسجيل دخول تلقائي بنقرة واحدة (مسؤول)" : "1-Click Instant Auto-Login (Admin)"}</span>
           </button>
 
@@ -193,7 +193,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               type="checkbox"
               checked={autoLoginChecked}
               onChange={toggleAutoLoginPreference}
-              className="rounded-sm border-zinc-300 dark:border-zinc-700 text-emerald-600 focus:ring-emerald-500"
+              className="rounded-sm border-zinc-300 dark:border-zinc-700 text-zinc-900 focus:ring-zinc-900 dark:focus:ring-white"
             />
             <span>{language === "ar" ? "تفعيل تسجيل الدخول التلقائي في المرات القادمة" : "Auto-login automatically on launch"}</span>
           </label>
