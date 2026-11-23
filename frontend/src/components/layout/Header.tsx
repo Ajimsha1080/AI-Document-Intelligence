@@ -22,27 +22,15 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-30 w-full h-14 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-6 flex items-center justify-between gap-3 select-none">
-      {/* Brand & Breadcrumb Hierarchy (Matching v2/Command.dc.html) */}
+      {/* Brand & Organization Title */}
       <div className="flex items-center gap-2.5 min-w-0">
         <button
           type="button"
           onClick={() => setCurrentScreen("command")}
-          className="flex items-center gap-2 text-zinc-900 dark:text-zinc-50 font-bold text-base tracking-tight hover:opacity-85 transition"
+          className="text-sm font-bold text-zinc-900 dark:text-zinc-50 hover:opacity-85 transition truncate max-w-[200px] sm:max-w-none"
         >
-          <span
-            aria-hidden="true"
-            className="w-7 h-7 rounded-lg bg-zinc-950 text-emerald-400 dark:bg-zinc-100 dark:text-emerald-700 flex items-center justify-center font-extrabold text-sm shadow-xs"
-          >
-            D
-          </span>
-          <span className="font-extrabold">DocIntel</span>
-        </button>
-
-        <span className="text-zinc-300 dark:text-zinc-700 font-normal">/</span>
-
-        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 truncate max-w-[140px] sm:max-w-none">
           {language === "ar" ? activeTenant.nameAr : activeTenant.nameEn}
-        </span>
+        </button>
 
         {/* UAE Sovereign Region Pill */}
         <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">

@@ -105,11 +105,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         {/* Header Branding */}
         <div className="flex flex-col items-center text-center gap-2">
-          <div className="w-12 h-12 rounded-xl bg-zinc-950 text-emerald-400 dark:bg-zinc-100 dark:text-emerald-700 flex items-center justify-center font-extrabold text-2xl shadow-md">
-            D
-          </div>
           <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {language === "ar" ? "تسجيل الدخول المؤسسي • دوك إنتل" : "Sign in to DocIntel"}
+            {language === "ar" ? "تسجيل الدخول المؤسسي" : "Enterprise Sign In"}
           </h2>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
