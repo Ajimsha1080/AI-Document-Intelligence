@@ -92,8 +92,8 @@ export function Sidebar() {
   const navContent = (
     <>
       {/* Navigation Links */}
-      <nav aria-label="Main" className="flex-1 flex flex-col gap-1 overflow-y-auto">
-        <span className="px-2 pb-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+      <nav aria-label="Main" className="flex-1 flex flex-col gap-1.5 overflow-y-auto">
+        <span className="px-3 pb-1 text-xs font-bold text-zinc-400 uppercase tracking-wider">
           Workspace
         </span>
 
@@ -105,16 +105,16 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={() => handleNavigate(item.id)}
-              className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition text-start cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-start cursor-pointer ${
                 active
-                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs"
-                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-zinc-50 font-semibold shadow-xs"
+                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-zinc-100"
               }`}
             >
-              <div className="flex items-center gap-2.5 truncate">
+              <div className="flex items-center gap-3 truncate">
                 <Icon
-                  className={`w-4 h-4 shrink-0 ${
-                    active ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400"
+                  className={`w-4.5 h-4.5 shrink-0 ${
+                    active ? "text-zinc-950 dark:text-zinc-50" : "text-zinc-400"
                   }`}
                 />
                 <span className="truncate">{language === "ar" ? item.labelAr : item.label}</span>
@@ -122,10 +122,10 @@ export function Sidebar() {
 
               {item.badge !== undefined && (
                 <span
-                  className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                  className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                     item.badgeAmber
                       ? "text-amber-800 bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
-                      : "text-zinc-500 bg-zinc-200 dark:bg-zinc-800"
+                      : "text-zinc-600 bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
                   }`}
                 >
                   {item.badge}
@@ -136,23 +136,23 @@ export function Sidebar() {
         })}
 
         {/* Saved Views */}
-        <div className="pt-4 flex flex-col gap-1">
-          <span className="px-2 pb-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+        <div className="pt-5 flex flex-col gap-1">
+          <span className="px-3 pb-1 text-xs font-bold text-zinc-400 uppercase tracking-wider">
             Saved Views
           </span>
           <button
             onClick={() => handleNavigate("command")}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start cursor-pointer"
           >
             <span>Expiring IDs</span>
-            <span className="text-[10px] text-zinc-400 font-semibold">12</span>
+            <span className="text-xs text-zinc-400 font-semibold">12</span>
           </button>
           <button
             onClick={() => handleNavigate("command")}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition text-start cursor-pointer"
           >
             <span>Invoices &gt; AED 100k</span>
-            <span className="text-[10px] text-zinc-400 font-semibold">4</span>
+            <span className="text-xs text-zinc-400 font-semibold">4</span>
           </button>
         </div>
 
@@ -160,32 +160,32 @@ export function Sidebar() {
         <div className="pt-3">
           <button
             onClick={() => handleNavigate("landing")}
-            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition text-start cursor-pointer ${
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition text-start cursor-pointer ${
               currentScreen === "landing"
-                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold"
+                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-zinc-50 font-bold"
                 : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
             }`}
           >
-            <span className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100" />
+            <span className="flex items-center gap-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-950 dark:bg-zinc-100" />
               <span>Landing Page</span>
             </span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400" />
+            <ArrowUpRight className="w-4 h-4 text-zinc-400" />
           </button>
         </div>
       </nav>
 
       {/* Sovereign Air-Gap Status Box at bottom */}
       <div className="mt-auto pt-3">
-        <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-xs flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100 text-[11px]">
-            <ShieldCheck className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100 shrink-0" />
+        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm flex flex-col gap-1.5">
+          <div className="flex items-center gap-2 font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm">
+            <ShieldCheck className="w-4 h-4 text-zinc-900 dark:text-zinc-100 shrink-0" />
             <span>Sovereign Boundary</span>
           </div>
-          <p className="text-[10px] text-zinc-500 leading-snug">
+          <p className="text-[11px] sm:text-xs text-zinc-500 leading-snug">
             100% In-Country UAE Data Boundary (Federal Decree-Law 45/2021)
           </p>
-          <div className="pt-1 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400 font-medium">
+          <div className="pt-1.5 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-400 font-medium">
             <span>{activeTenant.tier.split(" ")[0]}</span>
             <span className="text-zinc-900 dark:text-zinc-100 font-bold">In-Region</span>
           </div>
@@ -197,7 +197,7 @@ export function Sidebar() {
   return (
     <>
       {/* Desktop Persistent Sidebar */}
-      <aside className="hidden md:flex w-56 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex-col py-4 px-3 select-none h-full">
+      <aside className="hidden md:flex w-64 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex-col py-5 px-3.5 select-none h-full">
         {navContent}
       </aside>
 

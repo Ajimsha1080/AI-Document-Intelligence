@@ -84,57 +84,57 @@ export function CommandCenterScreen() {
   return (
     <div className="flex flex-col gap-6">
       {/* Top Banner / Metrics Cards (Matching v2/Command.dc.html) */}
-      <section className="grid grid-cols-2 md:grid-cols-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 divide-x divide-y md:divide-y-0 divide-zinc-200 dark:divide-zinc-800 shadow-xs overflow-hidden">
-        <div className="p-4 flex flex-col gap-1.5">
-          <span className="text-xs text-zinc-500 font-medium">Total Ingested</span>
+      <section className="grid grid-cols-2 md:grid-cols-4 border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 divide-x divide-y md:divide-y-0 divide-zinc-200 dark:divide-zinc-800 shadow-xs overflow-hidden">
+        <div className="p-5 sm:p-6 flex flex-col gap-2">
+          <span className="text-xs sm:text-sm text-zinc-500 font-semibold uppercase tracking-wider">Total Ingested</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{totalCount}</span>
-            <div className="flex items-end gap-1 h-5" aria-hidden="true">
+            <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">{totalCount}</span>
+            <div className="flex items-end gap-1.5 h-6" aria-hidden="true">
               {[40, 65, 45, 80, 95, 60, 85].map((h, i) => (
-                <span key={i} className="w-1 bg-zinc-900/80 dark:bg-zinc-100/80 rounded-t" style={{ height: `${h}%` }} />
+                <span key={i} className="w-1.5 bg-zinc-900/80 dark:bg-zinc-100/80 rounded-t" style={{ height: `${h}%` }} />
               ))}
             </div>
           </div>
-          <span className="text-[11px] text-zinc-400">All tenant documents</span>
+          <span className="text-xs text-zinc-400 font-medium">All tenant documents</span>
         </div>
 
-        <div className="p-4 flex flex-col gap-1.5">
-          <span className="text-xs text-zinc-500 font-medium">Needs Review</span>
+        <div className="p-5 sm:p-6 flex flex-col gap-2">
+          <span className="text-xs sm:text-sm text-zinc-500 font-semibold uppercase tracking-wider">Needs Review</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">
+            <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-amber-600 dark:text-amber-400">
               {needsReviewDocs.length}
             </span>
-            <div className="flex items-end gap-1 h-5" aria-hidden="true">
+            <div className="flex items-end gap-1.5 h-6" aria-hidden="true">
               {[80, 50, 90, 70, 60, 85, 90].map((h, i) => (
-                <span key={i} className="w-1 bg-amber-500/80 rounded-t" style={{ height: `${h}%` }} />
+                <span key={i} className="w-1.5 bg-amber-500/80 rounded-t" style={{ height: `${h}%` }} />
               ))}
             </div>
           </div>
-          <span className="text-[11px] text-zinc-400">Awaiting human review</span>
+          <span className="text-xs text-zinc-400 font-medium">Awaiting human review</span>
         </div>
 
-        <div className="p-4 flex flex-col gap-1.5">
-          <span className="text-xs text-zinc-500 font-medium">Straight-Through</span>
+        <div className="p-5 sm:p-6 flex flex-col gap-2">
+          <span className="text-xs sm:text-sm text-zinc-500 font-semibold uppercase tracking-wider">Straight-Through</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{straightThroughRate}%</span>
-            <div className="flex items-end gap-1 h-5" aria-hidden="true">
+            <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">{straightThroughRate}%</span>
+            <div className="flex items-end gap-1.5 h-6" aria-hidden="true">
               {[70, 75, 80, 85, 90, 88, 92].map((h, i) => (
-                <span key={i} className="w-1 bg-zinc-900/80 dark:bg-zinc-100/80 rounded-t" style={{ height: `${h}%` }} />
+                <span key={i} className="w-1.5 bg-zinc-900/80 dark:bg-zinc-100/80 rounded-t" style={{ height: `${h}%` }} />
               ))}
             </div>
           </div>
-          <span className="text-[11px] text-zinc-400">Zero touch auto-approved</span>
+          <span className="text-xs text-zinc-400 font-medium">Zero touch auto-approved</span>
         </div>
 
-        <div className="p-4 flex flex-col gap-1.5">
-          <span className="text-xs text-zinc-500 font-medium">Avg Processing P95</span>
+        <div className="p-5 sm:p-6 flex flex-col gap-2">
+          <span className="text-xs sm:text-sm text-zinc-500 font-semibold uppercase tracking-wider">Avg Processing P95</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">1.8s</span>
-            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+            <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">1.8s</span>
+            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-full">
               In-Country
             </span>
           </div>
-          <span className="text-[11px] text-zinc-400">Zero foreign egress</span>
+          <span className="text-xs text-zinc-400 font-medium">Zero foreign egress</span>
         </div>
       </section>
 
@@ -144,7 +144,7 @@ export function CommandCenterScreen() {
         <div className="flex-1 w-full flex flex-col gap-3 min-w-0">
           {/* Filter Bar & Hotkey Hints */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-lg text-xs font-medium">
+            <div className="flex items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl text-sm font-medium">
               {[
                 { id: "all", label: "All", count: totalCount },
                 { id: "needs_review", label: "Needs Review", count: needsReviewDocs.length },
@@ -155,19 +155,19 @@ export function CommandCenterScreen() {
                 <button
                   key={t.id}
                   onClick={() => setActiveTab(t.id as any)}
-                  className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${
+                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-2 cursor-pointer ${
                     activeTab === t.id
                       ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-xs font-semibold"
                       : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
                   }`}
                 >
                   <span>{t.label}</span>
-                  <span className="text-[11px] font-semibold text-zinc-400">{t.count}</span>
+                  <span className="text-xs font-semibold text-zinc-400">{t.count}</span>
                 </button>
               ))}
             </div>
 
-            <div className="hidden sm:flex items-center gap-2 text-xs text-zinc-400">
+            <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-zinc-400">
               <span className="font-semibold bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">J</span>
               <span className="font-semibold bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">K</span>
               <span>navigate</span>
@@ -177,102 +177,102 @@ export function CommandCenterScreen() {
           </div>
 
           {/* Table Container */}
-          <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 overflow-hidden shadow-xs">
+          <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
-              <div className="min-w-[580px]">
-                <div className="grid grid-cols-12 gap-3 px-4 py-2.5 text-xs font-semibold text-zinc-500 bg-zinc-50 dark:bg-zinc-950/60 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="min-w-[650px]">
+                <div className="grid grid-cols-12 gap-4 px-5 py-3.5 text-xs sm:text-sm font-semibold text-zinc-500 bg-zinc-50/80 dark:bg-zinc-950/60 border-b border-zinc-200 dark:border-zinc-800 uppercase tracking-wider">
                   <span className="col-span-5">Document</span>
                   <span className="col-span-3">Status</span>
                   <span className="col-span-2">Confidence</span>
                   <span className="col-span-2 text-end">Action</span>
                 </div>
 
-            <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-              {filteredDocuments.length === 0 ? (
-                <div className="p-12 text-center text-zinc-400 text-sm flex flex-col items-center gap-2">
-                  <FileText className="w-8 h-8 text-zinc-300 dark:text-zinc-700" />
-                  <span>No documents found in this status.</span>
-                  <button
-                    onClick={() => setIsUploadModalOpen(true)}
-                    className="mt-2 text-xs font-semibold text-zinc-900 dark:text-zinc-100 hover:underline"
-                  >
-                    + Upload your first document
-                  </button>
-                </div>
-              ) : (
-                filteredDocuments.map((doc) => {
-                  const statusInfo = getStatusBadge(doc.status);
-                  const isSelected = selectedDoc?.id === doc.id;
-                  const confPct = Math.round((doc.overallConfidence || 0) * 100);
-
-                  return (
-                    <div
-                      key={doc.id}
-                      onClick={() => setSelectedDocumentId(doc.id)}
-                      className={`grid grid-cols-12 gap-3 px-4 py-3 items-center text-xs cursor-pointer transition ${
-                        isSelected
-                          ? "bg-zinc-50 dark:bg-zinc-800/60 border-s-2 border-zinc-900 dark:border-zinc-100"
-                          : "hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30"
-                      }`}
-                    >
-                      {/* Document Name & Type */}
-                      <div className="col-span-5 flex flex-col min-w-0">
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                          {doc.fileName}
-                        </span>
-                        <span className="text-[11px] text-zinc-400 font-medium truncate">
-                          {doc.referenceNumber} · {doc.documentTypeNameEn}
-                        </span>
-                      </div>
-
-                      {/* Status */}
-                      <div className="col-span-3 flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${statusInfo.dot}`} />
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          {statusInfo.text}
-                        </span>
-                      </div>
-
-                      {/* Confidence Bar & Pct */}
-                      <div className="col-span-2 flex items-center gap-2">
-                        <div className="flex-1 bg-zinc-200 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden hidden sm:block">
-                          <div
-                            className={`h-full rounded-full ${
-                              confPct >= 85
-                                ? "bg-zinc-900 dark:bg-zinc-100"
-                                : confPct >= 65
-                                ? "bg-amber-500"
-                                : "bg-rose-500"
-                            }`}
-                            style={{ width: `${confPct}%` }}
-                          />
-                        </div>
-                        <span className="font-semibold text-zinc-500 text-[11px]">{confPct}%</span>
-                      </div>
-
-                      {/* Quick Action Button */}
-                      <div className="col-span-2 flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenReview(doc.id)}
-                          className="px-2.5 py-1 rounded-md bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold hover:opacity-90 transition text-[11px] flex items-center gap-1"
-                        >
-                          Review
-                          <ArrowUpRight className="w-3 h-3" />
-                        </button>
-                        {userRole === "admin" && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleDelete(doc.id, e)}
-                            className="p-1 text-zinc-400 hover:text-rose-600 transition"
-                            title="Delete document"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
+                <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                  {filteredDocuments.length === 0 ? (
+                    <div className="p-16 text-center text-zinc-400 text-sm flex flex-col items-center gap-3">
+                      <FileText className="w-10 h-10 text-zinc-300 dark:text-zinc-700" />
+                      <span className="font-medium text-base">No documents found in this status.</span>
+                      <button
+                        onClick={() => setIsUploadModalOpen(true)}
+                        className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:underline"
+                      >
+                        + Upload your first document
+                      </button>
                     </div>
-                  );
+                  ) : (
+                    filteredDocuments.map((doc) => {
+                      const statusInfo = getStatusBadge(doc.status);
+                      const isSelected = selectedDoc?.id === doc.id;
+                      const confPct = Math.round((doc.overallConfidence || 0) * 100);
+
+                      return (
+                        <div
+                          key={doc.id}
+                          onClick={() => setSelectedDocumentId(doc.id)}
+                          className={`grid grid-cols-12 gap-4 px-5 py-4 items-center text-sm cursor-pointer transition ${
+                            isSelected
+                              ? "bg-zinc-50 dark:bg-zinc-800/60 border-s-4 border-zinc-900 dark:border-zinc-100"
+                              : "hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30"
+                          }`}
+                        >
+                          {/* Document Name & Type */}
+                          <div className="col-span-5 flex flex-col min-w-0 gap-0.5">
+                            <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base truncate">
+                              {doc.fileName}
+                            </span>
+                            <span className="text-xs text-zinc-400 font-medium truncate">
+                              {doc.referenceNumber} · {doc.documentTypeNameEn}
+                            </span>
+                          </div>
+
+                          {/* Status */}
+                          <div className="col-span-3 flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${statusInfo.dot}`} />
+                            <span className="font-medium text-sm text-zinc-800 dark:text-zinc-200">
+                              {statusInfo.text}
+                            </span>
+                          </div>
+
+                          {/* Confidence Bar & Pct */}
+                          <div className="col-span-2 flex items-center gap-2.5">
+                            <div className="flex-1 bg-zinc-200 dark:bg-zinc-800 h-2 rounded-full overflow-hidden hidden sm:block">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  confPct >= 85
+                                    ? "bg-zinc-900 dark:bg-zinc-100"
+                                    : confPct >= 65
+                                    ? "bg-amber-500"
+                                    : "bg-rose-500"
+                                }`}
+                                style={{ width: `${confPct}%` }}
+                              />
+                            </div>
+                            <span className="font-bold text-zinc-600 dark:text-zinc-400 text-xs sm:text-sm">{confPct}%</span>
+                          </div>
+
+                          {/* Quick Action Button */}
+                          <div className="col-span-2 flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenReview(doc.id)}
+                              className="px-3.5 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold hover:opacity-90 transition text-xs sm:text-sm flex items-center gap-1.5 shadow-2xs"
+                            >
+                              Review
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                            </button>
+                            {userRole === "admin" && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleDelete(doc.id, e)}
+                                className="p-1.5 text-zinc-400 hover:text-rose-600 transition"
+                                title="Delete document"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
                 })
               )}
             </div>

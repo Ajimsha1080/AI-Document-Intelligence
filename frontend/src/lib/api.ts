@@ -24,7 +24,11 @@ export interface PipelineStageEvent {
 export const STORAGE_KEY_TOKEN = "sanad_access_token";
 
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes("localhost") && !process.env.NEXT_PUBLIC_API_URL.includes("127.0.0.1"))
+    ? process.env.NEXT_PUBLIC_API_URL
+    : typeof window !== "undefined"
+      ? `${window.location.protocol}//${window.location.hostname || "127.0.0.1"}:8000`
+      : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000");
 
 export function getAuthHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -451,7 +455,14 @@ export const api: ApiAdapter = {
           }
         };
 
-        xhr.onerror = () => reject(new Error("Network error during document upload"));
+        xhr.onerror = () => {
+          const targetUrl = `${API_BASE}/api/v1/documents/upload`;
+          reject(new Error(`Network error connecting to processing server at ${targetUrl}. Please ensure backend is active.`));
+        };
+        xhr.ontimeout = () => {
+          reject(new Error("Document upload timed out. Please check server responsiveness."));
+        };
+        xhr.timeout = 60000; // 60s upload timeout
         xhr.send(formData);
       });
     },

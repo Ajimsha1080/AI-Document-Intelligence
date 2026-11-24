@@ -22,9 +22,9 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
   } = useApp();
 
   return (
-    <header className="sticky top-0 z-30 w-full h-14 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-3 sm:px-6 flex items-center justify-between gap-2.5 select-none">
+    <header className="sticky top-0 z-30 w-full h-16 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-8 flex items-center justify-between gap-3 select-none">
       {/* Brand & Organization Title & Mobile Hamburger */}
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0">
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
@@ -37,37 +37,37 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
         <button
           type="button"
           onClick={() => setCurrentScreen("command")}
-          className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-50 hover:opacity-85 transition truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none"
+          className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50 hover:opacity-85 transition truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none"
         >
           {language === "ar" ? activeTenant.nameAr : activeTenant.nameEn}
         </button>
 
         {/* UAE Sovereign Region Pill */}
-        <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+        <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
           <span className="w-1.5 h-1.5 rounded-full bg-zinc-950 dark:bg-zinc-100" />
           UAE North
         </span>
       </div>
 
       {/* Center: Command Palette Trigger (Desktop) */}
-      <div className="flex-1 max-w-md mx-auto hidden md:block">
+      <div className="flex-1 max-w-lg mx-auto hidden md:block">
         <button
           type="button"
           onClick={() => setIsCommandPaletteOpen(true)}
-          className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-lg text-xs text-zinc-400 flex items-center justify-between transition"
+          className="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-xs sm:text-sm text-zinc-400 flex items-center justify-between transition shadow-2xs"
         >
-          <span className="flex items-center gap-2">
-            <Search className="w-3.5 h-3.5 text-zinc-400" />
+          <span className="flex items-center gap-2.5">
+            <Search className="w-4 h-4 text-zinc-400" />
             <span>Search documents, fields, people…</span>
           </span>
-          <kbd className="text-[10px] text-zinc-500 bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 font-semibold">
+          <kbd className="text-[11px] text-zinc-500 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700 font-semibold shadow-2xs">
             ⌘K
           </kbd>
         </button>
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
         {/* Mobile Search Button */}
         <button
           type="button"
@@ -83,9 +83,9 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
           <button
             type="button"
             onClick={() => setIsUploadModalOpen(true)}
-            className="h-8 px-2.5 sm:px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold hover:opacity-90 transition flex items-center gap-1.5 shadow-xs"
+            className="h-9 px-3.5 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs sm:text-sm font-semibold hover:opacity-90 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Upload</span>
           </button>
         )}
@@ -94,24 +94,24 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
         <button
           type="button"
           onClick={() => setCurrentScreen("ask")}
-          className="h-8 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-medium text-zinc-700 dark:text-zinc-300 transition flex items-center gap-1.5"
+          className="h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 transition flex items-center gap-1.5 cursor-pointer"
           title="Ask Sovereign AI"
         >
-          <Sparkles className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100" />
+          <Sparkles className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
           <span className="hidden lg:inline">Ask AI</span>
         </button>
 
         {/* Bilingual Switcher */}
         <LanguageSwitcher />
 
-        {/* User Profile Avatar (Matching v2/Command.dc.html) */}
+        {/* User Profile Avatar */}
         <button
           type="button"
           onClick={onOpenLoginModal}
-          className="flex items-center gap-2 pl-1.5 hover:opacity-85 transition text-start"
+          className="flex items-center gap-2 pl-1.5 hover:opacity-85 transition text-start cursor-pointer"
           title="Click to view profile or sign out"
         >
-          <div className="w-8 h-8 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center font-bold text-xs">
+          <div className="w-9 h-9 rounded-full bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center font-bold text-xs sm:text-sm shadow-xs">
             {(currentUser?.name || "AD").slice(0, 2).toUpperCase()}
           </div>
         </button>

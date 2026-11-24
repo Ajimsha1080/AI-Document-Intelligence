@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 import asyncio
 import json
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -142,6 +143,25 @@ async def uae_compliance_headers_middleware(request: Request, call_next):
     response.headers["X-Data-Sovereignty-Region"] = settings.CURRENT_REGION
     response.headers["X-Compliance-PDPL"] = "UAE-Federal-Law-45-2021"
     response.headers["X-Model-Provider-Mode"] = actual_backend
+    return response
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Catches all unhandled exceptions and guarantees CORS headers are preserved.
+    Prevents browser CORS errors from masking underlying backend exceptions.
+    """
+    logger.error(f"Unhandled exception during {request.method} {request.url.path}: {exc}", exc_info=True)
+    origin = request.headers.get("origin")
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": f"Server error: {str(exc) or 'Internal server error'}"}
+    )
+    if origin and (origin in settings.ALLOWED_ORIGINS or "*" in settings.ALLOWED_ORIGINS):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
