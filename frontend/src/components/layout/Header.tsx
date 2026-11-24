@@ -43,24 +43,26 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
         </button>
 
         {/* UAE Sovereign Region Pill */}
-        <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+        <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shrink-0 whitespace-nowrap">
           <span className="w-1.5 h-1.5 rounded-full bg-zinc-950 dark:bg-zinc-100" />
           UAE North
         </span>
       </div>
 
       {/* Center: Command Palette Trigger (Desktop) */}
-      <div className="flex-1 max-w-lg mx-auto hidden md:block">
+      <div className="flex-1 max-w-md lg:max-w-lg mx-auto hidden md:block min-w-0 px-2">
         <button
           type="button"
           onClick={() => setIsCommandPaletteOpen(true)}
-          className="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-xs sm:text-sm text-zinc-400 flex items-center justify-between transition shadow-2xs"
+          className="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-xs sm:text-sm text-zinc-400 flex items-center justify-between gap-2 transition shadow-2xs overflow-hidden"
         >
-          <span className="flex items-center gap-2.5">
-            <Search className="w-4 h-4 text-zinc-400" />
-            <span>Search documents, fields, people…</span>
+          <span className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+            <Search className="w-4 h-4 text-zinc-400 shrink-0" />
+            <span className="truncate whitespace-nowrap text-start">
+              {language === "ar" ? "ابحث في المستندات والحقول والأشخاص..." : "Search documents, fields, people…"}
+            </span>
           </span>
-          <kbd className="text-[11px] text-zinc-500 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700 font-semibold shadow-2xs">
+          <kbd className="shrink-0 text-[11px] text-zinc-500 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700 font-semibold shadow-2xs">
             ⌘K
           </kbd>
         </button>
