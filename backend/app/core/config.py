@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = DEFAULT_SECRET_KEY
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days session validity
     PLATFORM_ADMIN_API_KEY: Optional[str] = None
     WEBHOOK_SIGNING_SECRET: Optional[str] = None
     

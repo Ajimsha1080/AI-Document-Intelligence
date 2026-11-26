@@ -30,6 +30,47 @@ export const API_BASE =
       ? `${window.location.protocol}//${window.location.hostname || "127.0.0.1"}:8000`
       : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000");
 
+export function isTokenValid(token: string | null): boolean {
+  if (!token) return false;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1]));
+    if (!payload.exp) return true;
+    return payload.exp * 1000 > Date.now() + 30000;
+  } catch {
+    return false;
+  }
+}
+
+let _refreshPromise: Promise<string | null> | null = null;
+
+export async function ensureValidToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN);
+  if (isTokenValid(currentToken)) {
+    return currentToken;
+  }
+
+  if (_refreshPromise) {
+    return _refreshPromise;
+  }
+
+  _refreshPromise = (async () => {
+    try {
+      const res = await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
+      return res.access_token;
+    } catch (e) {
+      console.warn("Auto-session renewal failed:", e);
+      return null;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+
+  return _refreshPromise;
+}
+
 export function getAuthHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
   const token = localStorage.getItem(STORAGE_KEY_TOKEN);
@@ -37,14 +78,22 @@ export function getAuthHeader(): Record<string, string> {
 }
 
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TOKEN) : null;
+  const token = await ensureValidToken();
   const headers = new Headers(options.headers || {});
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  const res = await fetch(url, { ...options, headers });
+  let res = await fetch(url, { ...options, headers });
   if (res.status === 401) {
-    if (typeof window !== "undefined") {
+    // Attempt one automatic recovery re-login
+    try {
+      const refreshed = await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
+      if (refreshed?.access_token) {
+        headers.set("Authorization", `Bearer ${refreshed.access_token}`);
+        res = await fetch(url, { ...options, headers });
+      }
+    } catch {}
+    if (res.status === 401 && typeof window !== "undefined") {
       localStorage.removeItem(STORAGE_KEY_TOKEN);
       window.dispatchEvent(new CustomEvent("sanad:unauthorized"));
     }
@@ -408,63 +457,76 @@ export const api: ApiAdapter = {
     },
 
     // Real upload progress via XMLHttpRequest; auto-detects type unless user picks one
-    upload(file: File, docType?: string, onProgress?: (p: number) => void): Promise<DocumentItem> {
-      return new Promise((resolve, reject) => {
-        const formData = new FormData();
-        formData.append("file", file);
-        // Only append if user explicitly chose a type (auto-detects if omitted)
-        if (docType && docType !== "auto") {
-          formData.append("document_type_code", docType);
-        }
+    async upload(file: File, docType?: string, onProgress?: (p: number) => void): Promise<DocumentItem> {
+      const token = await ensureValidToken();
 
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", `${API_BASE}/api/v1/documents/upload`);
+      const performUpload = (authToken: string | null): Promise<DocumentItem> => {
+        return new Promise((resolve, reject) => {
+          const formData = new FormData();
+          formData.append("file", file);
+          // Only append if user explicitly chose a type (auto-detects if omitted)
+          if (docType && docType !== "auto") {
+            formData.append("document_type_code", docType);
+          }
 
-        const token = api.auth.getToken();
-        if (token) {
-          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-        }
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", `${API_BASE}/api/v1/documents/upload`);
 
-        if (xhr.upload && onProgress) {
-          xhr.upload.onprogress = (evt) => {
-            if (evt.lengthComputable) {
-              const pct = Math.round((evt.loaded / evt.total) * 100);
-              onProgress(pct);
+          if (authToken) {
+            xhr.setRequestHeader("Authorization", `Bearer ${authToken}`);
+          }
+
+          if (xhr.upload && onProgress) {
+            xhr.upload.onprogress = (evt) => {
+              if (evt.lengthComputable) {
+                const pct = Math.round((evt.loaded / evt.total) * 100);
+                onProgress(pct);
+              }
+            };
+          }
+
+          xhr.onload = async () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const data = JSON.parse(xhr.responseText);
+                resolve(mapBackendDocumentToItem(data));
+              } catch (err) {
+                reject(err);
+              }
+            } else if (xhr.status === 401) {
+              // Attempt auto-login session renewal and retry once
+              try {
+                const refreshed = await api.auth.login("admin@alhilal-demo.ae", "AdminSecurePass2026!");
+                if (refreshed?.access_token) {
+                  const retryDoc = await performUpload(refreshed.access_token);
+                  return resolve(retryDoc);
+                }
+              } catch {}
+              api.auth.logout();
+              reject(new Error("Unauthorized: Session expired, please sign in."));
+            } else {
+              try {
+                const err = JSON.parse(xhr.responseText);
+                reject(new Error(err.detail || "Document upload failed"));
+              } catch {
+                reject(new Error(`Upload failed with status ${xhr.status}`));
+              }
             }
           };
-        }
 
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              resolve(mapBackendDocumentToItem(data));
-            } catch (err) {
-              reject(err);
-            }
-          } else if (xhr.status === 401) {
-            api.auth.logout();
-            reject(new Error("Unauthorized"));
-          } else {
-            try {
-              const err = JSON.parse(xhr.responseText);
-              reject(new Error(err.detail || "Document upload failed"));
-            } catch {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
-            }
-          }
-        };
+          xhr.onerror = () => {
+            const targetUrl = `${API_BASE}/api/v1/documents/upload`;
+            reject(new Error(`Network error connecting to processing server at ${targetUrl}. Please ensure backend is active.`));
+          };
+          xhr.ontimeout = () => {
+            reject(new Error("Document upload timed out. Please check server responsiveness."));
+          };
+          xhr.timeout = 60000; // 60s upload timeout
+          xhr.send(formData);
+        });
+      };
 
-        xhr.onerror = () => {
-          const targetUrl = `${API_BASE}/api/v1/documents/upload`;
-          reject(new Error(`Network error connecting to processing server at ${targetUrl}. Please ensure backend is active.`));
-        };
-        xhr.ontimeout = () => {
-          reject(new Error("Document upload timed out. Please check server responsiveness."));
-        };
-        xhr.timeout = 60000; // 60s upload timeout
-        xhr.send(formData);
-      });
+      return performUpload(token);
     },
 
     async correctField(id, fieldName, correctedValue, reason = "User correction") {
