@@ -50,19 +50,19 @@ export function Header({ onOpenLoginModal }: HeaderProps) {
       </div>
 
       {/* Center: Command Palette Trigger (Desktop) */}
-      <div className="flex-1 max-w-md lg:max-w-lg mx-auto hidden md:block min-w-0 px-2">
+      <div className="flex-1 max-w-sm md:max-w-md lg:max-w-xl mx-auto hidden md:block min-w-[240px] lg:min-w-[320px] px-2">
         <button
           type="button"
           onClick={() => setIsCommandPaletteOpen(true)}
-          className="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-xs sm:text-sm text-zinc-400 flex items-center justify-between gap-2 transition shadow-2xs overflow-hidden"
+          className="w-full h-10 px-3.5 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-xl text-xs sm:text-sm text-zinc-400 flex items-center justify-between gap-2 transition shadow-2xs overflow-hidden select-none whitespace-nowrap cursor-pointer"
         >
-          <span className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+          <span className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden whitespace-nowrap">
             <Search className="w-4 h-4 text-zinc-400 shrink-0" />
-            <span className="truncate whitespace-nowrap text-start">
+            <span className="truncate whitespace-nowrap block min-w-0 max-w-full text-start leading-none">
               {language === "ar" ? "ابحث في المستندات والحقول والأشخاص..." : "Search documents, fields, people…"}
             </span>
           </span>
-          <kbd className="shrink-0 text-[11px] text-zinc-500 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700 font-semibold shadow-2xs">
+          <kbd className="shrink-0 text-[11px] text-zinc-500 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700 font-semibold shadow-2xs leading-normal">
             ⌘K
           </kbd>
         </button>

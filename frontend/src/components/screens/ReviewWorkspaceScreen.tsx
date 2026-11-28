@@ -23,6 +23,11 @@ export function ReviewWorkspaceScreen() {
 
   const doc = documents.find((d) => d.id === selectedDocumentId) || documents[0];
 
+  const [detailedDoc, setDetailedDoc] = useState<any>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
+  const [isForceModalOpen, setIsForceModalOpen] = useState<boolean>(false);
+  const [forceReason, setForceReason] = useState<string>("Manual verification confirmed valid");
+
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [rotation, setRotation] = useState<number>(0);
@@ -31,7 +36,32 @@ export function ReviewWorkspaceScreen() {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState<boolean>(false);
 
-  const isPdf = doc?.fileName?.toLowerCase().endsWith(".pdf") || false;
+  // Fetch full document details (fields, validation results, pages)
+  useEffect(() => {
+    if (!doc?.id) return;
+    let isMounted = true;
+    setIsLoadingDetails(true);
+
+    api.documents.get(doc.id)
+      .then((fullDoc) => {
+        if (isMounted && fullDoc) {
+          setDetailedDoc(fullDoc);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load full document details:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingDetails(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [doc?.id]);
+
+  const currentDoc = (detailedDoc && detailedDoc.id === doc?.id) ? detailedDoc : doc;
+  const isPdf = currentDoc?.fileName?.toLowerCase().endsWith(".pdf") || false;
 
   useEffect(() => {
     if (!doc?.id) return;
@@ -101,74 +131,84 @@ export function ReviewWorkspaceScreen() {
 
   const saveEdit = async (fieldKey: string) => {
     try {
-      await updateDocumentField(doc.id, fieldKey, editValue);
-      showToast("success", `Updated ${fieldKey}`, `تم تحديث الحقل ${fieldKey}`);
+      await updateDocumentField(currentDoc.id, fieldKey, editValue);
+      // Reload full document details to get updated validation results from backend
+      try {
+        const fullDoc = await api.documents.get(currentDoc.id);
+        if (fullDoc) setDetailedDoc(fullDoc);
+      } catch {}
       setEditingKey(null);
     } catch (err: any) {
       showToast("error", err.message || "Failed to update field", "تعذر حفظ التعديل");
     }
   };
 
-  const hasFailedErrors = (doc.validationErrors || []).some((e) => e.severity === "error" && !e.isResolved);
-  const isApproved = doc.status === "approved";
-  const canApprove = (userRole === "admin" || !hasFailedErrors) && !isApproved;
-
-  const handleApprove = async () => {
-    setIsApproving(true);
-    try {
-      let force = false;
-      if (hasFailedErrors) {
-        if (userRole !== "admin") {
-          showToast("error", "Cannot approve document with unresolved errors.", "لا يمكن اعتماد المستند مع وجود أخطاء");
-          return;
-        }
-        const reason = window.prompt("Admin Force Approval: Enter reason for audit trail:");
-        if (reason === null) {
-          return; // user cancelled prompt
-        }
-        if (!reason.trim()) {
-          showToast("error", "Reason is required to force-approve.", "السبب مطلوب للاعتماد الاستثنائي");
-          return;
-        }
-        force = true;
-      }
-      await approveDocument(doc.id, force);
-      showToast("success", "Document approved successfully", "تم اعتماد المستند بنجاح");
-      // Go to next review doc if available
-      if (currentIndex < needsReviewList.length - 1) {
-        setSelectedDocumentId(needsReviewList[currentIndex + 1].id);
-      }
-    } catch (err: any) {
-      showToast("error", err.message || "Cannot approve document", "تعذر اعتماد المستند");
-    } finally {
-      setIsApproving(false);
-    }
-  };
-
-  const handleReject = async () => {
-    setIsRejecting(true);
-    try {
-      await rejectDocument(doc.id);
-      showToast("info", "Document rejected", "تم رفض المستند");
-      if (currentIndex < needsReviewList.length - 1) {
-        setSelectedDocumentId(needsReviewList[currentIndex + 1].id);
-      }
-    } catch (err: any) {
-      showToast("error", err.message || "Cannot reject document", "تعذر رفض المستند");
-    } finally {
-      setIsRejecting(false);
-    }
-  };
-
-  // Real validation results from API
-  const validationResults = doc.validationResults || (doc.validationErrors || []).map((e) => ({
+  // Real validation results from detailed document
+  const validationResults = currentDoc.validationResults || (currentDoc.validationErrors || []).map((e: any) => ({
     id: e.id,
     ruleName: e.fieldKey || "Validation Check",
     passed: false,
     severity: e.severity,
     message: e.messageEn,
   }));
-  const passedChecksCount = validationResults.filter((c) => c.passed).length;
+  const passedChecksCount = validationResults.filter((c: any) => c.passed).length;
+  const failedErrorChecks = validationResults.filter((c: any) => !c.passed && c.severity === "error");
+
+  const hasFailedErrors =
+    failedErrorChecks.length > 0 ||
+    (currentDoc.validationErrors || []).some((e: any) => e.severity === "error" && !e.isResolved);
+
+  const isApproved = currentDoc.status === "approved";
+  const canApprove = (userRole === "admin" || !hasFailedErrors) && !isApproved;
+
+  const handleApprove = async (forceOverride = false) => {
+    if (!currentDoc?.id) return;
+
+    if (hasFailedErrors && !forceOverride) {
+      if (userRole === "admin") {
+        setIsForceModalOpen(true);
+        return;
+      } else {
+        showToast("error", "Cannot approve document with unresolved errors.", "لا يمكن اعتماد المستند مع وجود أخطاء");
+        return;
+      }
+    }
+
+    setIsApproving(true);
+    try {
+      await approveDocument(currentDoc.id, forceOverride);
+      setIsForceModalOpen(false);
+      // Reload full document to reflect approved state
+      try {
+        const fullDoc = await api.documents.get(currentDoc.id);
+        if (fullDoc) setDetailedDoc(fullDoc);
+      } catch {}
+
+      // Go to next review doc if available
+      if (currentIndex < needsReviewList.length - 1) {
+        setSelectedDocumentId(needsReviewList[currentIndex + 1].id);
+      }
+    } catch {
+      // Toast notification is already handled by approveDocument in AppContext
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!currentDoc?.id) return;
+    setIsRejecting(true);
+    try {
+      await rejectDocument(currentDoc.id);
+      if (currentIndex < needsReviewList.length - 1) {
+        setSelectedDocumentId(needsReviewList[currentIndex + 1].id);
+      }
+    } catch {
+      // Toast notification is already handled by rejectDocument in AppContext
+    } finally {
+      setIsRejecting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4 -mt-2">
@@ -184,19 +224,19 @@ export function ReviewWorkspaceScreen() {
           </button>
           <span className="text-zinc-300 dark:text-zinc-700">/</span>
           <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate max-w-xs">
-            {doc.fileName}
+            {currentDoc.fileName}
           </span>
-          <span className="text-xs text-zinc-400 font-medium">{doc.referenceNumber}</span>
+          <span className="text-xs text-zinc-400 font-medium">{currentDoc.referenceNumber}</span>
           <span
             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              doc.status === "approved"
+              currentDoc.status === "approved"
                 ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                : doc.status === "needs_review"
+                : currentDoc.status === "needs_review"
                 ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                 : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
             }`}
           >
-            {doc.status.replace("_", " ")}
+            {currentDoc.status.replace("_", " ")}
           </span>
         </div>
 
@@ -257,11 +297,12 @@ export function ReviewWorkspaceScreen() {
               <object
                 data={blobUrl}
                 type="application/pdf"
+                style={{ visibility: isForceModalOpen ? "hidden" : "visible" }}
                 className="w-full h-full min-h-[500px] rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm"
               >
                 <iframe
                   src={blobUrl}
-                  title={doc.fileName}
+                  title={currentDoc.fileName}
                   className="w-full h-full min-h-[500px] rounded-lg border-0"
                 />
               </object>
@@ -272,11 +313,11 @@ export function ReviewWorkspaceScreen() {
               >
                 <img
                   src={blobUrl}
-                  alt={doc.fileName}
+                  alt={currentDoc.fileName}
                   className="max-w-full max-h-[600px] object-contain block"
                 />
                 {/* Real field bounding box overlays */}
-                {(doc.fields || []).map((field) => {
+                {(currentDoc.fields || []).map((field: any) => {
                   if (!field.bbox) return null;
                   const isSelected = activeFieldKey === field.key;
                   return (
@@ -336,20 +377,20 @@ export function ReviewWorkspaceScreen() {
                     Validation Checks Require Attention
                   </span>
                   <div className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5 space-y-1">
-                    {(doc.validationErrors || []).map((err, i) => (
+                    {(failedErrorChecks.length > 0 ? failedErrorChecks : (currentDoc.validationErrors || [])).map((err: any, i: number) => (
                       <p key={i} className="leading-relaxed">
-                        • {err.messageEn || err.fieldKey}
+                        • {err.message || err.messageEn || err.fieldKey || err.ruleName}
                       </p>
                     ))}
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2 pt-1">
-                {doc.fields?.find((f) => f.key === "id_number") && (
+                {currentDoc.fields?.find((f: any) => f.key === "id_number") && (
                   <button
                     type="button"
                     onClick={() => {
-                      const idF = doc.fields?.find((f) => f.key === "id_number");
+                      const idF = currentDoc.fields?.find((f: any) => f.key === "id_number");
                       if (idF) startEdit(idF);
                     }}
                     className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -373,7 +414,16 @@ export function ReviewWorkspaceScreen() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 divide-y divide-zinc-100 dark:divide-zinc-800/60">
-            {(doc.fields || []).map((field) => {
+            {isLoadingDetails && !detailedDoc ? (
+              <div className="p-8 text-center text-xs text-zinc-400 animate-pulse">
+                Loading sovereign field extractions...
+              </div>
+            ) : (currentDoc.fields || []).length === 0 ? (
+              <div className="p-8 text-center text-xs text-zinc-400">
+                No fields extracted for this document.
+              </div>
+            ) : (
+              (currentDoc.fields || []).map((field: any) => {
               const isSelected = activeFieldKey === field.key;
               const isEditing = editingKey === field.key;
               const confPct = Math.round((field.confidence || 0) * 100);
@@ -446,7 +496,7 @@ export function ReviewWorkspaceScreen() {
                   )}
                 </div>
               );
-            })}
+            }))}
           </div>
 
           {/* Validation Checks Summary */}
@@ -461,7 +511,7 @@ export function ReviewWorkspaceScreen() {
               <span className="text-zinc-400 text-[11px]">No validation checks run.</span>
             ) : (
               <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {validationResults.map((chk, i) => (
+                {validationResults.map((chk: any, i: number) => (
                   <div key={chk.id || i} className="flex flex-col gap-0.5 text-[11px] p-1.5 rounded-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                     <div className="flex items-center justify-between">
                       <span className="text-zinc-700 dark:text-zinc-300 font-medium flex items-center gap-1.5">
@@ -490,19 +540,19 @@ export function ReviewWorkspaceScreen() {
                 type="button"
                 onClick={handleReject}
                 disabled={isRejecting}
-                className="flex-1 py-2.5 px-4 rounded-xl border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 font-semibold text-xs transition disabled:opacity-50"
+                className="flex-1 py-2.5 px-4 rounded-xl border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 font-semibold text-xs transition disabled:opacity-50 cursor-pointer"
               >
                 Reject Document
               </button>
               <button
                 type="button"
-                onClick={handleApprove}
+                onClick={() => handleApprove(false)}
                 disabled={isApproving || !canApprove}
                 className={`flex-[2] py-2.5 px-4 rounded-xl font-semibold text-xs transition shadow-xs flex items-center justify-center gap-2 ${
                   isApproved
                     ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 cursor-default"
                     : canApprove
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90"
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 cursor-pointer"
                     : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed"
                 }`}
               >
@@ -517,6 +567,77 @@ export function ReviewWorkspaceScreen() {
           </div>
         </section>
       </div>
+
+      {/* Admin Force Approval Modal */}
+      {isForceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div
+            className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-6 text-zinc-900 dark:text-zinc-100 flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-sm sm:text-base">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <span>Admin Force Approval</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsForceModalOpen(false)}
+                className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              This document has {failedErrorChecks.length || 1} unresolved error validation check(s). As an administrator, you can override validation and approve this document. This action will be permanently logged in the sovereign audit trail.
+            </p>
+
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 space-y-1">
+              <span className="font-semibold block text-[11px] uppercase tracking-wider text-rose-800 dark:text-rose-200">
+                Failed Validation Checks:
+              </span>
+              {(failedErrorChecks.length > 0 ? failedErrorChecks : (currentDoc.validationErrors || [])).map((chk: any, idx: number) => (
+                <div key={idx} className="flex items-start gap-1.5 text-[11px]">
+                  <span className="font-bold">•</span>
+                  <span>{chk.ruleName || chk.fieldKey || "Validation Check"}: {chk.message || chk.messageEn || "Failed rule check"}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Audit Reason for Exception Approval
+              </label>
+              <input
+                type="text"
+                value={forceReason}
+                onChange={(e) => setForceReason(e.target.value)}
+                placeholder="e.g. Manual verification confirmed valid"
+                className="w-full px-3 py-2 text-xs border border-zinc-300 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 focus:outline-hidden focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsForceModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isApproving || !forceReason.trim()}
+                onClick={() => handleApprove(true)}
+                className="px-4 py-2 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                {isApproving ? "Approving..." : "Confirm Force Approval"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
