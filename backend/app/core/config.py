@@ -32,10 +32,16 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:3005",
+        "http://localhost:3010",
+        "http://localhost:3006",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3005",
+        "http://127.0.0.1:3010",
+        "http://127.0.0.1:3006",
         "http://0.0.0.0:3000",
         "http://0.0.0.0:3005",
+        "http://0.0.0.0:3010",
+        "http://0.0.0.0:3006",
     ]
     
     # Login Rate Limiting & Account Lockout

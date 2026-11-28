@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const port = parseInt(process.env.PORT || '3005', 10);
+const port = parseInt(process.env.PORT || '3010', 10);
 const hasBuild = fs.existsSync(path.join(__dirname, '.next', 'BUILD_ID'));
 const dev = process.env.NODE_ENV === 'development' ? true : !hasBuild;
 const app = next({ dev, dir: __dirname });
